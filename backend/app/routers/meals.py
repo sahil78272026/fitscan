@@ -28,7 +28,7 @@ async def log_meal(
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         logger.error(f"Failed to log meal: {e}")
-        raise HTTPException(status_code=500, detail="Failed to analyze food. Please try again.")
+        raise HTTPException(status_code=500, detail=f"Failed to analyze food: {str(e)}")
 
 
 @router.get("/today", response_model=list[MealResponse])

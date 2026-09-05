@@ -5,9 +5,6 @@ from google.genai import types
 from app.config import get_settings
 
 logger = logging.getLogger("fitscan.gemini")
-settings = get_settings()
-
-client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
 SYSTEM_PROMPT = """You are a precise nutrition expert. The user will tell you what they ate. 
 Your job is to parse each food item, estimate its quantity, and provide accurate calorie counts.
@@ -43,6 +40,9 @@ async def analyze_food(raw_input: str) -> dict:
     Send food text to Gemini and get structured calorie breakdown.
     Returns dict with 'items' list and 'total_calories'.
     """
+    settings = get_settings()
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+
     try:
         response = await client.aio.models.generate_content(
             model=settings.GEMINI_MODEL,
