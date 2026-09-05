@@ -40,10 +40,13 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS
+# CORS — support comma-separated origins + Netlify/Vercel preview patterns
+cors_origins = [o.strip() for o in app_settings.FRONTEND_ORIGIN.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[app_settings.FRONTEND_ORIGIN],
+    allow_origins=cors_origins,
+    allow_origin_regex=r"https://.*\.netlify\.app|https://.*\.vercel\.app|http://localhost:\d+",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
