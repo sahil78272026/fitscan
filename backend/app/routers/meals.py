@@ -22,7 +22,7 @@ async def log_meal(
 ):
     """Log a new meal. Text is analyzed by Gemini AI for calorie breakdown."""
     try:
-        meal = await create_meal(db, current_user.id, payload.raw_input, payload.meal_type)
+        meal = await create_meal(db, current_user.id, payload.raw_input, payload.meal_type, payload.meal_date)
         return meal
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))

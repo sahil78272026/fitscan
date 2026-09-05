@@ -113,7 +113,8 @@ export default function Home() {
   const handleLogMeal = async (rawInput, mealType) => {
     setSubmitting(true);
     try {
-      await logMeal(rawInput, mealType);
+      const dateStr = formatDateStr(selectedDate);
+      await logMeal(rawInput, mealType, dateStr);
       await fetchSummary(selectedDate);
       await fetchCalendar(calendarYear, calendarMonth);
       showToast("Meal logged! 🎉");

@@ -11,7 +11,7 @@ from app.services.gemini_service import analyze_food
 logger = logging.getLogger("fitscan.meal_service")
 
 
-async def create_meal(db: AsyncSession, user_id: int, raw_input: str, meal_type: str) -> Meal:
+async def create_meal(db: AsyncSession, user_id: int, raw_input: str, meal_type: str, target_meal_date: date | None = None) -> Meal:
     """Analyze food with Gemini and store the meal + food items."""
 
     # Get calorie breakdown from Gemini
@@ -23,7 +23,7 @@ async def create_meal(db: AsyncSession, user_id: int, raw_input: str, meal_type:
         meal_type=meal_type,
         raw_input=raw_input,
         total_calories=analysis["total_calories"],
-        meal_date=date.today(),
+        meal_date=target_meal_date or date.today(),
     )
     db.add(meal)
     await db.flush()  # get meal.id

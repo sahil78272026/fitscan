@@ -69,10 +69,12 @@ export async function getDailySummary(date = null) {
   return request(`/daily-summary${query}`);
 }
 
-export async function logMeal(rawInput, mealType) {
+export async function logMeal(rawInput, mealType, mealDate = null) {
+  const body = { raw_input: rawInput, meal_type: mealType };
+  if (mealDate) body.meal_date = mealDate;
   return request("/meals", {
     method: "POST",
-    body: JSON.stringify({ raw_input: rawInput, meal_type: mealType }),
+    body: JSON.stringify(body),
   });
 }
 
