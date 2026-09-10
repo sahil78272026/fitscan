@@ -1,3 +1,4 @@
+import json
 import logging
 from datetime import date
 from sqlalchemy import select, func
@@ -150,6 +151,35 @@ async def get_or_create_settings(db: AsyncSession, user_id: int) -> UserSettings
     return settings
 
 
+def parse_settings_response_dict(settings: UserSettings) -> dict:
+    """Helper to convert UserSettings to dict with parsed selected_meal_plan."""
+    selected_plan = None
+    if settings.selected_meal_plan:
+        if isinstance(settings.selected_meal_plan, str):
+            try:
+                selected_plan = json.loads(settings.selected_meal_plan)
+            except Exception:
+                selected_plan = None
+        elif isinstance(settings.selected_meal_plan, dict):
+            selected_plan = settings.selected_meal_plan
+
+    return {
+        "calorie_goal": settings.calorie_goal,
+        "protein_goal": settings.protein_goal,
+        "carbs_goal": settings.carbs_goal,
+        "fat_goal": settings.fat_goal,
+        "goal_type": settings.goal_type,
+        "diet_type": settings.diet_type,
+        "budget_tier": settings.budget_tier,
+        "age": settings.age,
+        "gender": settings.gender,
+        "height_cm": settings.height_cm,
+        "weight_kg": settings.weight_kg,
+        "activity_level": settings.activity_level,
+        "selected_meal_plan": selected_plan,
+    }
+
+
 def calculate_user_goals(
     goal_type: str = "fat_loss",
     weight_kg: float | None = 70.0,
@@ -248,6 +278,25 @@ async def update_calorie_goal(db: AsyncSession, user_id: int, calorie_goal: int)
     settings.calorie_goal = calorie_goal
     await db.commit()
     await db.refresh(settings)
-    logger.info(f"Updated calorie goal to {calorie_goal} for user #{user_id}")
+    return settings
+
+
+async def save_selected_meal_plan(db: AsyncSession, user_id: int, meal_plan: dict) -> UserSettings:
+    """Save the user's selected meal plan and update target macros if available."""
+    settings = await get_or_create_settings(db, user_id)
+    settings.selected_meal_plan = json.dumps(meal_plan)
+
+    if "daily_calories" in meal_plan and meal_plan["daily_calories"]:
+        settings.calorie_goal = int(meal_plan["daily_calories"])
+    if "protein_g" in meal_plan and meal_plan["protein_g"]:
+        settings.protein_goal = int(meal_plan["protein_g"])
+    if "carbs_g" in meal_plan and meal_plan["carbs_g"]:
+        settings.carbs_goal = int(meal_plan["carbs_g"])
+    if "fat_g" in meal_plan and meal_plan["fat_g"]:
+        settings.fat_goal = int(meal_plan["fat_g"])
+
+    await db.commit()
+    await db.refresh(settings)
+    logger.info(f"Saved selected meal plan for user #{user_id}: {meal_plan.get('title')}")
     return settings
 

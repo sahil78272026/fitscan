@@ -8,7 +8,8 @@ import MacroProgressBar from "@/components/MacroProgressBar";
 import MealInput from "@/components/MealInput";
 import MealCard from "@/components/MealCard";
 import GoalEditor from "@/components/GoalEditor";
-import OnboardingModal from "@/components/OnboardingModal";
+import OnboardingWizard from "@/components/OnboardingWizard";
+import MealPlanSelector from "@/components/MealPlanSelector";
 import MealRecommendations from "@/components/MealRecommendations";
 import DateStrip from "@/components/DateStrip";
 import CalendarGrid from "@/components/CalendarGrid";
@@ -20,7 +21,9 @@ import {
   updateCalorieGoal,
   getCalendarMonth,
   getSettings,
-  updateUserGoals
+  updateUserGoals,
+  getSuggestedMealPlans,
+  selectMealPlan,
 } from "@/lib/api";
 import styles from "./page.module.css";
 
@@ -43,7 +46,9 @@ export default function Home() {
   const [selectedDate, setSelectedDate] = useState(today);
   const [summary, setSummary] = useState(null);
   const [userSettings, setUserSettings] = useState(null);
-  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [planSelectorOpen, setPlanSelectorOpen] = useState(false);
+  const [suggestedPlans, setSuggestedPlans] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [toasts, setToasts] = useState([]);
@@ -84,6 +89,11 @@ export default function Home() {
     try {
       const settings = await getSettings();
       setUserSettings(settings);
+
+      // If first time user (no weight_kg or no selected_meal_plan), open wizard automatically
+      if (!settings.weight_kg || !settings.selected_meal_plan) {
+        setWizardOpen(true);
+      }
     } catch (err) {
       // Fail silently
     }
@@ -174,14 +184,34 @@ export default function Home() {
     }
   };
 
-  const handleSaveOnboarding = async (goalData) => {
+  // Step 4 of Onboarding Wizard complete -> Save goals & trigger AI Meal Plan generation
+  const handleWizardComplete = async (goalData) => {
     try {
-      const updated = await updateUserGoals(goalData);
-      setUserSettings(updated);
-      await fetchSummary(selectedDate);
-      showToast("Fitness goal & target macros calculated! 🎯");
+      const updatedSettings = await updateUserGoals(goalData);
+      setUserSettings(updatedSettings);
+      setWizardOpen(false);
+
+      // Open Meal Plan Selector & fetch AI suggestions
+      setPlanSelectorOpen(true);
+      showToast("Metrics saved! Generating meal plans... ✨");
+
+      const plansData = await getSuggestedMealPlans();
+      setSuggestedPlans(plansData);
     } catch (err) {
-      showToast("Failed to save goal settings", "error");
+      showToast(err.message || "Failed to save goals", "error");
+    }
+  };
+
+  // User selects a meal plan -> Save selection & land on tracking dashboard
+  const handleSelectMealPlan = async (chosenPlan) => {
+    try {
+      const updated = await selectMealPlan(chosenPlan);
+      setUserSettings(updated);
+      setPlanSelectorOpen(false);
+      await fetchSummary(selectedDate);
+      showToast(`Activated: ${chosenPlan.title}! 🎯`);
+    } catch (err) {
+      showToast(err.message || "Failed to activate meal plan", "error");
     }
   };
 
@@ -225,13 +255,26 @@ export default function Home() {
         </div>
       )}
 
-      {/* Goal & Budget Onboarding Modal */}
-      <OnboardingModal
-        isOpen={onboardingOpen}
-        onClose={() => setOnboardingOpen(false)}
-        initialSettings={userSettings}
-        onSave={handleSaveOnboarding}
-      />
+      {/* Step 1-4 Onboarding Wizard (Split screens for Goal, Diet, Budget, Metrics) */}
+      {wizardOpen && (
+        <OnboardingWizard
+          initialSettings={userSettings}
+          onComplete={handleWizardComplete}
+          onCancel={() => setWizardOpen(false)}
+        />
+      )}
+
+      {/* Step 5 Meal Plan Selection */}
+      {planSelectorOpen && (
+        <MealPlanSelector
+          initialPlans={suggestedPlans}
+          onSelectPlan={handleSelectMealPlan}
+          onBackToWizard={() => {
+            setPlanSelectorOpen(false);
+            setWizardOpen(true);
+          }}
+        />
+      )}
 
       <div className={styles.container}>
         {/* Header */}
@@ -246,10 +289,10 @@ export default function Home() {
           <div className={styles.headerRight}>
             <button
               className={styles.goalSetupBtn}
-              onClick={() => setOnboardingOpen(true)}
+              onClick={() => setWizardOpen(true)}
               title="Configure Goal & Budget"
             >
-              🎯 Goals & Budget
+              🎯 Onboarding & Plans
             </button>
             <GoalEditor
               currentGoal={summary?.calorie_goal || 2000}
@@ -264,6 +307,27 @@ export default function Home() {
             </button>
           </div>
         </header>
+
+        {/* Active Selected Meal Plan Banner (If available) */}
+        {userSettings?.selected_meal_plan && (
+          <section className={styles.activePlanBanner}>
+            <div className={styles.bannerInfo}>
+              <span className={styles.bannerBadge}>Active Meal Plan</span>
+              <h3 className={styles.bannerTitle}>
+                {userSettings.selected_meal_plan.title || "Custom Fitness Plan"}
+              </h3>
+              <p className={styles.bannerTagline}>
+                {userSettings.selected_meal_plan.tagline || "Optimized for your daily macronutrient targets"}
+              </p>
+            </div>
+            <button
+              className={styles.changePlanBtn}
+              onClick={() => setPlanSelectorOpen(true)}
+            >
+              🔄 Change Plan
+            </button>
+          </section>
+        )}
 
         {/* Date Strip */}
         <section>
@@ -291,7 +355,7 @@ export default function Home() {
           </section>
         )}
 
-        {/* Progress Ring & Macro Progress Bars */}
+        {/* Progress Ring & Segregated Macro Progress Bars */}
         {loading ? (
           <div className={styles.loader} style={{ height: "200px" }}>
             <div className={styles.loaderSpinner} />
@@ -359,4 +423,5 @@ export default function Home() {
     </main>
   );
 }
+
 

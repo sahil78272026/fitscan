@@ -147,6 +147,19 @@ export async function updateCalorieGoal(calorieGoal) {
   });
 }
 
+export async function getSuggestedMealPlans() {
+  return request("/settings/meal-plans/suggest", {
+    method: "POST",
+  });
+}
+
+export async function selectMealPlan(mealPlan) {
+  return request("/settings/meal-plan/select", {
+    method: "PUT",
+    body: JSON.stringify({ meal_plan: mealPlan }),
+  });
+}
+
 // --- Calendar ---
 
 export async function getCalendarMonth(year, month) {

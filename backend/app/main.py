@@ -39,6 +39,7 @@ async def init_db_schema(conn):
         ("user_settings", "height_cm", "FLOAT"),
         ("user_settings", "weight_kg", "FLOAT"),
         ("user_settings", "activity_level", "VARCHAR(50) DEFAULT 'moderate'"),
+        ("user_settings", "selected_meal_plan", "TEXT"),
         ("meals", "total_protein", "FLOAT DEFAULT 0.0"),
         ("meals", "total_carbs", "FLOAT DEFAULT 0.0"),
         ("meals", "total_fat", "FLOAT DEFAULT 0.0"),

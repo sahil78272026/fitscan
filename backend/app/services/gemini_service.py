@@ -157,6 +157,77 @@ def _parse_json_from_text(text: str) -> dict:
     return json.loads(clean_text)
 
 
+MULTIPLE_MEAL_PLANS_PROMPT = """You are a master nutritionist and budget culinary advisor.
+Generate 3 DISTINCT 1-day Meal Plans based on the user's parameters:
+
+Parameters:
+- Goal: {goal_type}
+- Dietary Preference: {diet_type}
+- Budget Tier: {budget_tier}
+- Target Daily Calories: ~{calorie_goal} kcal
+- Target Protein: ~{protein_goal} g | Carbs: ~{carbs_goal} g | Fat: ~{fat_goal} g
+
+Provide 3 distinct plans catering to different preferences:
+1. Plan 1: High Protein & Fitness Focus
+2. Plan 2: Balanced Local Staples
+3. Plan 3: Quick & Easy Prep
+
+Return ONLY a valid JSON matching this exact structure:
+{{
+  "plans": [
+    {{
+      "plan_id": "plan_1",
+      "title": "💪 High Protein Power Plan",
+      "tagline": "Maximized protein for optimal muscle retention & recovery",
+      "daily_calories": {calorie_goal},
+      "protein_g": {protein_goal},
+      "carbs_g": {carbs_goal},
+      "fat_g": {fat_goal},
+      "estimated_cost": "Budget Friendly (~₹150/day)",
+      "meals": [
+        {{
+          "meal_type": "Breakfast",
+          "dish_name": "Paneer & Oats Bhurji",
+          "calories": 450,
+          "protein": 28.0,
+          "carbs": 40.0,
+          "fat": 15.0,
+          "description": "Scrambled cottage cheese with rolled oats, cumin, and spinach."
+        }},
+        {{
+          "meal_type": "Lunch",
+          "dish_name": "Chana Dal & Brown Rice",
+          "calories": 550,
+          "protein": 25.0,
+          "carbs": 75.0,
+          "fat": 12.0,
+          "description": "Spiced Bengal gram stew served with brown rice and cucumber."
+        }},
+        {{
+          "meal_type": "Snack",
+          "dish_name": "Roasted Chana & Green Tea",
+          "calories": 200,
+          "protein": 12.0,
+          "carbs": 28.0,
+          "fat": 4.0,
+          "description": "Crunchy dry roasted chickpeas with green tea."
+        }},
+        {{
+          "meal_type": "Dinner",
+          "dish_name": "Soya Chunk Curry & Roti",
+          "calories": 500,
+          "protein": 35.0,
+          "carbs": 50.0,
+          "fat": 12.0,
+          "description": "High-protein soya chunks cooked in tomato gravy with 2 whole wheat rotis."
+        }}
+      ]
+    }}
+  ]
+}}
+"""
+
+
 async def recommend_curated_meals(
     goal_type: str = "fat_loss",
     diet_type: str = "veg",
@@ -205,5 +276,46 @@ async def recommend_curated_meals(
     except Exception as err:
         logger.error(f"Failed to generate meal recommendations: {err}")
         raise ValueError("Unable to generate meal recommendations. Please try again.")
+
+
+async def generate_multiple_meal_plans(
+    goal_type: str = "fat_loss",
+    diet_type: str = "veg",
+    budget_tier: str = "moderate",
+    calorie_goal: int = 2000,
+    protein_goal: int = 150,
+    carbs_goal: int = 200,
+    fat_goal: int = 65
+) -> dict:
+    """
+    Generate 3 distinct full-day meal plan options tailored to user metrics & goals.
+    """
+    settings = get_settings()
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+
+    prompt = MULTIPLE_MEAL_PLANS_PROMPT.format(
+        goal_type=goal_type,
+        diet_type=diet_type,
+        budget_tier=budget_tier,
+        calorie_goal=calorie_goal,
+        protein_goal=protein_goal,
+        carbs_goal=carbs_goal,
+        fat_goal=fat_goal
+    )
+
+    try:
+        response = await client.aio.models.generate_content(
+            model=settings.GEMINI_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.4,
+            ),
+        )
+        return _parse_json_from_text(response.text)
+    except Exception as e:
+        logger.error(f"Failed to generate multiple meal plans: {e}")
+        raise ValueError("Unable to generate candidate meal plans. Please try again.")
+
 
 

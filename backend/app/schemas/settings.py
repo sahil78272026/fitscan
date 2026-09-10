@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Any, Dict
 
 class UserGoalUpdate(BaseModel):
     goal_type: str = Field("fat_loss", pattern="^(fat_loss|weight_loss|muscle_building|muscle_maintain)$")
@@ -21,6 +21,10 @@ class CalorieGoalUpdate(BaseModel):
     calorie_goal: int = Field(..., gt=0, le=10000, description="Daily calorie target")
 
 
+class SelectMealPlanPayload(BaseModel):
+    meal_plan: Dict[str, Any] = Field(..., description="The meal plan object selected by user")
+
+
 class SettingsResponse(BaseModel):
     calorie_goal: int
     protein_goal: int
@@ -34,6 +38,7 @@ class SettingsResponse(BaseModel):
     height_cm: Optional[float] = None
     weight_kg: Optional[float] = None
     activity_level: Optional[str] = "moderate"
+    selected_meal_plan: Optional[Any] = None
 
     class Config:
         from_attributes = True
