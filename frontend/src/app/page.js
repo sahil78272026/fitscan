@@ -10,7 +10,6 @@ import MealCard from "@/components/MealCard";
 import GoalEditor from "@/components/GoalEditor";
 import OnboardingWizard from "@/components/OnboardingWizard";
 import MealPlanSelector from "@/components/MealPlanSelector";
-import MealRecommendations from "@/components/MealRecommendations";
 import DateStrip from "@/components/DateStrip";
 import CalendarGrid from "@/components/CalendarGrid";
 import {
@@ -368,11 +367,6 @@ export default function Home() {
                 goal={summary?.calorie_goal || 2000}
               />
               <MacroProgressBar summary={summary} />
-            </section>
-
-            {/* Curated Budget Meal Recommendations */}
-            <section>
-              <MealRecommendations />
             </section>
 
             {/* Meal Input (Text or Image Scan) — only for today */}
