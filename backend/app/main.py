@@ -20,17 +20,62 @@ logging.basicConfig(
 logger = logging.getLogger("fitscan")
 
 
+from sqlalchemy import text
+
+async def init_db_schema(conn):
+    """Ensure database tables and all new macro & goal columns exist across SQLite and PostgreSQL."""
+    await conn.run_sync(Base.metadata.create_all)
+
+    columns_to_add = [
+        # (table_name, column_name, column_type_and_default)
+        ("user_settings", "protein_goal", "INTEGER DEFAULT 150"),
+        ("user_settings", "carbs_goal", "INTEGER DEFAULT 200"),
+        ("user_settings", "fat_goal", "INTEGER DEFAULT 65"),
+        ("user_settings", "goal_type", "VARCHAR(50) DEFAULT 'fat_loss'"),
+        ("user_settings", "diet_type", "VARCHAR(50) DEFAULT 'veg'"),
+        ("user_settings", "budget_tier", "VARCHAR(50) DEFAULT 'moderate'"),
+        ("user_settings", "age", "INTEGER"),
+        ("user_settings", "gender", "VARCHAR(20)"),
+        ("user_settings", "height_cm", "FLOAT"),
+        ("user_settings", "weight_kg", "FLOAT"),
+        ("user_settings", "activity_level", "VARCHAR(50) DEFAULT 'moderate'"),
+        ("meals", "total_protein", "FLOAT DEFAULT 0.0"),
+        ("meals", "total_carbs", "FLOAT DEFAULT 0.0"),
+        ("meals", "total_fat", "FLOAT DEFAULT 0.0"),
+        ("meals", "image_url", "VARCHAR(500)"),
+        ("food_items", "protein", "FLOAT DEFAULT 0.0"),
+        ("food_items", "carbs", "FLOAT DEFAULT 0.0"),
+        ("food_items", "fat", "FLOAT DEFAULT 0.0"),
+    ]
+
+    is_pg = "postgresql" in str(conn.engine.url)
+
+    for table, col, col_def in columns_to_add:
+        if is_pg:
+            stmt = f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col} {col_def};"
+            try:
+                await conn.execute(text(stmt))
+            except Exception as e:
+                logger.debug(f"Column {table}.{col} creation note: {e}")
+        else:
+            stmt = f"ALTER TABLE {table} ADD COLUMN {col} {col_def};"
+            try:
+                await conn.execute(text(stmt))
+            except Exception:
+                pass
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Create tables on startup (dev only). Use Alembic for production."""
+    """Create tables & migrate schema on startup."""
     logger.info("🏋️ FitScan starting up...")
-    if app_settings.APP_ENV == "development":
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        logger.info("✅ Database tables created/verified")
+    async with engine.begin() as conn:
+        await init_db_schema(conn)
+    logger.info("✅ Database tables & macro schema verified")
     yield
     logger.info("👋 FitScan shutting down...")
     await engine.dispose()
+
 
 
 app = FastAPI(

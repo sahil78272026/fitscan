@@ -10,6 +10,9 @@ class FoodItemBase(BaseModel):
     quantity: float
     unit: str
     calories: int
+    protein: float = 0.0
+    carbs: float = 0.0
+    fat: float = 0.0
 
 
 class FoodItemResponse(FoodItemBase):
@@ -32,6 +35,10 @@ class MealResponse(BaseModel):
     meal_type: str
     raw_input: str
     total_calories: int
+    total_protein: float = 0.0
+    total_carbs: float = 0.0
+    total_fat: float = 0.0
+    image_url: Optional[str] = None
     meal_date: date
     logged_at: datetime
     food_items: list[FoodItemResponse]
@@ -45,7 +52,36 @@ class MealResponse(BaseModel):
 class DailySummaryResponse(BaseModel):
     date: date
     total_calories: int
+    total_protein: float
+    total_carbs: float
+    total_fat: float
     calorie_goal: int
-    remaining: int
+    protein_goal: int
+    carbs_goal: int
+    fat_goal: int
+    remaining_calories: int
+    remaining_protein: float
+    remaining_carbs: float
+    remaining_fat: float
     meal_count: int
     meals: list[MealResponse]
+
+
+# --- Meal Recommendations ---
+
+class MealRecommendationOption(BaseModel):
+    dish_name: str
+    meal_type: str
+    estimated_cost: str
+    calories: int
+    protein: float
+    carbs: float
+    fat: float
+    description: str
+    recipe_summary: str
+
+class MealRecommendationResponse(BaseModel):
+    budget_tier: str
+    diet_type: str
+    recommendations: list[MealRecommendationOption]
+

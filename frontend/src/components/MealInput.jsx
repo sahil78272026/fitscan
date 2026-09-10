@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import styles from "./MealInput.module.css";
 
 const MEAL_TYPES = [
@@ -10,32 +10,85 @@ const MEAL_TYPES = [
   { value: "snack", label: "🍿 Snack", icon: "🍿" },
 ];
 
-export default function MealInput({ onSubmit, isLoading }) {
+export default function MealInput({ onSubmit, onScanImage, isLoading }) {
   const [rawInput, setRawInput] = useState("");
   const [mealType, setMealType] = useState("breakfast");
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const clearFile = () => {
+    setSelectedFile(null);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!rawInput.trim() || isLoading) return;
-    await onSubmit(rawInput.trim(), mealType);
+    if ((!rawInput.trim() && !selectedFile) || isLoading) return;
+
+    if (selectedFile && onScanImage) {
+      await onScanImage(selectedFile, rawInput.trim(), mealType);
+    } else {
+      await onSubmit(rawInput.trim(), mealType);
+    }
+
     setRawInput("");
+    clearFile();
   };
 
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
-      <h3 className={styles.title}>Log a Meal</h3>
+      <div className={styles.headerRow}>
+        <h3 className={styles.title}>Log a Meal</h3>
+        <button
+          type="button"
+          className={styles.photoAttachBtn}
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isLoading}
+          title="Snap/Upload food photo"
+        >
+          📷 Scan Food Photo
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileChange}
+          style={{ display: "none" }}
+        />
+      </div>
+
+      {previewUrl && (
+        <div className={styles.previewContainer}>
+          <img src={previewUrl} alt="Meal preview" className={styles.previewImage} />
+          <button type="button" className={styles.removeImgBtn} onClick={clearFile}>✕ Remove Photo</button>
+        </div>
+      )}
+
       <div className={styles.inputWrapper}>
         <textarea
           id="meal-input"
           className={styles.textarea}
           value={rawInput}
           onChange={(e) => setRawInput(e.target.value)}
-          placeholder="What did you eat? e.g. 2 roti, dal, rice..."
+          placeholder={selectedFile ? "Add optional note for AI (e.g. 2 pieces paratha, 1 cup dal)..." : "What did you eat? e.g. 2 roti, dal, rice..."}
           rows={2}
           maxLength={500}
           disabled={isLoading}
         />
       </div>
+
       <div className={styles.controls}>
         <div className={styles.mealTypes}>
           {MEAL_TYPES.map((type) => (
@@ -51,10 +104,11 @@ export default function MealInput({ onSubmit, isLoading }) {
             </button>
           ))}
         </div>
+
         <button
           type="submit"
           className={styles.submitBtn}
-          disabled={!rawInput.trim() || isLoading}
+          disabled={(!rawInput.trim() && !selectedFile) || isLoading}
         >
           {isLoading ? (
             <span className={styles.spinner} />
@@ -64,7 +118,7 @@ export default function MealInput({ onSubmit, isLoading }) {
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              Add Meal
+              {selectedFile ? "Scan Image & Log" : "Add Meal"}
             </>
           )}
         </button>
@@ -72,3 +126,4 @@ export default function MealInput({ onSubmit, isLoading }) {
     </form>
   );
 }
+

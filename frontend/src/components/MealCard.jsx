@@ -61,11 +61,24 @@ export default function MealCard({ meal, onDelete }) {
       {expanded && (
         <div className={styles.items}>
           <div className={styles.rawInput}>&ldquo;{meal.raw_input}&rdquo;</div>
+
+          {/* Macro breakdown summary */}
+          <div className={styles.macroSummaryRow}>
+            <span style={{ color: "#3b82f6" }}>⚡ P: {meal.total_protein || 0}g</span>
+            <span style={{ color: "#10b981" }}>🌾 C: {meal.total_carbs || 0}g</span>
+            <span style={{ color: "#f59e0b" }}>🥑 F: {meal.total_fat || 0}g</span>
+          </div>
+
           {meal.food_items.map((item) => (
             <div key={item.id} className={styles.foodItem}>
-              <span className={styles.foodName}>
-                {item.quantity > 1 ? `${item.quantity}× ` : ""}{item.name}
-              </span>
+              <div className={styles.foodItemLeft}>
+                <span className={styles.foodName}>
+                  {item.quantity > 1 ? `${item.quantity}× ` : ""}{item.name}
+                </span>
+                <span className={styles.foodMacros}>
+                  P: {item.protein || 0}g · C: {item.carbs || 0}g · F: {item.fat || 0}g
+                </span>
+              </div>
               <span className={styles.foodCalories}>{item.calories} kcal</span>
             </div>
           ))}

@@ -4,8 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.settings import CalorieGoalUpdate, SettingsResponse
-from app.services.meal_service import get_or_create_settings, update_calorie_goal
+from app.schemas.settings import CalorieGoalUpdate, UserGoalUpdate, SettingsResponse
+from app.services.meal_service import get_or_create_settings, update_calorie_goal, update_user_goals
 from app.middleware.auth import get_current_user
 
 logger = logging.getLogger("fitscan.routers.settings")
@@ -18,8 +18,19 @@ async def get_settings(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get current user settings (calorie goal)."""
+    """Get current user settings (goals, budget, diet, macros)."""
     settings = await get_or_create_settings(db, current_user.id)
+    return settings
+
+
+@router.put("/goals", response_model=SettingsResponse)
+async def set_user_goals(
+    payload: UserGoalUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Save user onboarding goals, budget, diet preferences, and auto-calculate daily macros."""
+    settings = await update_user_goals(db, current_user.id, payload.model_dump())
     return settings
 
 
@@ -32,3 +43,4 @@ async def set_calorie_goal(
     """Update the daily calorie goal."""
     settings = await update_calorie_goal(db, current_user.id, payload.calorie_goal)
     return settings
+

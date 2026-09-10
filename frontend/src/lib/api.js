@@ -42,6 +42,37 @@ async function request(endpoint, options = {}, requireAuth = true) {
   return res.json();
 }
 
+async function requestForm(endpoint, formData) {
+  const url = `${API_BASE}${endpoint}`;
+  const headers = {};
+  const token = getToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  if (res.status === 401) {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("fitscan_token");
+      localStorage.removeItem("fitscan_user");
+      window.location.href = "/login";
+    }
+    throw new Error("Session expired. Please log in again.");
+  }
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "Something went wrong" }));
+    throw new Error(error.detail || `HTTP ${res.status}`);
+  }
+
+  return res.json();
+}
+
 // --- Auth ---
 
 export async function sendOtp(phone) {
@@ -78,6 +109,20 @@ export async function logMeal(rawInput, mealType, mealDate = null) {
   });
 }
 
+export async function scanMealImage(imageFile, rawInput = "", mealType = "lunch", mealDate = null) {
+  const formData = new FormData();
+  formData.append("image", imageFile);
+  if (rawInput) formData.append("raw_input", rawInput);
+  if (mealType) formData.append("meal_type", mealType);
+  if (mealDate) formData.append("meal_date", mealDate);
+
+  return requestForm("/meals/scan-image", formData);
+}
+
+export async function getMealRecommendations() {
+  return request("/meals/recommendations");
+}
+
 export async function deleteMeal(mealId) {
   return request(`/meals/${mealId}`, { method: "DELETE" });
 }
@@ -86,6 +131,13 @@ export async function deleteMeal(mealId) {
 
 export async function getSettings() {
   return request("/settings");
+}
+
+export async function updateUserGoals(goalData) {
+  return request("/settings/goals", {
+    method: "PUT",
+    body: JSON.stringify(goalData),
+  });
 }
 
 export async function updateCalorieGoal(calorieGoal) {
@@ -100,3 +152,4 @@ export async function updateCalorieGoal(calorieGoal) {
 export async function getCalendarMonth(year, month) {
   return request(`/calendar/month?year=${year}&month=${month}`);
 }
+

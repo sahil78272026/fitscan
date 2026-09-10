@@ -60,6 +60,23 @@
   gap: 0.5rem;
 }
 
+.goalSetupBtn {
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.goalSetupBtn:hover {
+  background: rgba(59, 130, 246, 0.25);
+}
+
+
 .logoutBtn {
   display: flex;
   align-items: center;

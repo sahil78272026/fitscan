@@ -4,12 +4,24 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import ProgressRing from "@/components/ProgressRing";
+import MacroProgressBar from "@/components/MacroProgressBar";
 import MealInput from "@/components/MealInput";
 import MealCard from "@/components/MealCard";
 import GoalEditor from "@/components/GoalEditor";
+import OnboardingModal from "@/components/OnboardingModal";
+import MealRecommendations from "@/components/MealRecommendations";
 import DateStrip from "@/components/DateStrip";
 import CalendarGrid from "@/components/CalendarGrid";
-import { getDailySummary, logMeal, deleteMeal, updateCalorieGoal, getCalendarMonth } from "@/lib/api";
+import {
+  getDailySummary,
+  logMeal,
+  scanMealImage,
+  deleteMeal,
+  updateCalorieGoal,
+  getCalendarMonth,
+  getSettings,
+  updateUserGoals
+} from "@/lib/api";
 import styles from "./page.module.css";
 
 function formatDateStr(d) {
@@ -30,6 +42,8 @@ export default function Home() {
   const today = useMemo(() => new Date(), []);
   const [selectedDate, setSelectedDate] = useState(today);
   const [summary, setSummary] = useState(null);
+  const [userSettings, setUserSettings] = useState(null);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [toasts, setToasts] = useState([]);
@@ -66,6 +80,15 @@ export default function Home() {
     }
   }, []);
 
+  const fetchSettings = useCallback(async () => {
+    try {
+      const settings = await getSettings();
+      setUserSettings(settings);
+    } catch (err) {
+      // Fail silently
+    }
+  }, []);
+
   const fetchCalendar = useCallback(async (year, month) => {
     try {
       const data = await getCalendarMonth(year, month);
@@ -75,13 +98,13 @@ export default function Home() {
     }
   }, []);
 
-  // Fetch summary when date changes
+  // Fetch summary and settings when authenticated
   useEffect(() => {
     if (isAuthenticated) {
       setLoading(true);
-      fetchSummary(selectedDate).finally(() => setLoading(false));
+      Promise.all([fetchSummary(selectedDate), fetchSettings()]).finally(() => setLoading(false));
     }
-  }, [selectedDate, isAuthenticated, fetchSummary]);
+  }, [selectedDate, isAuthenticated, fetchSummary, fetchSettings]);
 
   // Fetch calendar data for current month
   useEffect(() => {
@@ -117,9 +140,24 @@ export default function Home() {
       await logMeal(rawInput, mealType, dateStr);
       await fetchSummary(selectedDate);
       await fetchCalendar(calendarYear, calendarMonth);
-      showToast("Meal logged! 🎉");
+      showToast("Meal logged & macros updated! 🎉");
     } catch (err) {
       showToast(err.message || "Failed to log meal", "error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleScanMealImage = async (imageFile, rawInput, mealType) => {
+    setSubmitting(true);
+    try {
+      const dateStr = formatDateStr(selectedDate);
+      await scanMealImage(imageFile, rawInput, mealType, dateStr);
+      await fetchSummary(selectedDate);
+      await fetchCalendar(calendarYear, calendarMonth);
+      showToast("Photo analyzed & meal logged! 📷✨");
+    } catch (err) {
+      showToast(err.message || "Failed to analyze food photo", "error");
     } finally {
       setSubmitting(false);
     }
@@ -133,6 +171,17 @@ export default function Home() {
       showToast("Meal removed");
     } catch (err) {
       showToast("Failed to delete meal", "error");
+    }
+  };
+
+  const handleSaveOnboarding = async (goalData) => {
+    try {
+      const updated = await updateUserGoals(goalData);
+      setUserSettings(updated);
+      await fetchSummary(selectedDate);
+      showToast("Fitness goal & target macros calculated! 🎯");
+    } catch (err) {
+      showToast("Failed to save goal settings", "error");
     }
   };
 
@@ -176,6 +225,14 @@ export default function Home() {
         </div>
       )}
 
+      {/* Goal & Budget Onboarding Modal */}
+      <OnboardingModal
+        isOpen={onboardingOpen}
+        onClose={() => setOnboardingOpen(false)}
+        initialSettings={userSettings}
+        onSave={handleSaveOnboarding}
+      />
+
       <div className={styles.container}>
         {/* Header */}
         <header className={styles.header}>
@@ -187,6 +244,13 @@ export default function Home() {
             <p className={styles.date}>{dateLabel}</p>
           </div>
           <div className={styles.headerRight}>
+            <button
+              className={styles.goalSetupBtn}
+              onClick={() => setOnboardingOpen(true)}
+              title="Configure Goal & Budget"
+            >
+              🎯 Goals & Budget
+            </button>
             <GoalEditor
               currentGoal={summary?.calorie_goal || 2000}
               onUpdate={handleUpdateGoal}
@@ -227,7 +291,7 @@ export default function Home() {
           </section>
         )}
 
-        {/* Progress Ring */}
+        {/* Progress Ring & Macro Progress Bars */}
         {loading ? (
           <div className={styles.loader} style={{ height: "200px" }}>
             <div className={styles.loaderSpinner} />
@@ -239,12 +303,22 @@ export default function Home() {
                 consumed={summary?.total_calories || 0}
                 goal={summary?.calorie_goal || 2000}
               />
+              <MacroProgressBar summary={summary} />
             </section>
 
-            {/* Meal Input — only for today */}
+            {/* Curated Budget Meal Recommendations */}
+            <section>
+              <MealRecommendations />
+            </section>
+
+            {/* Meal Input (Text or Image Scan) — only for today */}
             {isToday && (
               <section className={styles.section}>
-                <MealInput onSubmit={handleLogMeal} isLoading={submitting} />
+                <MealInput
+                  onSubmit={handleLogMeal}
+                  onScanImage={handleScanMealImage}
+                  isLoading={submitting}
+                />
               </section>
             )}
 
@@ -268,7 +342,7 @@ export default function Home() {
                     {isToday ? "No meals logged yet today" : "No meals logged on this day"}
                   </p>
                   {isToday && (
-                    <p className={styles.emptyHint}>Start by logging your first meal above</p>
+                    <p className={styles.emptyHint}>Scan a photo or type a meal above to track macros</p>
                   )}
                 </div>
               ) : (
@@ -285,3 +359,4 @@ export default function Home() {
     </main>
   );
 }
+

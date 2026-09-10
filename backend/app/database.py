@@ -8,7 +8,7 @@ settings = get_settings()
 is_sqlite = settings.DATABASE_URL.startswith("sqlite")
 
 engine_kwargs = {
-    "echo": settings.APP_ENV == "development",
+    "echo": False,
 }
 
 if is_sqlite:
