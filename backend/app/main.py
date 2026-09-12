@@ -106,6 +106,6 @@ app.include_router(settings.router)
 app.include_router(calendar.router)
 
 
-@app.get("/api/health")
+@app.api_route("/api/health", methods=["GET", "HEAD"])
 async def health_check():
     return {"status": "healthy", "app": "FitScan"}

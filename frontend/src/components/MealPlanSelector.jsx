@@ -149,6 +149,10 @@ export default function MealPlanSelector({ initialPlans, onSelectPlan, onBackToW
             );
           })}
         </div>
+
+        <div className={styles.legalDisclaimerBox}>
+          ⚖️ <strong>Disclaimer:</strong> FitScan AI meal suggestions and macro estimates are generated for general fitness, wellness, and educational purposes only. They do not constitute medical nutrition therapy or personalized medical advice. Please consult a qualified physician or dietitian regarding specific dietary needs, allergies, or medical conditions.
+        </div>
       </div>
     </div>
   );

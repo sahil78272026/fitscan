@@ -260,6 +260,17 @@
   box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.2);
 }
 
+.legalDisclaimerBox {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.76rem;
+  color: #9ca3af;
+  line-height: 1.4;
+  margin-bottom: 1.25rem;
+}
+
 .wizardFooter {
   display: flex;
   align-items: center;

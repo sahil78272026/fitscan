@@ -6,9 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.models.user import User
+from app.models.settings import UserSettings
 
 logger = logging.getLogger("fitscan.auth_service")
 settings = get_settings()
+
 
 # In-memory OTP store for dev mode: {phone: {"otp": str, "expires_at": datetime}}
 _otp_store: dict = {}
@@ -89,8 +91,22 @@ async def get_or_create_user(db: AsyncSession, phone: str, name: str | None = No
         # Create new user
         user = User(phone=phone, name=name)
         db.add(user)
+        await db.flush()
+
+        user_settings = UserSettings(
+            user_id=user.id,
+            calorie_goal=2000,
+            protein_goal=150,
+            carbs_goal=200,
+            fat_goal=65,
+            goal_type="fat_loss",
+            diet_type="veg",
+            budget_tier="moderate",
+            activity_level="moderate",
+        )
+        db.add(user_settings)
         await db.commit()
         await db.refresh(user)
-        logger.info(f"New user created: {phone} (id={user.id})")
+        logger.info(f"New user created: {phone} (id={user.id}) with default settings")
 
     return user

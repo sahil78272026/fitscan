@@ -157,69 +157,90 @@ def _parse_json_from_text(text: str) -> dict:
     return json.loads(clean_text)
 
 
-MULTIPLE_MEAL_PLANS_PROMPT = """You are a master nutritionist and budget culinary advisor.
-Generate 3 DISTINCT 1-day Meal Plans based on the user's parameters:
+MULTIPLE_MEAL_PLANS_PROMPT = """You are an expert sports nutritionist and budget culinary advisor.
+Generate 3 DISTINCT 1-day Meal Plans tailored STRICTLY to the user's explicit parameters:
 
-Parameters:
-- Goal: {goal_type}
+USER PARAMETERS:
+- Fitness Goal: {goal_type}
 - Dietary Preference: {diet_type}
 - Budget Tier: {budget_tier}
-- Target Daily Calories: ~{calorie_goal} kcal
-- Target Protein: ~{protein_goal} g | Carbs: ~{carbs_goal} g | Fat: ~{fat_goal} g
+- Target Daily Calories: {calorie_goal} kcal
+- Target Daily Protein: {protein_goal} g
+- Target Daily Carbs: {carbs_goal} g
+- Target Daily Fat: {fat_goal} g
 
-Provide 3 distinct plans catering to different preferences:
-1. Plan 1: High Protein & Fitness Focus
-2. Plan 2: Balanced Local Staples
-3. Plan 3: Quick & Easy Prep
+CRITICAL DIET PREFERENCE RULES (MUST BE STRICTLY FOLLOWED):
+1. If diet_type is "non_veg": You MUST feature non-vegetarian protein sources (e.g. Chicken, Eggs, Fish, Mutton) in at least 2 out of the 4 meals per plan.
+2. If diet_type is "vegan": STRICTLY 100% plant-based! NO dairy (milk, paneer, curd, ghee), NO eggs, NO meat, NO fish, NO honey. Use Tofu, Soya Chunks, Legumes, Lentils, Seeds, and Oats.
+3. If diet_type is "veg": STRICTLY Vegetarian! NO meat, NO chicken, NO fish, NO eggs. Use Paneer, Soya, Dals, Rajma, Milk, Curd, and Sprouts.
+4. If diet_type is "eggetarian": Vegetarian + Eggs. MUST include egg dishes (Egg Bhurji, Boiled Eggs, Omelettes, Egg Curry) alongside vegetarian staples. NO meat or fish.
 
-Return ONLY a valid JSON matching this exact structure:
+FITNESS GOAL RULES:
+- "fat_loss": Prioritize high protein density (>2.0g/kg), low refined sugars, and high-fiber vegetables for satiety during deficit.
+- "weight_loss": Moderate caloric deficit with balanced whole foods and portion control.
+- "muscle_building": Caloric surplus with high protein and complex carbohydrates (oats, brown rice, whole wheat rotis) for workout performance and recovery.
+- "muscle_maintain": Balanced maintenance macros and steady energy.
+
+BUDGET TIER RULES:
+- "low_budget": Use budget-friendly local market staples (Eggs, Chana, Rajma, Soya Chunks, Seasonal Veggies, Rice, Wheat Rotis). Estimated cost: ~₹100-140/day.
+- "moderate": Use balanced everyday staples (Paneer, Local Chicken, Oats, Milk, Curd, Tofu). Estimated cost: ~₹180-250/day.
+- "flexible": Premium options allowed (Whey Protein, Fish/Salmon, Avocados, Nuts, Greek Yogurt). Estimated cost: ~₹300+/day.
+
+MACRO SUMMATION REQUIREMENT:
+For each plan, the sum of the 4 meals (Breakfast, Lunch, Snack, Dinner):
+- sum(meal.calories) MUST equal approximately {calorie_goal} kcal (within ±5%).
+- sum(meal.protein) MUST equal approximately {protein_goal} g (within ±5%).
+- sum(meal.carbs) MUST equal approximately {carbs_goal} g (within ±5%).
+- sum(meal.fat) MUST equal approximately {fat_goal} g (within ±5%).
+
+Return ONLY a valid JSON object matching this exact structure (do NOT include markdown codeblocks or extra text):
 {{
   "plans": [
     {{
       "plan_id": "plan_1",
-      "title": "💪 High Protein Power Plan",
-      "tagline": "Maximized protein for optimal muscle retention & recovery",
+      "title": "Short Inspiring Title matched to Goal & Diet",
+      "tagline": "1-line explanation of why this plan fits their goal",
       "daily_calories": {calorie_goal},
       "protein_g": {protein_goal},
       "carbs_g": {carbs_goal},
       "fat_g": {fat_goal},
-      "estimated_cost": "Budget Friendly (~₹150/day)",
+      "estimated_cost": "Estimated Cost String (e.g. ~₹180/day)",
       "meals": [
         {{
           "meal_type": "Breakfast",
-          "dish_name": "Paneer & Oats Bhurji",
+          "dish_name": "Name of Dish matching diet_type",
           "calories": 450,
-          "protein": 28.0,
-          "carbs": 40.0,
-          "fat": 15.0,
-          "description": "Scrambled cottage cheese with rolled oats, cumin, and spinach."
+          "protein": 30.0,
+          "carbs": 45.0,
+          "fat": 12.0,
+          "description": "Short description of ingredients and preparation."
         }},
         {{
           "meal_type": "Lunch",
-          "dish_name": "Chana Dal & Brown Rice",
-          "calories": 550,
-          "protein": 25.0,
-          "carbs": 75.0,
-          "fat": 12.0,
-          "description": "Spiced Bengal gram stew served with brown rice and cucumber."
+          "dish_name": "Name of Dish matching diet_type",
+          "calories": 600,
+          "protein": 45.0,
+          "carbs": 65.0,
+          "fat": 18.0,
+          "description": "Short description of ingredients and preparation."
         }},
         {{
           "meal_type": "Snack",
-          "dish_name": "Roasted Chana & Green Tea",
-          "calories": 200,
-          "protein": 12.0,
-          "carbs": 28.0,
-          "fat": 4.0,
-          "description": "Crunchy dry roasted chickpeas with green tea."
+          "dish_name": "Name of Dish matching diet_type",
+          "calories": 250,
+          "protein": 15.0,
+          "carbs": 30.0,
+          "fat": 8.0,
+          "description": "Short description of ingredients and preparation."
         }},
         {{
           "meal_type": "Dinner",
-          "dish_name": "Soya Chunk Curry & Roti",
+          "dish_name": "Name of Dish matching diet_type",
           "calories": 500,
-          "protein": 35.0,
-          "carbs": 50.0,
-          "fat": 12.0,
-          "description": "High-protein soya chunks cooked in tomato gravy with 2 whole wheat rotis."
+          "protein": 40.0,
+          "carbs": 45.0,
+          "fat": 15.0,
+          "description": "Short description of ingredients and preparation."
         }}
       ]
     }}
@@ -288,15 +309,35 @@ async def generate_multiple_meal_plans(
     fat_goal: int = 65
 ) -> dict:
     """
-    Generate 3 distinct full-day meal plan options tailored to user metrics & goals.
+    Generate 3 distinct full-day meal plan options tailored strictly to user metrics & goals.
     """
     settings = get_settings()
     client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
+    diet_descriptions = {
+        "non_veg": "Non-Vegetarian (MUST include Chicken, Eggs, Fish, or Mutton in meals)",
+        "vegan": "100% Vegan (STRICTLY Plant-Based: NO milk, NO paneer, NO ghee, NO curd, NO eggs, NO meat, NO fish)",
+        "veg": "Vegetarian (Pure Vegetarian: Paneer, Soya, Dals, Milk, Curd — NO meat, NO fish, NO eggs)",
+        "eggetarian": "Eggetarian (Vegetarian + Eggs: Egg Bhurji, Boiled Eggs, Omelette — NO meat or fish)",
+    }
+
+    goal_descriptions = {
+        "fat_loss": "Fat Loss (Caloric deficit with high protein density to burn fat & retain muscle)",
+        "weight_loss": "Weight Loss (Steady caloric deficit, portion control & high fiber)",
+        "muscle_building": "Muscle Building (Caloric surplus with high protein & complex carbs for muscle hypertrophy)",
+        "muscle_maintain": "Maintenance (Maintain current weight with steady energy & balanced macros)",
+    }
+
+    budget_descriptions = {
+        "low_budget": "Pocket Friendly / Low Budget (~₹100-140/day using local staples: Chana, Rajma, Eggs, Soya, Rice, Wheat)",
+        "moderate": "Moderate Budget (~₹180-250/day using Paneer, Chicken, Oats, Milk, Curd, Tofu)",
+        "flexible": "Flexible / Premium Budget (~₹300+/day using Whey Protein, Salmon/Fish, Avocados, Nuts)",
+    }
+
     prompt = MULTIPLE_MEAL_PLANS_PROMPT.format(
-        goal_type=goal_type,
-        diet_type=diet_type,
-        budget_tier=budget_tier,
+        goal_type=goal_descriptions.get(goal_type, goal_type),
+        diet_type=diet_descriptions.get(diet_type, diet_type),
+        budget_tier=budget_descriptions.get(budget_tier, budget_tier),
         calorie_goal=calorie_goal,
         protein_goal=protein_goal,
         carbs_goal=carbs_goal,

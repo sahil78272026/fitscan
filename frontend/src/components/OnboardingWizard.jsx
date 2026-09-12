@@ -267,6 +267,10 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
                 </div>
               </div>
 
+              <div className={styles.legalDisclaimerBox}>
+                ⚖️ <strong>Health & Medical Disclaimer:</strong> FitScan generates AI meal suggestions and macro estimates for general wellness and educational purposes only. FitScan is not a licensed medical provider and does not provide medical nutrition therapy. Consult a physician before beginning any diet program.
+              </div>
+
               <div className={styles.wizardFooter}>
                 <button type="button" className={styles.backBtn} onClick={handleBack}>
                   ← Back

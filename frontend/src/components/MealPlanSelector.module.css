@@ -248,6 +248,18 @@
   cursor: not-allowed;
 }
 
+.legalDisclaimerBox {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 0.85rem 1.1rem;
+  font-size: 0.78rem;
+  color: #9ca3af;
+  line-height: 1.45;
+  margin-top: 1.75rem;
+  text-align: center;
+}
+
 /* Loading & Error States */
 
 .loadingContainer,

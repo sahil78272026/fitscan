@@ -2,6 +2,7 @@ import json
 import logging
 from datetime import date
 from sqlalchemy import select, func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -126,27 +127,34 @@ async def get_daily_summary(db: AsyncSession, user_id: int, target_date: date | 
 
 
 async def get_or_create_settings(db: AsyncSession, user_id: int) -> UserSettings:
-    """Get current settings for user or create default."""
+    """Get current settings for user or create default, safely handling concurrent requests."""
     result = await db.execute(
         select(UserSettings).where(UserSettings.user_id == user_id)
     )
     settings = result.scalar_one_or_none()
 
     if not settings:
-        settings = UserSettings(
-            user_id=user_id,
-            calorie_goal=2000,
-            protein_goal=150,
-            carbs_goal=200,
-            fat_goal=65,
-            goal_type="fat_loss",
-            diet_type="veg",
-            budget_tier="moderate",
-            activity_level="moderate"
-        )
-        db.add(settings)
-        await db.commit()
-        await db.refresh(settings)
+        try:
+            settings = UserSettings(
+                user_id=user_id,
+                calorie_goal=2000,
+                protein_goal=150,
+                carbs_goal=200,
+                fat_goal=65,
+                goal_type="fat_loss",
+                diet_type="veg",
+                budget_tier="moderate",
+                activity_level="moderate"
+            )
+            db.add(settings)
+            await db.commit()
+            await db.refresh(settings)
+        except IntegrityError:
+            await db.rollback()
+            result = await db.execute(
+                select(UserSettings).where(UserSettings.user_id == user_id)
+            )
+            settings = result.scalar_one_or_none()
 
     return settings
 
@@ -180,6 +188,42 @@ def parse_settings_response_dict(settings: UserSettings) -> dict:
     }
 
 
+# Activity level multipliers for TDEE calculation
+ACTIVITY_MULTIPLIERS: dict[str, float] = {
+    "sedentary": 1.2,
+    "light": 1.375,
+    "moderate": 1.55,
+    "very_active": 1.725,
+}
+
+# Configurable Goal Profiles: calorie multiplier, protein factor (g/kg), and fat allocation (% of calories)
+GOAL_PROFILES: dict[str, dict[str, float]] = {
+    "fat_loss": {
+        "calorie_multiplier": 0.80,   # 20% caloric deficit
+        "protein_g_per_kg": 2.2,     # High protein to preserve muscle & increase satiety
+        "fat_pct_calories": 0.32,    # 32% calories from healthy fats
+    },
+    "weight_loss": {
+        "calorie_multiplier": 0.85,   # 15% caloric deficit
+        "protein_g_per_kg": 2.0,     # Moderate-high protein
+        "fat_pct_calories": 0.30,    # 30% calories from healthy fats
+    },
+    "muscle_building": {
+        "calorie_multiplier": 1.12,   # 12% caloric surplus
+        "protein_g_per_kg": 2.2,     # High protein for hypertrophy
+        "fat_pct_calories": 0.25,    # 25% calories from fat (higher carbs to fuel workouts)
+    },
+    "muscle_maintain": {
+        "calorie_multiplier": 1.00,   # Maintenance calories
+        "protein_g_per_kg": 1.8,     # Maintenance protein
+        "fat_pct_calories": 0.28,    # 28% calories from fat
+    },
+}
+
+DEFAULT_GOAL_PROFILE = GOAL_PROFILES["fat_loss"]
+DEFAULT_ACTIVITY_MULTIPLIER = ACTIVITY_MULTIPLIERS["moderate"]
+
+
 def calculate_user_goals(
     goal_type: str = "fat_loss",
     weight_kg: float | None = 70.0,
@@ -189,7 +233,8 @@ def calculate_user_goals(
     activity_level: str | None = "moderate"
 ) -> tuple[int, int, int, int]:
     """
-    Calculate daily calorie and macro goals (Protein, Carbs, Fat) based on BMR, TDEE, and Goal Type.
+    Dynamically calculate daily calorie and macro goals (Protein, Carbs, Fat)
+    based on BMR, TDEE, activity level, and goal profile.
     Returns: (calorie_goal, protein_goal, carbs_goal, fat_goal)
     """
     w = weight_kg or 70.0
@@ -199,40 +244,32 @@ def calculate_user_goals(
     act = activity_level or "moderate"
 
     # Mifflin-St Jeor Equation for BMR
-    if g == "male":
-        bmr = 10 * w + 6.25 * h - 5 * a + 5
-    else:
+    if g and g.lower() == "female":
         bmr = 10 * w + 6.25 * h - 5 * a - 161
+    else:
+        bmr = 10 * w + 6.25 * h - 5 * a + 5
 
-    # Activity multiplier
-    multipliers = {
-        "sedentary": 1.2,
-        "light": 1.375,
-        "moderate": 1.55,
-        "very_active": 1.725
-    }
-    tdee = bmr * multipliers.get(act, 1.55)
+    # Dynamic activity multiplier lookup
+    act_multiplier = ACTIVITY_MULTIPLIERS.get(act, DEFAULT_ACTIVITY_MULTIPLIER)
+    tdee = bmr * act_multiplier
 
-    # Goal adjustment factor & protein target (g per kg bodyweight)
-    if goal_type == "fat_loss":
-        target_calories = int(tdee * 0.80)
-        p_factor = 2.0
-    elif goal_type == "weight_loss":
-        target_calories = int(tdee * 0.85)
-        p_factor = 1.8
-    elif goal_type == "muscle_building":
-        target_calories = int(tdee * 1.12)
-        p_factor = 2.2
-    else:  # muscle_maintain
-        target_calories = int(tdee * 1.00)
-        p_factor = 1.8
+    # Dynamic goal profile lookup
+    profile = GOAL_PROFILES.get(goal_type, DEFAULT_GOAL_PROFILE)
 
-    protein_g = int(w * p_factor)
-    # Fat target: 25% of calories (9 kcal/g)
-    fat_g = int((target_calories * 0.25) / 9)
-    # Carbs target: Remaining calories (4 kcal/g)
-    remaining_cals = target_calories - (protein_g * 4 + fat_g * 9)
-    carbs_g = max(50, int(remaining_cals / 4))
+    # Calculate caloric target
+    target_calories = int(tdee * profile["calorie_multiplier"])
+
+    # Calculate protein target (g = weight_kg * protein_g_per_kg)
+    protein_g = int(w * profile["protein_g_per_kg"])
+    protein_cals = protein_g * 4
+
+    # Calculate fat target (g = (target_calories * fat_pct_calories) / 9)
+    fat_g = int((target_calories * profile["fat_pct_calories"]) / 9)
+    fat_cals = fat_g * 9
+
+    # Calculate carbohydrate target from remaining energy balance
+    remaining_cals = target_calories - (protein_cals + fat_cals)
+    carbs_g = max(30, int(remaining_cals / 4))
 
     return (target_calories, protein_g, carbs_g, fat_g)
 
