@@ -20,6 +20,7 @@ class UserSettings(Base):
     gender = Column(String(20), nullable=True)
     height_cm = Column(Float, nullable=True)
     weight_kg = Column(Float, nullable=True)
+    start_weight_kg = Column(Float, nullable=True)
     activity_level = Column(String(50), nullable=True, default="moderate")
     selected_meal_plan = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

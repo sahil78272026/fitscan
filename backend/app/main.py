@@ -5,10 +5,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.database import engine, Base
-from app.routers import auth, meals, daily_summary, settings, calendar, stats
+from app.routers import auth, meals, daily_summary, settings, calendar, stats, weight
 
 # Import models so they're registered with Base.metadata
-from app.models import User, Meal, FoodItem, UserSettings  # noqa: F401
+from app.models import User, Meal, FoodItem, UserSettings, WeightLog  # noqa: F401
 
 app_settings = get_settings()
 
@@ -38,6 +38,7 @@ async def init_db_schema(conn):
         ("user_settings", "gender", "VARCHAR(20)"),
         ("user_settings", "height_cm", "FLOAT"),
         ("user_settings", "weight_kg", "FLOAT"),
+        ("user_settings", "start_weight_kg", "FLOAT"),
         ("user_settings", "activity_level", "VARCHAR(50) DEFAULT 'moderate'"),
         ("user_settings", "selected_meal_plan", "TEXT"),
         ("meals", "total_protein", "FLOAT DEFAULT 0.0"),
@@ -105,6 +106,7 @@ app.include_router(daily_summary.router)
 app.include_router(settings.router)
 app.include_router(calendar.router)
 app.include_router(stats.router)
+app.include_router(weight.router)
 
 
 @app.api_route("/api/health", methods=["GET", "HEAD"])

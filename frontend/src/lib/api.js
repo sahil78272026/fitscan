@@ -170,3 +170,22 @@ export async function getAdherenceStats() {
   return request("/stats/adherence");
 }
 
+// --- Weight Tracking ---
+
+export async function logWeight(weightKg, loggedDate = null) {
+  const body = { weight_kg: parseFloat(weightKg) };
+  if (loggedDate) body.logged_date = loggedDate;
+  return request("/weight", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function getWeightHistory(days = 30) {
+  return request(`/weight/history?days=${days}`);
+}
+
+export async function deleteWeightLog(logId) {
+  return request(`/weight/${logId}`, { method: "DELETE" });
+}
+

@@ -11,6 +11,7 @@ import MealCard from "@/components/MealCard";
 import DateStrip from "@/components/DateStrip";
 import CalendarGrid from "@/components/CalendarGrid";
 import AdherenceWidget from "@/components/AdherenceWidget";
+import WeightChart from "@/components/WeightChart";
 import {
   getDailySummary,
   logMeal,
@@ -19,6 +20,8 @@ import {
   getCalendarMonth,
   getSettings,
   getAdherenceStats,
+  logWeight,
+  getWeightHistory,
 } from "@/lib/api";
 import styles from "./page.module.css";
 
@@ -41,6 +44,8 @@ export default function Home() {
   const [selectedDate, setSelectedDate] = useState(today);
   const [summary, setSummary] = useState(null);
   const [adherenceStats, setAdherenceStats] = useState(null);
+  const [weightHistory, setWeightHistory] = useState(null);
+  const [weightTimeframe, setWeightTimeframe] = useState(30);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [toasts, setToasts] = useState([]);
@@ -86,6 +91,15 @@ export default function Home() {
     }
   }, []);
 
+  const fetchWeight = useCallback(async (days) => {
+    try {
+      const history = await getWeightHistory(days);
+      setWeightHistory(history);
+    } catch (err) {
+      // Fail silently
+    }
+  }, []);
+
   const fetchSettings = useCallback(async () => {
     try {
       await getSettings();
@@ -93,6 +107,21 @@ export default function Home() {
       // Fail silently
     }
   }, []);
+
+  const handleLogWeight = async (weightKg) => {
+    try {
+      await logWeight(weightKg);
+      await fetchWeight(weightTimeframe);
+      showToast("Weight logged successfully! ⚖️");
+    } catch (err) {
+      showToast(err.message || "Failed to log weight", "error");
+    }
+  };
+
+  const handleWeightTimeframeChange = (days) => {
+    setWeightTimeframe(days);
+    fetchWeight(days);
+  };
 
   const fetchCalendar = useCallback(async (year, month) => {
     try {
@@ -103,13 +132,18 @@ export default function Home() {
     }
   }, []);
 
-  // Fetch summary, stats, and settings when authenticated
+  // Fetch summary, stats, weight, and settings when authenticated
   useEffect(() => {
     if (isAuthenticated) {
       setLoading(true);
-      Promise.all([fetchSummary(selectedDate), fetchStats(), fetchSettings()]).finally(() => setLoading(false));
+      Promise.all([
+        fetchSummary(selectedDate),
+        fetchStats(),
+        fetchWeight(weightTimeframe),
+        fetchSettings(),
+      ]).finally(() => setLoading(false));
     }
-  }, [selectedDate, isAuthenticated, fetchSummary, fetchStats, fetchSettings]);
+  }, [selectedDate, isAuthenticated, fetchSummary, fetchStats, fetchWeight, weightTimeframe, fetchSettings]);
 
   // Fetch calendar data for current month
   useEffect(() => {
@@ -264,6 +298,15 @@ export default function Home() {
           <>
             <section>
               <AdherenceWidget stats={adherenceStats} />
+            </section>
+
+            <section>
+              <WeightChart
+                historyData={weightHistory}
+                onLogWeight={handleLogWeight}
+                onTimeframeChange={handleWeightTimeframeChange}
+                currentTimeframe={weightTimeframe}
+              />
             </section>
 
             <section className={styles.progressSection}>

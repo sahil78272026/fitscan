@@ -7,12 +7,15 @@ import { useAuth } from "@/context/AuthContext";
 import GoalEditor from "@/components/GoalEditor";
 import OnboardingWizard from "@/components/OnboardingWizard";
 import MealPlanSelector from "@/components/MealPlanSelector";
+import WeightChart from "@/components/WeightChart";
 import {
   getSettings,
   updateUserGoals,
   updateCalorieGoal,
   getSuggestedMealPlans,
   selectMealPlan,
+  logWeight,
+  getWeightHistory,
 } from "@/lib/api";
 import styles from "./page.module.css";
 
@@ -21,6 +24,8 @@ export default function ProfilePage() {
   const router = useRouter();
 
   const [userSettings, setUserSettings] = useState(null);
+  const [weightHistory, setWeightHistory] = useState(null);
+  const [timeframe, setTimeframe] = useState(30);
   const [loading, setLoading] = useState(true);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [planSelectorOpen, setPlanSelectorOpen] = useState(false);
@@ -42,6 +47,15 @@ export default function ProfilePage() {
     }, 3000);
   };
 
+  const fetchWeightHistory = useCallback(async (days) => {
+    try {
+      const data = await getWeightHistory(days);
+      setWeightHistory(data);
+    } catch (err) {
+      // Fail silently for weight history
+    }
+  }, []);
+
   const fetchSettings = useCallback(async () => {
     try {
       setLoading(true);
@@ -57,8 +71,9 @@ export default function ProfilePage() {
   useEffect(() => {
     if (isAuthenticated) {
       fetchSettings();
+      fetchWeightHistory(timeframe);
     }
-  }, [isAuthenticated, fetchSettings]);
+  }, [isAuthenticated, fetchSettings, fetchWeightHistory, timeframe]);
 
   // Handle Wizard Complete -> Save goals & generate meal plans
   const handleWizardComplete = async (goalData) => {
@@ -112,6 +127,22 @@ export default function ProfilePage() {
     } catch (err) {
       showToast(err.message || "Failed to load meal plans", "error");
     }
+  };
+
+  const handleLogWeight = async (weightKg) => {
+    try {
+      await logWeight(weightKg);
+      await fetchSettings();
+      await fetchWeightHistory(timeframe);
+      showToast("Weight logged successfully! ⚖️");
+    } catch (err) {
+      showToast(err.message || "Failed to log weight", "error");
+    }
+  };
+
+  const handleTimeframeChange = (days) => {
+    setTimeframe(days);
+    fetchWeightHistory(days);
   };
 
   if (authLoading || loading) {
@@ -248,9 +279,13 @@ export default function ProfilePage() {
               </span>
             </div>
             <div className={styles.metricCard}>
-              <span className={styles.metricLabel}>Weight</span>
+              <span className={styles.metricLabel}>Current Weight</span>
               <span className={styles.metricValue}>
-                {userSettings?.weight_kg ? `${userSettings.weight_kg} kg` : "Not Set"}
+                {weightHistory?.current_weight !== null && weightHistory?.current_weight !== undefined
+                  ? `${weightHistory.current_weight} kg`
+                  : userSettings?.weight_kg
+                  ? `${userSettings.weight_kg} kg`
+                  : "Not Set"}
               </span>
             </div>
             <div className={styles.metricCard}>

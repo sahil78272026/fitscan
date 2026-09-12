@@ -15,6 +15,7 @@ class User(Base):
 
     meals = relationship("Meal", back_populates="user", cascade="all, delete-orphan")
     settings = relationship("UserSettings", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    weight_logs = relationship("WeightLog", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User(id={self.id}, phone={self.phone}, name={self.name})>"

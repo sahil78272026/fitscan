@@ -183,6 +183,7 @@ def parse_settings_response_dict(settings: UserSettings) -> dict:
         "gender": settings.gender,
         "height_cm": settings.height_cm,
         "weight_kg": settings.weight_kg,
+        "start_weight_kg": settings.start_weight_kg,
         "activity_level": settings.activity_level,
         "selected_meal_plan": selected_plan,
     }
@@ -286,6 +287,11 @@ async def update_user_goals(
     for field in ["goal_type", "diet_type", "budget_tier", "age", "gender", "height_cm", "weight_kg", "activity_level"]:
         if field in goal_data and goal_data[field] is not None:
             setattr(settings, field, goal_data[field])
+
+    # Preserve initial starting weight benchmark
+    if "weight_kg" in goal_data and goal_data["weight_kg"] is not None:
+        if settings.start_weight_kg is None:
+            settings.start_weight_kg = goal_data["weight_kg"]
 
     # Compute default targets
     c_goal, p_goal, carbs_g, f_goal = calculate_user_goals(

@@ -37,6 +37,7 @@ class SettingsResponse(BaseModel):
     gender: Optional[str] = None
     height_cm: Optional[float] = None
     weight_kg: Optional[float] = None
+    start_weight_kg: Optional[float] = None
     activity_level: Optional[str] = "moderate"
     selected_meal_plan: Optional[Any] = None
 
