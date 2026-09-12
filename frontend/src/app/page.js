@@ -2,27 +2,23 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import ProgressRing from "@/components/ProgressRing";
 import MacroProgressBar from "@/components/MacroProgressBar";
 import MealInput from "@/components/MealInput";
 import MealCard from "@/components/MealCard";
-import GoalEditor from "@/components/GoalEditor";
-import OnboardingWizard from "@/components/OnboardingWizard";
-import MealPlanSelector from "@/components/MealPlanSelector";
 import DateStrip from "@/components/DateStrip";
 import CalendarGrid from "@/components/CalendarGrid";
+import AdherenceWidget from "@/components/AdherenceWidget";
 import {
   getDailySummary,
   logMeal,
   scanMealImage,
   deleteMeal,
-  updateCalorieGoal,
   getCalendarMonth,
   getSettings,
-  updateUserGoals,
-  getSuggestedMealPlans,
-  selectMealPlan,
+  getAdherenceStats,
 } from "@/lib/api";
 import styles from "./page.module.css";
 
@@ -38,16 +34,13 @@ function isSameDay(d1, d2) {
 }
 
 export default function Home() {
-  const { isAuthenticated, loading: authLoading, user, logout } = useAuth();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
 
   const today = useMemo(() => new Date(), []);
   const [selectedDate, setSelectedDate] = useState(today);
   const [summary, setSummary] = useState(null);
-  const [userSettings, setUserSettings] = useState(null);
-  const [wizardOpen, setWizardOpen] = useState(false);
-  const [planSelectorOpen, setPlanSelectorOpen] = useState(false);
-  const [suggestedPlans, setSuggestedPlans] = useState(null);
+  const [adherenceStats, setAdherenceStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [toasts, setToasts] = useState([]);
@@ -84,15 +77,18 @@ export default function Home() {
     }
   }, []);
 
+  const fetchStats = useCallback(async () => {
+    try {
+      const stats = await getAdherenceStats();
+      setAdherenceStats(stats);
+    } catch (err) {
+      // Fail silently
+    }
+  }, []);
+
   const fetchSettings = useCallback(async () => {
     try {
-      const settings = await getSettings();
-      setUserSettings(settings);
-
-      // If first time user (no weight_kg or no selected_meal_plan), open wizard automatically
-      if (!settings.weight_kg || !settings.selected_meal_plan) {
-        setWizardOpen(true);
-      }
+      await getSettings();
     } catch (err) {
       // Fail silently
     }
@@ -107,13 +103,13 @@ export default function Home() {
     }
   }, []);
 
-  // Fetch summary and settings when authenticated
+  // Fetch summary, stats, and settings when authenticated
   useEffect(() => {
     if (isAuthenticated) {
       setLoading(true);
-      Promise.all([fetchSummary(selectedDate), fetchSettings()]).finally(() => setLoading(false));
+      Promise.all([fetchSummary(selectedDate), fetchStats(), fetchSettings()]).finally(() => setLoading(false));
     }
-  }, [selectedDate, isAuthenticated, fetchSummary, fetchSettings]);
+  }, [selectedDate, isAuthenticated, fetchSummary, fetchStats, fetchSettings]);
 
   // Fetch calendar data for current month
   useEffect(() => {
@@ -148,6 +144,7 @@ export default function Home() {
       const dateStr = formatDateStr(selectedDate);
       await logMeal(rawInput, mealType, dateStr);
       await fetchSummary(selectedDate);
+      await fetchStats();
       await fetchCalendar(calendarYear, calendarMonth);
       showToast("Meal logged & macros updated! 🎉");
     } catch (err) {
@@ -163,6 +160,7 @@ export default function Home() {
       const dateStr = formatDateStr(selectedDate);
       await scanMealImage(imageFile, rawInput, mealType, dateStr);
       await fetchSummary(selectedDate);
+      await fetchStats();
       await fetchCalendar(calendarYear, calendarMonth);
       showToast("Photo analyzed & meal logged! 📷✨");
     } catch (err) {
@@ -176,51 +174,11 @@ export default function Home() {
     try {
       await deleteMeal(mealId);
       await fetchSummary(selectedDate);
+      await fetchStats();
       await fetchCalendar(calendarYear, calendarMonth);
       showToast("Meal removed");
     } catch (err) {
       showToast("Failed to delete meal", "error");
-    }
-  };
-
-  // Step 4 of Onboarding Wizard complete -> Save goals & trigger AI Meal Plan generation
-  const handleWizardComplete = async (goalData) => {
-    try {
-      const updatedSettings = await updateUserGoals(goalData);
-      setUserSettings(updatedSettings);
-      setWizardOpen(false);
-
-      // Open Meal Plan Selector & fetch AI suggestions
-      setPlanSelectorOpen(true);
-      showToast("Metrics saved! Generating meal plans... ✨");
-
-      const plansData = await getSuggestedMealPlans();
-      setSuggestedPlans(plansData);
-    } catch (err) {
-      showToast(err.message || "Failed to save goals", "error");
-    }
-  };
-
-  // User selects a meal plan -> Save selection & land on tracking dashboard
-  const handleSelectMealPlan = async (chosenPlan) => {
-    try {
-      const updated = await selectMealPlan(chosenPlan);
-      setUserSettings(updated);
-      setPlanSelectorOpen(false);
-      await fetchSummary(selectedDate);
-      showToast(`Activated: ${chosenPlan.title}! 🎯`);
-    } catch (err) {
-      showToast(err.message || "Failed to activate meal plan", "error");
-    }
-  };
-
-  const handleUpdateGoal = async (newGoal) => {
-    try {
-      await updateCalorieGoal(newGoal);
-      await fetchSummary(selectedDate);
-      showToast("Goal updated! 🎯");
-    } catch (err) {
-      showToast("Failed to update goal", "error");
     }
   };
 
@@ -254,27 +212,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Step 1-4 Onboarding Wizard (Split screens for Goal, Diet, Budget, Metrics) */}
-      {wizardOpen && (
-        <OnboardingWizard
-          initialSettings={userSettings}
-          onComplete={handleWizardComplete}
-          onCancel={() => setWizardOpen(false)}
-        />
-      )}
-
-      {/* Step 5 Meal Plan Selection */}
-      {planSelectorOpen && (
-        <MealPlanSelector
-          initialPlans={suggestedPlans}
-          onSelectPlan={handleSelectMealPlan}
-          onBackToWizard={() => {
-            setPlanSelectorOpen(false);
-            setWizardOpen(true);
-          }}
-        />
-      )}
-
       <div className={styles.container}>
         {/* Header */}
         <header className={styles.header}>
@@ -286,47 +223,11 @@ export default function Home() {
             <p className={styles.date}>{dateLabel}</p>
           </div>
           <div className={styles.headerRight}>
-            <button
-              className={styles.goalSetupBtn}
-              onClick={() => setWizardOpen(true)}
-              title="Configure Goal & Budget"
-            >
-              🎯 Onboarding & Plans
-            </button>
-            <GoalEditor
-              currentGoal={summary?.calorie_goal || 2000}
-              onUpdate={handleUpdateGoal}
-            />
-            <button className={styles.logoutBtn} onClick={logout} title="Logout">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16,17 21,12 16,7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-            </button>
+            <Link href="/profile" className={styles.profileBtn} title="Profile & Settings">
+              👤 Profile
+            </Link>
           </div>
         </header>
-
-        {/* Active Selected Meal Plan Banner (If available) */}
-        {userSettings?.selected_meal_plan && (
-          <section className={styles.activePlanBanner}>
-            <div className={styles.bannerInfo}>
-              <span className={styles.bannerBadge}>Active Meal Plan</span>
-              <h3 className={styles.bannerTitle}>
-                {userSettings.selected_meal_plan.title || "Custom Fitness Plan"}
-              </h3>
-              <p className={styles.bannerTagline}>
-                {userSettings.selected_meal_plan.tagline || "Optimized for your daily macronutrient targets"}
-              </p>
-            </div>
-            <button
-              className={styles.changePlanBtn}
-              onClick={() => setPlanSelectorOpen(true)}
-            >
-              🔄 Change Plan
-            </button>
-          </section>
-        )}
 
         {/* Date Strip */}
         <section>
@@ -361,6 +262,10 @@ export default function Home() {
           </div>
         ) : (
           <>
+            <section>
+              <AdherenceWidget stats={adherenceStats} />
+            </section>
+
             <section className={styles.progressSection}>
               <ProgressRing
                 consumed={summary?.total_calories || 0}

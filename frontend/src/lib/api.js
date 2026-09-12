@@ -160,9 +160,13 @@ export async function selectMealPlan(mealPlan) {
   });
 }
 
-// --- Calendar ---
+// --- Calendar & Stats ---
 
 export async function getCalendarMonth(year, month) {
   return request(`/calendar/month?year=${year}&month=${month}`);
+}
+
+export async function getAdherenceStats() {
+  return request("/stats/adherence");
 }
 

@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.database import engine, Base
-from app.routers import auth, meals, daily_summary, settings, calendar
+from app.routers import auth, meals, daily_summary, settings, calendar, stats
 
 # Import models so they're registered with Base.metadata
 from app.models import User, Meal, FoodItem, UserSettings  # noqa: F401
@@ -104,6 +104,7 @@ app.include_router(meals.router)
 app.include_router(daily_summary.router)
 app.include_router(settings.router)
 app.include_router(calendar.router)
+app.include_router(stats.router)
 
 
 @app.api_route("/api/health", methods=["GET", "HEAD"])
