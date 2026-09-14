@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRY_HOURS: int = 720  # 30 days
 
-    # OTP
+    # OTP & Auth
     DEV_OTP: str = "123456"  # dev mode OTP — bypasses SMS
     OTP_EXPIRY_SECONDS: int = 300  # 5 minutes
 

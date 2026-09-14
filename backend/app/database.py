@@ -4,8 +4,16 @@ from app.config import get_settings
 
 settings = get_settings()
 
+raw_url = settings.DATABASE_URL
+if raw_url.startswith("postgresql://"):
+    db_url = raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+elif raw_url.startswith("postgres://"):
+    db_url = raw_url.replace("postgres://", "postgresql+asyncpg://", 1)
+else:
+    db_url = raw_url
+
 # SQLite needs connect_args for check_same_thread
-is_sqlite = settings.DATABASE_URL.startswith("sqlite")
+is_sqlite = db_url.startswith("sqlite")
 
 engine_kwargs = {
     "echo": False,
@@ -17,7 +25,7 @@ else:
     engine_kwargs["pool_size"] = 5
     engine_kwargs["max_overflow"] = 10
 
-engine = create_async_engine(settings.DATABASE_URL, **engine_kwargs)
+engine = create_async_engine(db_url, **engine_kwargs)
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,

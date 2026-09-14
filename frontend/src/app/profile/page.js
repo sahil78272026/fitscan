@@ -244,7 +244,12 @@ export default function ProfilePage() {
           )}
 
           <div className={styles.actionBtnRow}>
-            <button className={styles.primaryBtn} onClick={handleOpenPlanSelector}>
+            {selectedPlan && (
+              <Link href="/meal-plan" className={styles.primaryBtn} style={{ textDecoration: "none", textAlign: "center" }}>
+                📖 View Full Meal Plan Schedule →
+              </Link>
+            )}
+            <button className={selectedPlan ? styles.secondaryBtn : styles.primaryBtn} onClick={handleOpenPlanSelector}>
               🔄 {selectedPlan ? "Change Meal Plan" : "Generate Meal Plans"}
             </button>
             <button className={styles.secondaryBtn} onClick={() => setWizardOpen(true)}>

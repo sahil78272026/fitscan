@@ -89,6 +89,13 @@ export async function verifyOtp(phone, otp, name = null) {
   }, false);
 }
 
+export async function verifyFirebaseToken(idToken, phone = null, name = null) {
+  return request("/auth/firebase-verify", {
+    method: "POST",
+    body: JSON.stringify({ firebase_token: idToken, phone, name }),
+  }, false);
+}
+
 export async function getMe() {
   return request("/auth/me");
 }

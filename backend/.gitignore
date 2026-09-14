@@ -26,3 +26,5 @@ alembic/versions/__pycache__/
 .DS_Store
 *.log
 commands.md
+
+scripts/

@@ -257,6 +257,9 @@ export default function Home() {
             <p className={styles.date}>{dateLabel}</p>
           </div>
           <div className={styles.headerRight}>
+            <Link href="/meal-plan" className={styles.profileBtn} title="View Meal Plan Schedule">
+              📋 Meal Plan
+            </Link>
             <Link href="/profile" className={styles.profileBtn} title="Profile & Settings">
               👤 Profile
             </Link>

@@ -18,6 +18,12 @@ class VerifyOtpRequest(BaseModel):
     name: Optional[str] = Field(None, max_length=100, description="User's name (for new registration)")
 
 
+class FirebaseVerifyRequest(BaseModel):
+    firebase_token: str = Field(..., description="Firebase Auth ID Token")
+    phone: Optional[str] = Field(None, description="Formatted phone number")
+    name: Optional[str] = Field(None, max_length=100, description="User's name (for new registration)")
+
+
 class UserResponse(BaseModel):
     id: int
     phone: str

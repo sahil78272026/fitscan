@@ -189,11 +189,12 @@ USER PARAMETERS:
 - Target Daily Carbs: {carbs_goal} g
 - Target Daily Fat: {fat_goal} g
 
-CRITICAL DIET PREFERENCE RULES (MUST BE STRICTLY FOLLOWED):
-1. If diet_type is "non_veg": You MUST feature non-vegetarian protein sources (e.g. Chicken, Eggs, Fish, Mutton) in at least 2 out of the 4 meals per plan.
-2. If diet_type is "vegan": STRICTLY 100% plant-based! NO dairy (milk, paneer, curd, ghee), NO eggs, NO meat, NO fish, NO honey. Use Tofu, Soya Chunks, Legumes, Lentils, Seeds, and Oats.
-3. If diet_type is "veg": STRICTLY Vegetarian! NO meat, NO chicken, NO fish, NO eggs. Use Paneer, Soya, Dals, Rajma, Milk, Curd, and Sprouts.
-4. If diet_type is "eggetarian": Vegetarian + Eggs. MUST include egg dishes (Egg Bhurji, Boiled Eggs, Omelettes, Egg Curry) alongside vegetarian staples. NO meat or fish.
+CRITICAL DIET PREFERENCE & VARIETY RULES (MUST BE STRICTLY FOLLOWED):
+1. SOYA CAP & DIVERSITY RULE: Do NOT overuse Soya Bean / Soya Chunks! Soya chunks MUST NOT appear in more than 1 meal out of 4 per day (maximum once per daily plan). Ensure rich culinary variety across meals using diverse Indian staples.
+2. If diet_type is "non_veg": You MUST feature non-vegetarian protein sources (e.g. Chicken, Eggs, Fish, Mutton) in at least 2 out of the 4 meals per plan.
+3. If diet_type is "vegan": STRICTLY 100% plant-based! NO dairy (milk, paneer, curd, ghee), NO eggs, NO meat, NO fish, NO honey. Use Kala Chana, Rajma, Moong Sprouts, Sattu (Roasted Chana Flour), Besan (Chickpea Flour Chilla), Tofu, Lentils/Dals (Masoor, Toor, Chana Dal), Roasted Peanuts, Oats, and Soya Chunks (max once/day).
+4. If diet_type is "veg": STRICTLY Vegetarian! NO meat, NO chicken, NO fish, NO eggs. Use Paneer, Curd/Dahi, Chaach, Kala Chana, Rajma, Moong Sprouts, Sattu, Besan Chilla, Dals, Milk, Peanuts, and Soya Chunks (max once/day).
+5. If diet_type is "eggetarian": Vegetarian + Eggs. MUST include egg dishes (Egg Bhurji, Boiled Eggs, Omelettes, Egg Curry) alongside vegetarian staples. NO meat or fish.
 
 FITNESS GOAL RULES:
 - "fat_loss": Prioritize high protein density (>2.0g/kg), low refined sugars, and high-fiber vegetables for satiety during deficit.
@@ -202,8 +203,8 @@ FITNESS GOAL RULES:
 - "muscle_maintain": Balanced maintenance macros and steady energy.
 
 BUDGET TIER RULES:
-- "low_budget": Use budget-friendly local market staples (Eggs, Chana, Rajma, Soya Chunks, Seasonal Veggies, Rice, Wheat Rotis). Estimated cost: ~₹100-140/day.
-- "moderate": Use balanced everyday staples (Paneer, Local Chicken, Oats, Milk, Curd, Tofu). Estimated cost: ~₹180-250/day.
+- "low_budget": Use diverse, highly affordable local market staples (Kala Chana, Rajma, Moong Sprouts, Besan Chilla, Sattu, Dahi/Chaach, Eggs, Masoor/Toor Dal, Roasted Peanuts, Seasonal Veggies, Rice, Wheat Rotis). Do NOT rely heavily on Soya Chunks. Estimated cost: ~₹100-140/day.
+- "moderate": Use balanced everyday staples (Paneer, Eggs, Local Chicken, Oats, Milk, Curd, Tofu, Dals). Estimated cost: ~₹180-250/day.
 - "flexible": Premium options allowed (Whey Protein, Fish/Salmon, Avocados, Nuts, Greek Yogurt). Estimated cost: ~₹300+/day.
 
 MACRO SUMMATION REQUIREMENT:

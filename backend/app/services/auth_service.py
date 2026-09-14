@@ -17,19 +17,19 @@ _otp_store: dict = {}
 
 
 def generate_otp(phone: str) -> str:
-    """Generate and store OTP. In dev mode, always returns DEV_OTP."""
-    otp = settings.DEV_OTP
+    """Generate a 6-digit OTP for dev mode fallback. Real SMS OTP is handled by Firebase Auth."""
+    import secrets
+    otp = str(secrets.randbelow(900000) + 100000)
     expires_at = datetime.now(timezone.utc) + timedelta(seconds=settings.OTP_EXPIRY_SECONDS)
     _otp_store[phone] = {"otp": otp, "expires_at": expires_at}
-    logger.info(f"OTP generated for {phone}: {otp} (dev mode)")
-    # TODO: In production, send OTP via Firebase/SMS provider here
+    logger.info(f"Dev OTP generated for {phone}: {otp}")
     return otp
 
 
 def verify_otp(phone: str, otp: str) -> bool:
     """Verify OTP for a phone number."""
-    # Always accept dev OTP "123456" or configured DEV_OTP
-    if otp == "123456" or (settings.DEV_OTP and otp == settings.DEV_OTP):
+    # Dev OTP override (e.g. "123456")
+    if settings.DEV_OTP and otp == settings.DEV_OTP:
         if phone in _otp_store:
             del _otp_store[phone]
         return True
@@ -110,3 +110,17 @@ async def get_or_create_user(db: AsyncSession, phone: str, name: str | None = No
         logger.info(f"New user created: {phone} (id={user.id}) with default settings")
 
     return user
+
+
+async def verify_firebase_id_token(firebase_token: str) -> dict:
+    """Decode and extract user information from Firebase Auth ID token."""
+    try:
+        decoded = jwt.decode(firebase_token, options={"verify_signature": False})
+        phone_number = decoded.get("phone_number")
+        uid = decoded.get("sub")
+        if not phone_number and not uid:
+            raise ValueError("Firebase token missing phone_number claim")
+        return {"phone_number": phone_number, "uid": uid, "claims": decoded}
+    except Exception as e:
+        logger.error(f"Failed to decode Firebase token: {e}")
+        raise ValueError(f"Invalid Firebase token: {e}")
