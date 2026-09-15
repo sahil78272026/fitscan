@@ -15,7 +15,7 @@
   width: 100%;
   height: 100%;
   transform: rotate(-90deg);
-  filter: drop-shadow(0 0 20px rgba(99, 102, 241, 0.15));
+  filter: drop-shadow(0 0 24px rgba(232, 160, 32, 0.2));
 }
 
 .track {
@@ -40,7 +40,8 @@
 }
 
 .consumed {
-  font-size: 2.2rem;
+  font-family: 'Fraunces', serif;
+  font-size: 2.8rem;
   font-weight: 700;
   color: var(--color-text-primary);
   letter-spacing: -0.02em;
@@ -55,8 +56,8 @@
 
 .unit {
   font-size: 0.75rem;
-  color: var(--color-text-tertiary);
-  font-weight: 500;
+  color: var(--color-primary);
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
@@ -74,7 +75,8 @@
 }
 
 .statValue {
-  font-size: 1.3rem;
+  font-family: 'Fraunces', serif;
+  font-size: 1.4rem;
   font-weight: 600;
   color: var(--color-text-primary);
 }

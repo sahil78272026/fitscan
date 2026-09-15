@@ -31,11 +31,11 @@ export default function MacroProgressBar({ summary }) {
         {/* Protein */}
         <div className={styles.macroItem}>
           <div className={styles.macroHeader}>
-            <span className={styles.macroName} style={{ color: "#3b82f6" }}>⚡ Protein</span>
+            <span className={styles.macroName} style={{ color: "var(--color-protein)" }}>🥩 Protein</span>
             <span className={styles.macroValue}>{total_protein} / {protein_goal}g</span>
           </div>
           <div className={styles.track}>
-            <div className={styles.fill} style={{ width: `${proteinPct}%`, backgroundColor: "#3b82f6" }} />
+            <div className={styles.fill} style={{ width: `${proteinPct}%`, backgroundColor: "var(--color-protein)" }} />
           </div>
           <div className={styles.macroFooter}>
             <span>{remaining_protein}g left</span>
@@ -46,11 +46,11 @@ export default function MacroProgressBar({ summary }) {
         {/* Carbs */}
         <div className={styles.macroItem}>
           <div className={styles.macroHeader}>
-            <span className={styles.macroName} style={{ color: "#10b981" }}>🌾 Carbs</span>
+            <span className={styles.macroName} style={{ color: "var(--color-carbs)" }}>🌾 Carbs</span>
             <span className={styles.macroValue}>{total_carbs} / {carbs_goal}g</span>
           </div>
           <div className={styles.track}>
-            <div className={styles.fill} style={{ width: `${carbsPct}%`, backgroundColor: "#10b981" }} />
+            <div className={styles.fill} style={{ width: `${carbsPct}%`, backgroundColor: "var(--color-carbs)" }} />
           </div>
           <div className={styles.macroFooter}>
             <span>{remaining_carbs}g left</span>
@@ -61,11 +61,11 @@ export default function MacroProgressBar({ summary }) {
         {/* Fat */}
         <div className={styles.macroItem}>
           <div className={styles.macroHeader}>
-            <span className={styles.macroName} style={{ color: "#f59e0b" }}>🥑 Fats</span>
+            <span className={styles.macroName} style={{ color: "var(--color-fat)" }}>🥑 Fats</span>
             <span className={styles.macroValue}>{total_fat} / {fat_goal}g</span>
           </div>
           <div className={styles.track}>
-            <div className={styles.fill} style={{ width: `${fatPct}%`, backgroundColor: "#f59e0b" }} />
+            <div className={styles.fill} style={{ width: `${fatPct}%`, backgroundColor: "var(--color-fat)" }} />
           </div>
           <div className={styles.macroFooter}>
             <span>{remaining_fat}g left</span>

@@ -1,3 +1,4 @@
+import base64
 import json
 import logging
 from google import genai
@@ -92,6 +93,41 @@ Rules:
 """
 
 
+def extract_raw_image_bytes(data: bytes) -> bytes:
+    if not data:
+        return data
+    # Strip data URI header if present (e.g. data:image/jpeg;base64,...)
+    if data.startswith(b"data:") and b"," in data:
+        try:
+            _, b64_part = data.split(b",", 1)
+            return base64.b64decode(b64_part)
+        except Exception:
+            pass
+    # If Base64 string bytes (JPEG starts with /9j/, PNG with iVBORw, WebP with UklGR)
+    if data.startswith(b"/9j/") or data.startswith(b"iVBORw") or data.startswith(b"UklGR"):
+        try:
+            return base64.b64decode(data)
+        except Exception:
+            pass
+    return data
+
+
+def detect_image_mime_type(data: bytes, fallback_mime: str = "image/jpeg") -> str:
+    if not data or len(data) < 8:
+        return "image/jpeg"
+    if data.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if data.startswith(b"RIFF") and data[8:12] == b"WEBP":
+        return "image/webp"
+    if data.startswith(b"\x47\x49\x46\x38"):
+        return "image/gif"
+    if fallback_mime and fallback_mime.startswith("image/"):
+        return fallback_mime
+    return "image/jpeg"
+
+
 async def analyze_food(raw_input: str, image_bytes: bytes | None = None, mime_type: str = "image/jpeg") -> dict:
     """
     Send food text and optional image to Gemini for structured calorie & macro breakdown.
@@ -102,8 +138,11 @@ async def analyze_food(raw_input: str, image_bytes: bytes | None = None, mime_ty
 
     contents = []
     if image_bytes:
+        raw_bytes = extract_raw_image_bytes(image_bytes)
+        safe_mime = detect_image_mime_type(raw_bytes, mime_type)
+        logger.info(f"Analyzing image: received_len={len(image_bytes)}, decoded_len={len(raw_bytes)}, mime={safe_mime}")
         contents.append(
-            types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
+            types.Part.from_bytes(data=raw_bytes, mime_type=safe_mime)
         )
     
     prompt_text = raw_input if raw_input and raw_input.strip() else "Analyze the food in this image and provide complete calorie & macro breakdown."

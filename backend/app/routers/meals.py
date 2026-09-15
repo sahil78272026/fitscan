@@ -1,6 +1,8 @@
+import base64
 import logging
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -14,6 +16,13 @@ from datetime import date
 logger = logging.getLogger("fitscan.routers.meals")
 
 router = APIRouter(prefix="/api/meals", tags=["Meals"])
+
+
+class ScanImageBase64Request(BaseModel):
+    photo_base64: str
+    raw_input: Optional[str] = None
+    meal_type: str = "lunch"
+    meal_date: Optional[str] = None
 
 
 @router.post("", response_model=MealResponse, status_code=201)
@@ -37,6 +46,38 @@ async def log_meal(
     except Exception as e:
         logger.error(f"Failed to log meal: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to analyze food: {str(e)}")
+
+
+@router.post("/scan-image-base64", response_model=MealResponse, status_code=201)
+async def scan_meal_image_base64(
+    payload: ScanImageBase64Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Log a meal using Base64 encoded food image JSON payload."""
+    try:
+        b64_str = payload.photo_base64
+        if "," in b64_str:
+            b64_str = b64_str.split(",", 1)[1]
+
+        image_bytes = base64.b64decode(b64_str)
+        target_date = date.fromisoformat(payload.meal_date) if payload.meal_date else date.today()
+
+        meal = await create_meal(
+            db=db,
+            user_id=current_user.id,
+            raw_input=payload.raw_input or f"Scanned {payload.meal_type} photo",
+            meal_type=payload.meal_type,
+            target_meal_date=target_date,
+            image_bytes=image_bytes,
+            mime_type="image/jpeg"
+        )
+        return meal
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to scan base64 meal image: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to analyze image: {str(e)}")
 
 
 @router.post("/scan-image", response_model=MealResponse, status_code=201)

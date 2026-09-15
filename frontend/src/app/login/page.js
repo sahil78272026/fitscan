@@ -7,6 +7,14 @@ import { sendOtp, verifyOtp, verifyFirebaseToken } from "@/lib/api";
 import { auth, RecaptchaVerifier, signInWithPhoneNumber, isFirebaseConfigured } from "@/lib/firebase";
 import styles from "./page.module.css";
 
+function cleanPhoneNumber(val) {
+  let digits = (val || "").replace(/\D/g, "");
+  if (digits.length > 10 && digits.startsWith("91")) {
+    digits = digits.slice(2);
+  }
+  return digits.slice(0, 10);
+}
+
 export default function LoginPage() {
   const [step, setStep] = useState("phone"); // "phone" | "otp" | "name"
   const [phone, setPhone] = useState("");
@@ -44,11 +52,12 @@ export default function LoginPage() {
 
   const handleSendOtp = async (e) => {
     e.preventDefault();
-    if (!phone.trim()) return;
+    const clean = cleanPhoneNumber(phone);
+    if (clean.length < 10) return;
     setLoading(true);
     setError("");
 
-    const formatted = phone.startsWith("+") ? phone : `+91${phone}`;
+    const formatted = `+91${clean}`;
 
     // 1. Try Firebase Phone Auth (Blaze Project fitscan-54e95)
     if (isFirebaseConfigured()) {
@@ -166,8 +175,8 @@ export default function LoginPage() {
               <input
                 type="tel"
                 className={styles.input}
-                value={phone.replace("+91", "")}
-                onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                value={cleanPhoneNumber(phone)}
+                onChange={(e) => setPhone(cleanPhoneNumber(e.target.value))}
                 placeholder="9876543210"
                 maxLength={10}
                 autoFocus
@@ -175,7 +184,7 @@ export default function LoginPage() {
               />
             </div>
             <div id="recaptcha-container" style={{ margin: "1rem 0", display: "flex", justifyContent: "center" }}></div>
-            <button type="submit" className={styles.button} disabled={loading || phone.replace("+91", "").length < 10}>
+            <button type="submit" className={styles.button} disabled={loading || cleanPhoneNumber(phone).length !== 10}>
               {loading ? <span className={styles.spinner} /> : "Send OTP"}
             </button>
             <p className={styles.devHint}>

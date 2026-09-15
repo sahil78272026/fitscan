@@ -5,10 +5,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.database import engine, Base
-from app.routers import auth, meals, daily_summary, settings, calendar, stats, weight
+from app.routers import auth, meals, daily_summary, settings, calendar, stats, weight, steps
 
 # Import models so they're registered with Base.metadata
-from app.models import User, Meal, FoodItem, UserSettings, WeightLog  # noqa: F401
+from app.models import User, Meal, FoodItem, UserSettings, WeightLog, StepLog  # noqa: F401
 
 app_settings = get_settings()
 
@@ -93,7 +93,7 @@ cors_origins = [o.strip() for o in app_settings.FRONTEND_ORIGIN.split(",") if o.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
-    allow_origin_regex=r"https://.*\.netlify\.app|https://.*\.vercel\.app|http://localhost:\d+",
+    allow_origin_regex=r"https://.*\.netlify\.app|https://.*\.vercel\.app|http://localhost:\d+|http://127\.0\.0\.1:\d+|http://192\.168\.\d+\.\d+:\d+|http://10\.0\.2\.2:\d+",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -107,6 +107,7 @@ app.include_router(settings.router)
 app.include_router(calendar.router)
 app.include_router(stats.router)
 app.include_router(weight.router)
+app.include_router(steps.router)
 
 
 @app.api_route("/api/health", methods=["GET", "HEAD"])
