@@ -48,6 +48,7 @@ export default function MealCard({ meal, onDelete }) {
               onClick={handleDelete}
               disabled={deleting}
               title="Delete meal"
+              aria-label="Delete meal"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="3,6 5,6 21,6" />
