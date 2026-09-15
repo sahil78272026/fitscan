@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import styles from "./DateStrip.module.css";
 
 function getWeekDates(referenceDate) {
@@ -62,18 +62,18 @@ export default function DateStrip({ selectedDate, onDateSelect, calendarData, on
   };
 
   // Update week when selectedDate changes externally (from calendar grid)
-  useEffect(() => {
-    if (selectedDate) {
-      setWeekRef(selectedDate);
-    }
-  }, [selectedDate]);
+  const [prevSelectedDate, setPrevSelectedDate] = useState(selectedDate);
+  if (selectedDate && (!prevSelectedDate || !isSameDay(selectedDate, prevSelectedDate))) {
+    setPrevSelectedDate(selectedDate);
+    setWeekRef(selectedDate);
+  }
 
   const isToday = isSameDay(selectedDate || today, today);
 
   return (
     <div className={styles.container}>
       <div className={styles.strip}>
-        <button className={styles.navBtn} onClick={prevWeek} title="Previous week">‹</button>
+        <button className={styles.navBtn} onClick={prevWeek} title="Previous week" aria-label="Previous week">‹</button>
 
         <div className={styles.days}>
           {weekDates.map((d, i) => {
@@ -81,12 +81,22 @@ export default function DateStrip({ selectedDate, onDateSelect, calendarData, on
             const isSelected = isSameDay(d, selectedDate || today);
             const isCurrentDay = isSameDay(d, today);
             const hasData = !!dataMap[dateStr];
+            const formattedDayLabel = d.toLocaleDateString("en-US", {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+            });
+            const dataInfo = hasData ? ", has logged data" : "";
+            const dayLabel = `${formattedDayLabel}${dataInfo}`;
 
             return (
               <button
                 key={dateStr}
                 className={`${styles.day} ${isSelected ? styles.selected : ""} ${isCurrentDay ? styles.today : ""}`}
                 onClick={() => onDateSelect(d)}
+                aria-label={dayLabel}
+                aria-pressed={isSelected}
+                aria-current={isCurrentDay ? "date" : undefined}
               >
                 <span className={styles.dayName}>{DAY_NAMES[i]}</span>
                 <span className={styles.dayNum}>{d.getDate()}</span>
@@ -96,7 +106,7 @@ export default function DateStrip({ selectedDate, onDateSelect, calendarData, on
           })}
         </div>
 
-        <button className={styles.navBtn} onClick={nextWeek} title="Next week">›</button>
+        <button className={styles.navBtn} onClick={nextWeek} title="Next week" aria-label="Next week">›</button>
       </div>
 
       <div className={styles.actions}>
@@ -107,6 +117,8 @@ export default function DateStrip({ selectedDate, onDateSelect, calendarData, on
           className={`${styles.calendarToggle} ${calendarOpen ? styles.calendarActive : ""}`}
           onClick={onToggleCalendar}
           title="Toggle calendar"
+          aria-label="Toggle calendar grid"
+          aria-expanded={calendarOpen}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />

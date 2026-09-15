@@ -96,9 +96,9 @@ export default function CalendarGrid({
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <button className={styles.navBtn} onClick={prevMonth}>‹</button>
+        <button className={styles.navBtn} onClick={prevMonth} aria-label="Previous month">‹</button>
         <span className={styles.monthLabel}>{MONTH_NAMES[month - 1]} {year}</span>
-        <button className={styles.navBtn} onClick={nextMonth}>›</button>
+        <button className={styles.navBtn} onClick={nextMonth} aria-label="Next month">›</button>
       </div>
 
       <div className={styles.dayHeaders}>
@@ -114,6 +114,13 @@ export default function CalendarGrid({
           const isSelected = selectedDate && isSameDay(d, selectedDate);
           const isToday = isSameDay(d, today);
           const status = getStatusColor(dayData);
+          const formattedDate = d.toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          });
+          const calInfo = dayData && isCurrentMonth ? `, ${dayData.total_calories} calories logged` : "";
+          const dateLabel = `${formattedDate}${calInfo}`;
 
           return (
             <button
@@ -126,6 +133,9 @@ export default function CalendarGrid({
                 ${status ? styles[status] : ""}
               `}
               onClick={() => onDateSelect(d)}
+              aria-label={dateLabel}
+              aria-pressed={isSelected}
+              aria-current={isToday ? "date" : undefined}
             >
               <span className={styles.cellNum}>{d.getDate()}</span>
               {dayData && isCurrentMonth && (
