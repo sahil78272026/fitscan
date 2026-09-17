@@ -9,25 +9,31 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0d1117"
+      "backgroundColor": "#181410"
     },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.fitscan.wellness",
       "infoPlist": {
-        "NSMotionUsageDescription": "FitScan needs access to your motion data to count your daily steps."
+        "NSMotionUsageDescription": "FitScan needs access to your motion data to count your daily steps.",
+        "NSCameraUsageDescription": "FitScan needs camera access to scan your meals and track calories."
       }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0d1117"
+        "backgroundColor": "#181410"
       },
-      "package": "com.fitscan.app",
+      "package": "com.fitscan.wellness",
+      "googleServicesFile": "./google-services.json",
+      "versionCode": 1,
       "permissions": [
         "ACTIVITY_RECOGNITION",
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "WRITE_EXTERNAL_STORAGE",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
       ]
     },
     "web": {
@@ -35,6 +41,15 @@
     },
     "plugins": [
       "expo-asset"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "9d9194f3-ba90-479a-9f2e-fd1df2c55938"
+      }
+    },
+    "owner": "sahilg045",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
   }
 }

@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     JWT_EXPIRY_HOURS: int = 720  # 30 days
 
     # OTP & Auth
-    DEV_OTP: str = "123456"  # dev mode OTP — bypasses SMS
+    DEV_OTP: str = ""  # Set to "123456" in local .env only — empty in production
     OTP_EXPIRY_SECONDS: int = 300  # 5 minutes
 
     # Misc

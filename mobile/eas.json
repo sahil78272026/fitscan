@@ -1,0 +1,49 @@
+{
+  "cli": {
+    "version": ">= 20.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://192.168.1.6:8000/api"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://fitscan-zb5j.onrender.com/api"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://fitscan-zb5j.onrender.com/api",
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyBlRK5Ez-RS27HUijdoK3ygNIEauAMGVBI",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "fitscan-54e95.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "fitscan-54e95",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "fitscan-54e95.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "672726878490",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:672726878490:web:833a52fedb95d4ff60c4a3"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./play-store-key.json",
+        "track": "internal"
+      }
+    }
+  }
+}

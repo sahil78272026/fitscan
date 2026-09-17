@@ -125,14 +125,17 @@ const FirebasePhoneAuthBridge = forwardRef(function FirebasePhoneAuthBridge(
     sendOtp: (phoneNumber) => {
       return new Promise((resolve, reject) => {
         pendingCallbacks.current['otp'] = { resolve, reject };
-        const js = `window.sendOtp('${phoneNumber}'); true;`;
+        // Use JSON.stringify to safely escape the phone number (especially the + sign)
+        const safePhone = JSON.stringify(phoneNumber);
+        const js = `window.sendOtp(${safePhone}); true;`;
         webViewRef.current?.injectJavaScript(js);
       });
     },
     verifyOtp: (code) => {
       return new Promise((resolve, reject) => {
         pendingCallbacks.current['verify'] = { resolve, reject };
-        const js = `window.verifyOtp('${code}'); true;`;
+        const safeCode = JSON.stringify(code);
+        const js = `window.verifyOtp(${safeCode}); true;`;
         webViewRef.current?.injectJavaScript(js);
       });
     },
@@ -170,6 +173,10 @@ const FirebasePhoneAuthBridge = forwardRef(function FirebasePhoneAuthBridge(
 
         case 'error':
           console.warn('[FirebasePhoneAuthBridge]', data);
+          break;
+
+        case 'debug':
+          console.log('[FirebasePhoneAuthBridge:WebView]', data);
           break;
       }
     } catch (err) {

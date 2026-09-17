@@ -28,8 +28,9 @@ def generate_otp(phone: str) -> str:
 
 def verify_otp(phone: str, otp: str) -> bool:
     """Verify OTP for a phone number."""
-    # Dev OTP override (e.g. "123456")
-    if settings.DEV_OTP and otp == settings.DEV_OTP:
+    # Dev OTP override — only in development mode
+    if settings.APP_ENV == "development" and settings.DEV_OTP and otp == settings.DEV_OTP:
+        logger.warning(f"Dev OTP bypass used for {phone} (APP_ENV=development)")
         if phone in _otp_store:
             del _otp_store[phone]
         return True

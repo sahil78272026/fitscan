@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "672726878490",
+    "project_id": "fitscan-54e95",
+    "storage_bucket": "fitscan-54e95.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:672726878490:android:8afede325f6bf8ba60c4a3",
+        "android_client_info": {
+          "package_name": "com.fitscan.wellness"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBWVe6ELgnGU77AxZ1O3HUsvIHUsVMOO6A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
