@@ -20,6 +20,14 @@ export default function MealCard({ meal, onDelete }) {
     await onDelete(meal.id);
   };
 
+  const handleKeyDown = (e) => {
+    if (e.target !== e.currentTarget) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      setExpanded((prev) => !prev);
+    }
+  };
+
   const timeStr = new Date(meal.logged_at).toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
@@ -30,6 +38,11 @@ export default function MealCard({ meal, onDelete }) {
     <div
       className={`${styles.card} ${expanded ? styles.expanded : ""} ${deleting ? styles.deleting : ""}`}
       onClick={() => setExpanded(!expanded)}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-expanded={expanded}
+      aria-label={`${meal.meal_type} meal, ${meal.total_calories} kcal. ${expanded ? "Collapse" : "Expand"} details.`}
     >
       <div className={styles.header}>
         <div className={styles.left}>
@@ -48,6 +61,7 @@ export default function MealCard({ meal, onDelete }) {
               onClick={handleDelete}
               disabled={deleting}
               title="Delete meal"
+              aria-label={`Delete ${meal.meal_type} meal`}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="3,6 5,6 21,6" />
