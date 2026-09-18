@@ -3,7 +3,6 @@
   border: 1px solid var(--color-border);
   border-radius: 1rem;
   padding: 1rem 1.25rem;
-  cursor: pointer;
   transition: all 0.25s ease;
   overflow: hidden;
 }
@@ -23,6 +22,28 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
+}
+
+.expandBtn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 0.5rem;
+}
+
+.expandBtn:focus-visible {
+  outline: 2px solid var(--color-accent, #3b82f6);
+  outline-offset: 4px;
 }
 
 .left {
@@ -53,7 +74,7 @@
   color: var(--color-text-tertiary);
 }
 
-.right {
+.rightInfo {
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -85,13 +106,19 @@
   color: var(--color-text-tertiary);
   cursor: pointer;
   transition: all 0.2s ease;
-  margin-left: 0.5rem;
+  margin-left: 0.25rem;
+  flex-shrink: 0;
 }
 
 .deleteBtn:hover {
   background: rgba(239, 68, 68, 0.1);
   border-color: rgba(239, 68, 68, 0.3);
   color: var(--color-danger);
+}
+
+.deleteBtn:focus-visible {
+  outline: 2px solid var(--color-danger, #ef4444);
+  outline-offset: 2px;
 }
 
 .items {
@@ -165,11 +192,11 @@
   white-space: nowrap;
 }
 
-
 .expandHint {
   display: flex;
+  align-items: center;
   justify-content: center;
-  margin-top: 0.5rem;
+  margin-left: 0.25rem;
 }
 
 .chevron {
@@ -177,6 +204,6 @@
   transition: transform 0.25s ease;
 }
 
-.card.expanded .chevron {
+.chevronExpanded {
   transform: rotate(180deg);
 }
