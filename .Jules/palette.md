@@ -1,0 +1,3 @@
+## 2025-05-18 - Interactive Cards Require Separate Native Buttons Rather Than Container Role="Button"
+**Learning:** Container elements (like cards or list items) containing internal actions (like delete or edit buttons) must NOT be given `role="button"`, as nesting `<button>` inside `role="button"` violates W3C ARIA specs, breaks screen reader tree hierarchy, and causes keydown event bubbling bugs.
+**Action:** Always use separate native `<button type="button">` elements for expandable card triggers and adjacent actions (e.g. delete button), pairing expandable triggers with `aria-expanded` and `aria-controls`.
