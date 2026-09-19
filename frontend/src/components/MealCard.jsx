@@ -27,39 +27,61 @@ export default function MealCard({ meal, onDelete }) {
   });
 
   return (
-    <div
-      className={`${styles.card} ${expanded ? styles.expanded : ""} ${deleting ? styles.deleting : ""}`}
-      onClick={() => setExpanded(!expanded)}
-    >
+    <div className={`${styles.card} ${expanded ? styles.expanded : ""} ${deleting ? styles.deleting : ""}`}>
       <div className={styles.header}>
-        <div className={styles.left}>
-          <span className={styles.icon}>{MEAL_ICONS[meal.meal_type] || "🍽️"}</span>
-          <div className={styles.info}>
-            <span className={styles.mealType}>{meal.meal_type}</span>
-            <span className={styles.time}>{timeStr}</span>
+        <button
+          type="button"
+          className={styles.expandToggleBtn}
+          onClick={() => setExpanded(!expanded)}
+          aria-expanded={expanded}
+          aria-controls={`meal-details-${meal.id}`}
+          aria-label={`${meal.meal_type} meal, ${meal.total_calories} calories. ${expanded ? "Collapse" : "Expand"} details`}
+        >
+          <div className={styles.left}>
+            <span className={styles.icon}>{MEAL_ICONS[meal.meal_type] || "🍽️"}</span>
+            <div className={styles.info}>
+              <span className={styles.mealType}>{meal.meal_type}</span>
+              <span className={styles.time}>{timeStr}</span>
+            </div>
           </div>
-        </div>
-        <div className={styles.right}>
-          <span className={styles.calories}>{meal.total_calories}</span>
-          <span className={styles.kcalLabel}>kcal</span>
-          {onDelete && (
-            <button
-              className={styles.deleteBtn}
-              onClick={handleDelete}
-              disabled={deleting}
-              title="Delete meal"
+          <div className={styles.rightInfo}>
+            <span className={styles.calories}>{meal.total_calories}</span>
+            <span className={styles.kcalLabel}>kcal</span>
+            <svg
+              className={`${styles.chevron} ${expanded ? styles.rotated : ""}`}
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="3,6 5,6 21,6" />
-                <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2" />
-              </svg>
-            </button>
-          )}
-        </div>
+              <polyline points="6,9 12,15 18,9" />
+            </svg>
+          </div>
+        </button>
+
+        {onDelete && (
+          <button
+            type="button"
+            className={styles.deleteBtn}
+            onClick={handleDelete}
+            disabled={deleting}
+            title="Delete meal"
+            aria-label={deleting ? "Deleting meal" : "Delete meal"}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3,6 5,6 21,6" />
+              <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {expanded && (
-        <div className={styles.items}>
+        <div id={`meal-details-${meal.id}`} className={styles.items}>
           <div className={styles.rawInput}>&ldquo;{meal.raw_input}&rdquo;</div>
 
           {/* Macro breakdown summary */}
@@ -84,22 +106,6 @@ export default function MealCard({ meal, onDelete }) {
           ))}
         </div>
       )}
-
-      <div className={styles.expandHint}>
-        <svg
-          className={styles.chevron}
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <polyline points="6,9 12,15 18,9" />
-        </svg>
-      </div>
     </div>
   );
 }
