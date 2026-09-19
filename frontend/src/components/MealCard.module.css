@@ -3,7 +3,6 @@
   border: 1px solid var(--color-border);
   border-radius: 1rem;
   padding: 1rem 1.25rem;
-  cursor: pointer;
   transition: all 0.25s ease;
   overflow: hidden;
 }
@@ -23,6 +22,28 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
+}
+
+.expandToggleBtn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.expandToggleBtn:focus-visible {
+  outline: 2px solid var(--color-primary, #6366f1);
+  outline-offset: 4px;
+  border-radius: 0.5rem;
 }
 
 .left {
@@ -53,7 +74,7 @@
   color: var(--color-text-tertiary);
 }
 
-.right {
+.rightInfo {
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -85,13 +106,18 @@
   color: var(--color-text-tertiary);
   cursor: pointer;
   transition: all 0.2s ease;
-  margin-left: 0.5rem;
+  margin-left: 0.25rem;
 }
 
 .deleteBtn:hover {
   background: rgba(239, 68, 68, 0.1);
   border-color: rgba(239, 68, 68, 0.3);
   color: var(--color-danger);
+}
+
+.deleteBtn:focus-visible {
+  outline: 2px solid var(--color-danger, #ef4444);
+  outline-offset: 2px;
 }
 
 .items {
@@ -165,18 +191,12 @@
   white-space: nowrap;
 }
 
-
-.expandHint {
-  display: flex;
-  justify-content: center;
-  margin-top: 0.5rem;
-}
-
 .chevron {
   color: var(--color-text-tertiary);
   transition: transform 0.25s ease;
+  margin-left: 0.25rem;
 }
 
-.card.expanded .chevron {
+.chevron.rotated {
   transform: rotate(180deg);
 }
