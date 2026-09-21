@@ -26,10 +26,28 @@ export default function MealCard({ meal, onDelete }) {
     hour12: true,
   });
 
+  const handleCardClick = (e) => {
+    // Prevent toggling if clicked inside action buttons like delete
+    if (e.target.closest("button")) return;
+    setExpanded(!expanded);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      if (e.target.closest("button")) return;
+      e.preventDefault();
+      setExpanded(!expanded);
+    }
+  };
+
   return (
     <div
       className={`${styles.card} ${expanded ? styles.expanded : ""} ${deleting ? styles.deleting : ""}`}
-      onClick={() => setExpanded(!expanded)}
+      onClick={handleCardClick}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      aria-expanded={expanded}
+      aria-label={`${meal.meal_type} logged at ${timeStr}, ${meal.total_calories} calories. Click to ${expanded ? "collapse" : "expand"} details.`}
     >
       <div className={styles.header}>
         <div className={styles.left}>
@@ -46,8 +64,10 @@ export default function MealCard({ meal, onDelete }) {
             <button
               className={styles.deleteBtn}
               onClick={handleDelete}
+              onKeyDown={(e) => e.stopPropagation()}
               disabled={deleting}
               title="Delete meal"
+              aria-label={`Delete ${meal.meal_type} meal`}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="3,6 5,6 21,6" />
