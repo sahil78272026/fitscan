@@ -62,17 +62,9 @@ export default function MealPlanPage() {
   return (
     <main className={styles.main}>
       <div className={styles.container}>
-        {/* Navigation Header */}
+        {/* Header */}
         <header className={styles.header}>
-          <div className={styles.navRow}>
-            <Link href="/" className={styles.backBtn}>
-              ← Tracker
-            </Link>
-            <Link href="/profile" className={styles.backBtn}>
-              👤 Profile
-            </Link>
-          </div>
-          <h1 className={styles.pageTitle}>Meal Plan Details</h1>
+          <h1 className={styles.pageTitle}>📋 AI Meal Plan</h1>
         </header>
 
         {!selectedPlan ? (
@@ -197,9 +189,6 @@ export default function MealPlanPage() {
             <section className={styles.actionRow}>
               <Link href="/profile" className={styles.primaryBtn}>
                 🔄 Change Meal Plan
-              </Link>
-              <Link href="/" className={styles.secondaryBtn}>
-                🏋️ Back to Tracker
               </Link>
             </section>
           </>

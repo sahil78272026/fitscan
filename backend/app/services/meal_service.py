@@ -1,7 +1,7 @@
 import json
 import logging
 from datetime import date
-from sqlalchemy import select, func
+from sqlalchemy import select, func, distinct, desc
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -90,13 +90,65 @@ async def delete_meal(db: AsyncSession, user_id: int, meal_id: int) -> bool:
     return True
 
 
+async def get_recent_food_items(db: AsyncSession, user_id: int, limit: int = 15) -> list[dict]:
+    """
+    Get deduplicated recent food items from the user's last 5 meal sessions.
+    Returns a list of unique food item dicts (name, quantity, unit, calories, protein, carbs, fat, meal_type)
+    ordered by most recently eaten, capped at `limit`.
+    """
+    # Get the last 5 distinct meal dates for this user
+    recent_dates_result = await db.execute(
+        select(Meal.meal_date)
+        .where(Meal.user_id == user_id)
+        .group_by(Meal.meal_date)
+        .order_by(desc(Meal.meal_date))
+        .limit(5)
+    )
+    recent_dates = [row[0] for row in recent_dates_result.all()]
+
+    if not recent_dates:
+        return []
+
+    # Get all food items with their parent meal's meal_type, ordered by most recent
+    result = await db.execute(
+        select(FoodItem, Meal.meal_type)
+        .join(Meal, FoodItem.meal_id == Meal.id)
+        .where(Meal.user_id == user_id, Meal.meal_date.in_(recent_dates))
+        .order_by(desc(Meal.logged_at))
+    )
+    rows = result.all()
+
+    # Deduplicate by (lowercase name + meal_type), keeping the most recent occurrence
+    seen_keys = set()
+    unique_items = []
+    for item, meal_type in rows:
+        name_key = (item.name.strip().lower(), meal_type)
+        if name_key not in seen_keys:
+            seen_keys.add(name_key)
+            unique_items.append({
+                "name": item.name,
+                "quantity": item.quantity,
+                "unit": item.unit,
+                "calories": item.calories,
+                "protein": item.protein,
+                "carbs": item.carbs,
+                "fat": item.fat,
+                "meal_type": meal_type,
+            })
+        if len(unique_items) >= limit:
+            break
+
+    return unique_items
+
+
 async def get_daily_summary(db: AsyncSession, user_id: int, target_date: date | None = None) -> dict:
-    """Get summary for a specific date: total calories & macros, goals, remaining values, meals."""
+    """Get summary for a specific date: total calories & macros, goals, remaining values, meals, and recent food suggestions."""
     if target_date is None:
         target_date = date.today()
 
-    # Get meals
+    # Get meals and recent food items in parallel-style (sequential but both lightweight DB queries)
     meals = await get_meals_by_date(db, user_id, target_date)
+    recent_items = await get_recent_food_items(db, user_id)
 
     # Calculate totals
     total_calories = sum(m.total_calories for m in meals)
@@ -123,6 +175,7 @@ async def get_daily_summary(db: AsyncSession, user_id: int, target_date: date | 
         "remaining_fat": max(0.0, round(settings.fat_goal - total_fat, 1)),
         "meal_count": len(meals),
         "meals": meals,
+        "recent_items": recent_items,
     }
 
 

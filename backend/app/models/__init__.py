@@ -5,3 +5,4 @@ from app.models.weight import WeightLog
 from app.models.step import StepLog
 
 __all__ = ["User", "Meal", "FoodItem", "UserSettings", "WeightLog", "StepLog"]
+    

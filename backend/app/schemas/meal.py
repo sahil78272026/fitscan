@@ -49,6 +49,17 @@ class MealResponse(BaseModel):
 
 # --- Daily Summary ---
 
+class RecentFoodItem(BaseModel):
+    name: str
+    quantity: float
+    unit: str
+    calories: int
+    protein: float = 0.0
+    carbs: float = 0.0
+    fat: float = 0.0
+    meal_type: str = "lunch"
+
+
 class DailySummaryResponse(BaseModel):
     date: date
     total_calories: int
@@ -65,6 +76,7 @@ class DailySummaryResponse(BaseModel):
     remaining_fat: float
     meal_count: int
     meals: list[MealResponse]
+    recent_items: list[RecentFoodItem] = []
 
 
 # --- Meal Recommendations ---

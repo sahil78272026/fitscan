@@ -87,10 +87,14 @@ export async function getMe() {
   return request('/auth/me');
 }
 
-// --- Daily Summary ---
+// --- Daily Summary & Calendar ---
 export async function getDailySummary(date = null) {
   const query = date ? `?date=${date}` : '';
   return request(`/daily-summary${query}`);
+}
+
+export async function getCalendarMonth(year, month) {
+  return request(`/calendar/month?year=${year}&month=${month}`);
 }
 
 // --- Step Tracking ---
@@ -227,5 +231,14 @@ export async function logWeight(weightKg, loggedDate = null) {
 
 export async function getWeightHistory(days = 30) {
   return request(`/weight/history?days=${days}`);
+}
+
+export async function deleteWeightLog(logId) {
+  return request(`/weight/${logId}`, { method: 'DELETE' });
+}
+
+// --- Stats & Adherence ---
+export async function getAdherenceStats() {
+  return request('/stats/adherence');
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import styles from "./MealInput.module.css";
 
 const MEAL_TYPES = [
@@ -10,12 +10,35 @@ const MEAL_TYPES = [
   { value: "snack", label: "🍿 Snack", icon: "🍿" },
 ];
 
-export default function MealInput({ onSubmit, onScanImage, isLoading }) {
+function getMealTypeFromTime() {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 11) return "breakfast";
+  if (hour >= 11 && hour < 15) return "lunch";
+  if (hour >= 15 && hour < 18) return "snack";
+  if (hour >= 18 && hour < 23) return "dinner";
+  return "snack"; // late night
+}
+
+export default function MealInput({ onSubmit, onScanImage, isLoading, recentItems = [] }) {
   const [rawInput, setRawInput] = useState("");
-  const [mealType, setMealType] = useState("breakfast");
+  const [mealType, setMealType] = useState(getMealTypeFromTime);
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Filter recent items to only show those matching the selected meal type
+  const filteredRecentItems = useMemo(
+    () => recentItems.filter((item) => item.meal_type === mealType),
+    [recentItems, mealType]
+  );
+
+  const handleSuggestionClick = (itemName) => {
+    setRawInput((prev) => {
+      const trimmed = prev.trim();
+      if (!trimmed) return itemName;
+      return `${trimmed}, ${itemName}`;
+    });
+  };
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -88,6 +111,27 @@ export default function MealInput({ onSubmit, onScanImage, isLoading }) {
           disabled={isLoading}
         />
       </div>
+
+      {filteredRecentItems.length > 0 && (
+        <div className={styles.suggestionsSection}>
+          <span className={styles.suggestionsLabel}>Recent:</span>
+          <div className={styles.suggestionsChips}>
+            {filteredRecentItems.map((item, idx) => (
+              <button
+                key={`${item.name}-${idx}`}
+                type="button"
+                className={styles.suggestionChip}
+                onClick={() => handleSuggestionClick(item.name)}
+                disabled={isLoading}
+                title={`${item.calories} kcal · P:${item.protein}g · C:${item.carbs}g · F:${item.fat}g`}
+              >
+                {item.name}
+                <span className={styles.chipCal}>{item.calories}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className={styles.controls}>
         <div className={styles.mealTypes}>

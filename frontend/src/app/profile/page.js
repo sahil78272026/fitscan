@@ -193,12 +193,9 @@ export default function ProfilePage() {
       )}
 
       <div className={styles.container}>
-        {/* Navigation Header */}
+        {/* Header */}
         <header className={styles.header}>
-          <Link href="/" className={styles.backBtn}>
-            ← Back to Tracker
-          </Link>
-          <h1 className={styles.pageTitle}>Profile & Goals</h1>
+          <h1 className={styles.pageTitle}>👤 Profile & Goals</h1>
         </header>
 
         {/* User Card */}

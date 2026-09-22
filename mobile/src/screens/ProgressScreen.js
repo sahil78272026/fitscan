@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,22 +10,27 @@ import {
   Alert,
   Platform,
   StatusBar,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getWeightHistory, logWeight, getSettings } from '../services/api';
+import { useFocusEffect } from '@react-navigation/native';
+import { getWeightHistory, logWeight, deleteWeightLog, getSettings } from '../services/api';
+import WeightTrendChart from '../components/WeightTrendChart';
 
 export default function ProgressScreen() {
   const [weightInput, setWeightInput] = useState('');
+  const [timeframe, setTimeframe] = useState(30);
   const [history, setHistory] = useState(null);
   const [userSettings, setUserSettings] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (days = timeframe) => {
     try {
       setLoading(true);
       const [histData, settingsData] = await Promise.all([
-        getWeightHistory(30),
+        getWeightHistory(days),
         getSettings(),
       ]);
       setHistory(histData);
@@ -34,12 +39,20 @@ export default function ProgressScreen() {
       console.warn('ProgressScreen load error:', err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, []);
+  }, [timeframe]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useFocusEffect(
+    useCallback(() => {
+      loadData(timeframe);
+    }, [loadData, timeframe])
+  );
+
+  const handleTimeframeChange = (days) => {
+    setTimeframe(days);
+    loadData(days);
+  };
 
   const handleSaveWeight = async () => {
     const w = parseFloat(weightInput);
@@ -53,15 +66,33 @@ export default function ProgressScreen() {
       await logWeight(w);
       setWeightInput('');
       Alert.alert('Weight Saved ⚖️', `Logged ${w} kg`);
-      await loadData();
+      await loadData(timeframe);
     } catch (err) {
-      Alert.alert('Error', 'Failed to log weight');
+      Alert.alert('Error', err.message || 'Failed to log weight');
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) {
+  const handleDeleteEntry = async (logId) => {
+    Alert.alert('Delete Entry', 'Are you sure you want to remove this weight entry?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteWeightLog(logId);
+            await loadData(timeframe);
+          } catch (err) {
+            Alert.alert('Error', 'Failed to delete weight entry');
+          }
+        },
+      },
+    ]);
+  };
+
+  if (loading && !refreshing) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loader}>
@@ -72,28 +103,76 @@ export default function ProgressScreen() {
     );
   }
 
-  const latestWeight = history?.entries?.[0]?.weight_kg || userSettings?.weight_kg || 75.0;
+  const logs = history?.logs || [];
+  const startWeight = history?.start_weight;
+  const currentWeight = history?.current_weight || userSettings?.weight_kg || 75.0;
+  const netChange = history?.net_change_kg;
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.topHeader}>
-        <Text style={styles.brandTitle}>FitScan Progress</Text>
+        <Text style={styles.brandTitle}>📈 FitScan Progress</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
-        {/* Weight Hero Box */}
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              loadData(timeframe);
+            }}
+            tintColor="#E8A020"
+          />
+        }
+      >
+        {/* Weight Hero & Change Stats Box */}
         <View style={styles.heroCard}>
           <Text style={styles.heroLabel}>CURRENT WEIGHT</Text>
           <View style={styles.weightDisplayRow}>
-            <Text style={styles.weightVal}>{latestWeight}</Text>
+            <Text style={styles.weightVal}>{currentWeight}</Text>
             <Text style={styles.weightUnit}>kg</Text>
           </View>
           <Text style={styles.heroSubtext}>
             Goal: {(userSettings?.goal_type || 'fat_loss').replace('_', ' ')} • target ~0.4 kg / week
           </Text>
+
+          {/* 3 Metrics: Start | Current | Net Change */}
+          <View style={styles.statsRow}>
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>Start</Text>
+              <Text style={styles.statVal}>{startWeight ? `${startWeight} kg` : '--'}</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>Current</Text>
+              <Text style={styles.statVal}>{currentWeight ? `${currentWeight} kg` : '--'}</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>Net Change</Text>
+              <Text
+                style={[
+                  styles.statVal,
+                  netChange < 0 && styles.lossText,
+                  netChange > 0 && styles.gainText,
+                ]}
+              >
+                {netChange !== null && netChange !== undefined
+                  ? `${netChange > 0 ? '+' : ''}${netChange} kg`
+                  : '--'}
+              </Text>
+            </View>
+          </View>
         </View>
 
-        {/* Quick Log Weight */}
+        {/* Visual Weight Trend Bar Chart */}
+        <WeightTrendChart
+          logs={logs}
+          currentTimeframe={timeframe}
+          onTimeframeChange={handleTimeframeChange}
+        />
+
+        {/* Quick Log Weight Form */}
         <Text style={styles.sectionTitle}>⚖️ Log Weight Entry</Text>
         <View style={styles.card}>
           <View style={styles.weightRow}>
@@ -116,17 +195,31 @@ export default function ProgressScreen() {
         </View>
 
         {/* Weight Log History List */}
-        <Text style={styles.sectionTitle}>📅 History (Past 30 Days)</Text>
+        <Text style={styles.sectionTitle}>📅 History (Past {timeframe} Days)</Text>
         <View style={styles.card}>
-          {history?.entries?.length === 0 ? (
-            <Text style={styles.emptyText}>No weight entries logged yet.</Text>
+          {logs.length === 0 ? (
+            <Text style={styles.emptyText}>No weight entries logged for this timeframe.</Text>
           ) : (
-            history?.entries?.map((item) => (
-              <View key={item.id} style={styles.historyRow}>
-                <Text style={styles.historyDate}>{item.logged_date}</Text>
-                <Text style={styles.historyVal}>{item.weight_kg} kg</Text>
-              </View>
-            ))
+            logs
+              .slice()
+              .reverse()
+              .map((item) => (
+                <View key={item.id} style={styles.historyRow}>
+                  <View>
+                    <Text style={styles.historyDate}>{item.logged_date}</Text>
+                  </View>
+                  <View style={styles.historyRight}>
+                    <Text style={styles.historyVal}>{item.weight_kg} kg</Text>
+                    <TouchableOpacity
+                      style={styles.deleteBtn}
+                      onPress={() => handleDeleteEntry(item.id)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.deleteText}>🗑️</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))
           )}
         </View>
       </ScrollView>
@@ -168,9 +261,9 @@ const styles = StyleSheet.create({
   heroCard: {
     backgroundColor: '#221D17',
     borderRadius: 16,
-    padding: 24,
+    padding: 20,
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#3A3128',
   },
@@ -196,10 +289,38 @@ const styles = StyleSheet.create({
     color: '#A79A85',
   },
   heroSubtext: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#A79A85',
-    marginTop: 8,
+    marginTop: 4,
+    marginBottom: 16,
     textTransform: 'capitalize',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#2D261F',
+  },
+  statBox: {
+    alignItems: 'center',
+  },
+  statLabel: {
+    fontSize: 11,
+    color: '#A79A85',
+    marginBottom: 2,
+  },
+  statVal: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#F4ECDD',
+  },
+  lossText: {
+    color: '#3fb950',
+  },
+  gainText: {
+    color: '#f85149',
   },
   sectionTitle: {
     fontSize: 15,
@@ -248,9 +369,15 @@ const styles = StyleSheet.create({
   historyRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#2C251D',
+  },
+  historyRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   historyDate: {
     fontSize: 14,
@@ -260,5 +387,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: 'bold',
     color: '#F4ECDD',
+  },
+  deleteBtn: {
+    padding: 4,
+  },
+  deleteText: {
+    fontSize: 14,
   },
 });

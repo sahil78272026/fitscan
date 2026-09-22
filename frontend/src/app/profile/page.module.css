@@ -2,7 +2,7 @@
   min-height: 100vh;
   background: var(--color-bg);
   color: var(--color-text-primary);
-  padding: 2rem var(--container-padding, 1.25rem) 4rem;
+  padding: 2rem var(--container-padding, 1.25rem) 5.5rem;
   position: relative;
   z-index: 1;
 }

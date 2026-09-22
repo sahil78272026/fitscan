@@ -12,14 +12,13 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getSettings, logWeight } from '../services/api';
+import { getSettings } from '../services/api';
 import OnboardingModal from '../components/OnboardingModal';
 import MealPlanSelectorModal from '../components/MealPlanSelectorModal';
 
 export default function ProfileScreen({ navigation, user, onLogout }) {
   const [userSettings, setUserSettings] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [weightInput, setWeightInput] = useState('');
   const [wizardOpen, setWizardOpen] = useState(false);
   const [planSelectorOpen, setPlanSelectorOpen] = useState(false);
 
@@ -38,22 +37,6 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
   useEffect(() => {
     fetchSettings();
   }, []);
-
-  const handleUpdateWeight = async () => {
-    const w = parseFloat(weightInput);
-    if (!w || w < 20 || w > 300) {
-      Alert.alert('Invalid Weight', 'Please enter a valid weight in kg');
-      return;
-    }
-    try {
-      await logWeight(w);
-      setWeightInput('');
-      Alert.alert('Success ⚖️', `Updated weight to ${w} kg`);
-      await fetchSettings();
-    } catch (err) {
-      Alert.alert('Error', 'Failed to update weight');
-    }
-  };
 
   const handleWizardComplete = async (updatedSettings) => {
     setUserSettings(updatedSettings);
@@ -212,24 +195,6 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
             <Text style={styles.metricValue}>
               {(userSettings?.activity_level || 'moderate').replace('_', ' ').toUpperCase()}
             </Text>
-          </View>
-        </View>
-
-        {/* Quick Log Weight Card */}
-        <Text style={styles.sectionTitle}>⚖️ Update Current Weight</Text>
-        <View style={styles.card}>
-          <View style={styles.weightRow}>
-            <TextInput
-              style={[styles.input, { flex: 1, marginBottom: 0 }]}
-              placeholder="e.g. 74.5"
-              placeholderTextColor="#6e7681"
-              keyboardType="decimal-pad"
-              value={weightInput}
-              onChangeText={setWeightInput}
-            />
-            <TouchableOpacity style={styles.saveBtn} onPress={handleUpdateWeight}>
-              <Text style={styles.saveBtnText}>Save</Text>
-            </TouchableOpacity>
           </View>
         </View>
 

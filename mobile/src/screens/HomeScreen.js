@@ -15,12 +15,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   getDailySummary,
+  getCalendarMonth,
+  getAdherenceStats,
   logMeal,
   deleteMeal,
   getSettings,
   logWeight,
   getStepHistory,
 } from '../services/api';
+import CalendarGrid from '../components/CalendarGrid';
+import DateStrip from '../components/DateStrip';
+import AdherenceCard from '../components/AdherenceCard';
 
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -34,6 +39,15 @@ export default function HomeScreen({ navigation, user, onLogout }) {
   const [submitting, setSubmitting] = useState(false);
   const [newWeight, setNewWeight] = useState('');
 
+  // Calendar State
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarData, setCalendarData] = useState(null);
+  const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
+  const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth() + 1);
+
+  // Adherence & Streak State
+  const [adherenceStats, setAdherenceStats] = useState(null);
+
   const formatDateStr = (d) => {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -43,19 +57,39 @@ export default function HomeScreen({ navigation, user, onLogout }) {
 
   const isToday = formatDateStr(selectedDate) === formatDateStr(new Date());
 
+  const fetchCalendar = useCallback(async (y, m) => {
+    try {
+      const res = await getCalendarMonth(y, m);
+      setCalendarData(res);
+    } catch (err) {
+      console.warn('Calendar fetch error:', err);
+    }
+  }, []);
+
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const dateStr = formatDateStr(selectedDate);
       const sumData = await getDailySummary(dateStr);
       setSummary(sumData);
+      
+      const selYear = selectedDate.getFullYear();
+      const selMonth = selectedDate.getMonth() + 1;
+      setCalendarYear(selYear);
+      setCalendarMonth(selMonth);
+
+      // Fetch calendar & adherence streak stats
+      await Promise.all([
+        fetchCalendar(selYear, selMonth),
+        getAdherenceStats().then(setAdherenceStats).catch(() => null),
+      ]);
     } catch (err) {
       console.warn('Dashboard load error:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedDate]);
+  }, [selectedDate, fetchCalendar]);
 
   useFocusEffect(
     useCallback(() => {
@@ -130,11 +164,22 @@ export default function HomeScreen({ navigation, user, onLogout }) {
     <SafeAreaView style={styles.container}>
       {/* Top Header */}
       <View style={styles.topHeader}>
-        <View>
-          <View style={styles.logoRow}>
-            <Text style={styles.logoIcon}>🏋️</Text>
-            <Text style={styles.logoText}>FitScan</Text>
-          </View>
+        <View style={styles.logoRow}>
+          <Text style={styles.logoIcon}>🏋️</Text>
+          <Text style={styles.logoText}>FitScan</Text>
+        </View>
+
+        <View style={styles.headerRight}>
+          {adherenceStats?.current_streak > 0 && (
+            <TouchableOpacity
+              style={styles.streakHeaderPill}
+              onPress={() => navigation.navigate('Streak')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.streakHeaderIcon}>🔥</Text>
+              <Text style={styles.streakHeaderText}>{adherenceStats.current_streak}d</Text>
+            </TouchableOpacity>
+          )}
           <Text style={styles.dateLabel}>{dateLabel}</Text>
         </View>
       </View>
@@ -143,6 +188,33 @@ export default function HomeScreen({ navigation, user, onLogout }) {
         contentContainerStyle={styles.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor="#58a6ff" />}
       >
+        {/* Weekly Date Strip */}
+        <DateStrip
+          selectedDate={selectedDate}
+          onDateSelect={(d) => setSelectedDate(d)}
+          calendarData={calendarData}
+          calendarOpen={calendarOpen}
+          onToggleCalendar={() => setCalendarOpen(!calendarOpen)}
+        />
+
+        {/* Expandable Monthly Calendar Grid */}
+        {calendarOpen && (
+          <CalendarGrid
+            year={calendarYear}
+            month={calendarMonth}
+            calendarData={calendarData}
+            selectedDateStr={formatDateStr(selectedDate)}
+            onSelectDate={(newDate) => {
+              setSelectedDate(newDate);
+              setCalendarOpen(false);
+            }}
+            onChangeMonth={(y, m) => {
+              setCalendarYear(y);
+              setCalendarMonth(m);
+              fetchCalendar(y, m);
+            }}
+          />
+        )}
         {/* Calorie Progress Circle Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>🔥 Calorie Summary</Text>
@@ -320,10 +392,54 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#E8A020',
   },
+  headerRight: {
+    alignItems: 'flex-end',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  streakHeaderPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2C2112',
+    borderWidth: 1,
+    borderColor: '#E8A020',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    gap: 2,
+  },
+  streakHeaderIcon: {
+    fontSize: 12,
+  },
+  streakHeaderText: {
+    color: '#E8A020',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
   dateLabel: {
     fontSize: 12,
     color: '#A79A85',
-    marginTop: 2,
+  },
+  calToggleBtn: {
+    backgroundColor: '#181410',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#3A3128',
+  },
+  calToggleBtnActive: {
+    backgroundColor: '#E8A020',
+    borderColor: '#E8A020',
+  },
+  calToggleText: {
+    color: '#F4ECDD',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  calToggleTextActive: {
+    color: '#221803',
+    fontWeight: 'bold',
   },
   navRow: {
     flexDirection: 'row',
