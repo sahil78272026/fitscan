@@ -58,18 +58,21 @@ export default function GoalEditor({ currentGoal, onUpdate }) {
         max={10000}
         autoFocus
         disabled={saving}
+        aria-label="Daily calorie goal"
       />
       <span className={styles.kcalSuffix}>kcal</span>
-      <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
+      <button type="button" className={styles.saveBtn} onClick={handleSave} disabled={saving}>
         {saving ? "..." : "Save"}
       </button>
       <button
+        type="button"
         className={styles.cancelBtn}
         onClick={() => {
           setValue(currentGoal);
           setEditing(false);
         }}
         disabled={saving}
+        aria-label="Cancel editing goal"
       >
         ✕
       </button>
