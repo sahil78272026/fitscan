@@ -10,7 +10,7 @@ from app.models.meal import Meal
 from app.services.meal_service import get_or_create_settings
 from app.middleware.auth import get_current_user
 
-logger = logging.getLogger("fitscan.routers.stats")
+logger = logging.getLogger("corecontrol.routers.stats")
 
 router = APIRouter(prefix="/api/stats", tags=["Stats & Gamification"])
 

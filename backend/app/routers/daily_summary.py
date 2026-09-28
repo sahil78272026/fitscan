@@ -10,7 +10,7 @@ from app.schemas.meal import DailySummaryResponse
 from app.services.meal_service import get_daily_summary
 from app.middleware.auth import get_current_user
 
-logger = logging.getLogger("fitscan.routers.daily_summary")
+logger = logging.getLogger("corecontrol.routers.daily_summary")
 
 router = APIRouter(prefix="/api/daily-summary", tags=["Daily Summary"])
 

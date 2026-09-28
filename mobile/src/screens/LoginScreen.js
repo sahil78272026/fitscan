@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,117 +9,109 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { sendOtp, verifyOtp, verifyFirebaseToken } from '../services/api';
-import { isFirebaseConfigured } from '../services/firebase';
-import { FirebasePhoneAuthBridge } from '../services/recaptchaVerifier';
+import { verifyFirebaseToken, loginWithEmail } from '../services/api';
+import {
+  auth,
+  isFirebaseConfigured,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
+} from '../services/firebase';
 
 export default function LoginScreen({ onLoginSuccess }) {
-  const [step, setStep] = useState('phone'); // 'phone' | 'otp' | 'name'
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isFirebaseMode, setIsFirebaseMode] = useState(false);
 
-  const firebaseBridge = useRef(null);
-
-  const firebaseConfig = {
-    apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-    authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-    storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
-  };
-
-  const handleSendOtp = async () => {
-    const cleanPhone = phone.replace(/\D/g, '');
-    if (cleanPhone.length < 10) {
-      Alert.alert('Invalid Phone', 'Please enter a 10-digit mobile number.');
+  const handleEmailAuth = async () => {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address.');
       return;
     }
-    setLoading(true);
-    const formatted = `+91${cleanPhone.slice(-10)}`;
-
-    // Try Firebase Phone Auth via WebView bridge
-    if (isFirebaseConfigured() && firebaseBridge.current) {
-      try {
-        await firebaseBridge.current.sendOtp(formatted);
-        setIsFirebaseMode(true);
-        setPhone(formatted);
-        setStep('otp');
-      } catch (err) {
-        console.error('Firebase Phone Auth error:', err);
-        Alert.alert('OTP Failed', err.message || 'Failed to send SMS via Firebase');
-      } finally {
-        setLoading(false);
-      }
+    if (!password || password.length < 6) {
+      Alert.alert('Invalid Password', 'Password must be at least 6 characters.');
       return;
     }
 
-    // Fallback: Dev mode backend OTP
-    try {
-      await sendOtp(formatted);
-      setIsFirebaseMode(false);
-      setPhone(formatted);
-      setStep('otp');
-    } catch (err) {
-      Alert.alert('OTP Failed', err.message || 'Failed to send OTP');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async () => {
-    if (otp.length !== 6) {
-      Alert.alert('Invalid OTP', 'Please enter the 6-digit OTP code.');
-      return;
-    }
     setLoading(true);
     try {
-      let res;
-
-      if (isFirebaseMode && firebaseBridge.current) {
-        // Verify via Firebase WebView bridge → get ID token → send to backend
-        const { idToken } = await firebaseBridge.current.verifyOtp(otp);
-        res = await verifyFirebaseToken(idToken, phone, name || null);
+      if (isFirebaseConfigured() && auth) {
+        let userCred;
+        if (isSignUp) {
+          userCred = await createUserWithEmailAndPassword(auth, cleanEmail, password);
+        } else {
+          userCred = await signInWithEmailAndPassword(auth, cleanEmail, password);
+        }
+        const idToken = await userCred.user.getIdToken();
+        const res = await verifyFirebaseToken(
+          idToken,
+          cleanEmail,
+          name.trim() || userCred.user.displayName || cleanEmail.split('@')[0],
+          userCred.user.photoURL
+        );
+        await AsyncStorage.setItem('fitscan_token', res.token);
+        await AsyncStorage.setItem('fitscan_user', JSON.stringify(res.user));
+        onLoginSuccess(res.user);
       } else {
-        // Dev mode OTP verification
-        res = await verifyOtp(phone, otp, name || null);
-      }
-
-      if (res.is_new_user && !name) {
-        setStep('name');
-        await AsyncStorage.setItem('fitscan_token_temp', res.token);
-      } else {
+        // Local dev fallback
+        const res = await loginWithEmail(
+          cleanEmail,
+          name.trim() || cleanEmail.split('@')[0]
+        );
         await AsyncStorage.setItem('fitscan_token', res.token);
         await AsyncStorage.setItem('fitscan_user', JSON.stringify(res.user));
         onLoginSuccess(res.user);
       }
     } catch (err) {
-      Alert.alert('Verification Failed', err.message || 'Invalid OTP');
+      console.warn('Email auth error:', err);
+      let msg = err.message || 'Authentication failed';
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
+        msg = 'Invalid email or password.';
+      } else if (err.code === 'auth/email-already-in-use') {
+        msg = 'An account with this email already exists. Please sign in.';
+      } else if (err.code === 'auth/user-not-found') {
+        msg = 'No account found with this email. Please sign up.';
+      }
+      Alert.alert('Sign In Failed', msg);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSetName = async () => {
-    if (!name.trim()) return;
+  const handleGoogleAuth = async () => {
     setLoading(true);
     try {
-      const tempToken = await AsyncStorage.getItem('fitscan_token_temp');
-      if (tempToken) {
-        await AsyncStorage.setItem('fitscan_token', tempToken);
-        const user = { name: name.trim(), phone };
-        await AsyncStorage.setItem('fitscan_user', JSON.stringify(user));
-        await AsyncStorage.removeItem('fitscan_token_temp');
-        onLoginSuccess(user);
+      if (Platform.OS === 'web' && isFirebaseConfigured() && auth) {
+        const provider = new GoogleAuthProvider();
+        const userCred = await signInWithPopup(auth, provider);
+        const idToken = await userCred.user.getIdToken();
+        const res = await verifyFirebaseToken(
+          idToken,
+          userCred.user.email,
+          userCred.user.displayName,
+          userCred.user.photoURL
+        );
+        await AsyncStorage.setItem('fitscan_token', res.token);
+        await AsyncStorage.setItem('fitscan_user', JSON.stringify(res.user));
+        onLoginSuccess(res.user);
+      } else {
+        // Mobile / Dev Google One-Tap Login
+        const res = await loginWithEmail('google.user@corecontrol.app', 'Google User');
+        await AsyncStorage.setItem('fitscan_token', res.token);
+        await AsyncStorage.setItem('fitscan_user', JSON.stringify(res.user));
+        onLoginSuccess(res.user);
       }
     } catch (err) {
-      Alert.alert('Error', 'Failed to save profile name');
+      console.warn('Google auth error:', err);
+      Alert.alert('Google Sign-In', err.message || 'Failed to sign in with Google');
     } finally {
       setLoading(false);
     }
@@ -127,90 +119,110 @@ export default function LoginScreen({ onLoginSuccess }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Hidden WebView bridge that handles Firebase Phone Auth */}
-      {isFirebaseConfigured() && (
-        <FirebasePhoneAuthBridge
-          ref={firebaseBridge}
-          firebaseConfig={firebaseConfig}
-        />
-      )}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.inner}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <View style={styles.brand}>
+            <Text style={styles.brandIcon}>🏋️</Text>
+            <Text style={styles.brandTitle}>CoreControl Mobile</Text>
+            <Text style={styles.brandSubtitle}>AI Calorie & Step Tracker</Text>
+          </View>
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.inner}>
-        <View style={styles.brand}>
-          <Text style={styles.brandIcon}>🏋️</Text>
-          <Text style={styles.brandTitle}>FitScan Mobile</Text>
-          <Text style={styles.brandSubtitle}>AI Calorie & Step Tracker</Text>
-        </View>
-
-        {step === 'phone' && (
           <View style={styles.card}>
-            <Text style={styles.label}>Enter Phone Number</Text>
-            <View style={styles.phoneRow}>
-              <Text style={styles.countryCode}>+91</Text>
+            {/* Google SSO Button */}
+            <TouchableOpacity
+              style={styles.googleButton}
+              onPress={handleGoogleAuth}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.googleIconText}>🌐</Text>
+              <Text style={styles.googleButtonText}>Continue with Google</Text>
+            </TouchableOpacity>
+
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>OR</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Email + Password Form */}
+            {isSignUp && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Your Name</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Sahil Garg"
+                  placeholderTextColor="#6e7681"
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
+                  disabled={loading}
+                />
+              </View>
+            )}
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email Address</Text>
               <TextInput
                 style={styles.input}
-                placeholder="9876543210"
+                placeholder="name@example.com"
                 placeholderTextColor="#6e7681"
-                keyboardType="phone-pad"
-                maxLength={10}
-                value={phone}
-                onChangeText={setPhone}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
+                disabled={loading}
               />
             </View>
 
-            <TouchableOpacity style={styles.button} onPress={handleSendOtp} disabled={loading}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Send OTP</Text>}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Password</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••"
+                placeholderTextColor="#6e7681"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+                disabled={loading}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.button}
+              onPress={handleEmailAuth}
+              disabled={loading || !email.trim() || !password}
+              activeOpacity={0.8}
+            >
+              {loading ? (
+                <ActivityIndicator color="#221803" />
+              ) : (
+                <Text style={styles.buttonText}>{isSignUp ? 'Create Account' : 'Sign In'}</Text>
+              )}
+            </TouchableOpacity>
+
+            {/* Switch Sign In / Sign Up */}
+            <TouchableOpacity
+              style={styles.switchButton}
+              onPress={() => setIsSignUp(!isSignUp)}
+              disabled={loading}
+            >
+              <Text style={styles.switchText}>
+                {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
+                <Text style={styles.switchHighlight}>{isSignUp ? 'Sign In' : 'Sign Up'}</Text>
+              </Text>
             </TouchableOpacity>
 
             <Text style={styles.devHint}>
               {isFirebaseConfigured()
-                ? '📲 Firebase SMS active'
-                : '🔧 Dev mode: OTP is 123456'}
+                ? '🔒 Secured with Firebase Authentication'
+                : '🔧 Dev mode active: instant local sign in'}
             </Text>
           </View>
-        )}
-
-        {step === 'otp' && (
-          <View style={styles.card}>
-            <Text style={styles.label}>Enter 6-Digit OTP</Text>
-            <Text style={styles.subtext}>Sent to {phone}</Text>
-
-            <TextInput
-              style={styles.otpInput}
-              placeholder="123456"
-              placeholderTextColor="#6e7681"
-              keyboardType="number-pad"
-              maxLength={6}
-              value={otp}
-              onChangeText={setOtp}
-            />
-
-            <TouchableOpacity style={styles.button} onPress={handleVerifyOtp} disabled={loading}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Verify & Sign In</Text>}
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.backButton} onPress={() => { setStep('phone'); setOtp(''); }}>
-              <Text style={styles.backText}>← Change Phone Number</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {step === 'name' && (
-          <View style={styles.card}>
-            <Text style={styles.label}>What is your name?</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Your Name"
-              placeholderTextColor="#6e7681"
-              value={name}
-              onChangeText={setName}
-            />
-
-            <TouchableOpacity style={styles.button} onPress={handleSetName} disabled={loading}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Get Started</Text>}
-            </TouchableOpacity>
-          </View>
-        )}
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -223,12 +235,16 @@ const styles = StyleSheet.create({
   },
   inner: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
+    paddingVertical: 32,
   },
   brand: {
     alignItems: 'center',
-    marginBottom: 36,
+    marginBottom: 28,
   },
   brandIcon: {
     fontSize: 48,
@@ -251,74 +267,89 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#3A3128',
   },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#F4ECDD',
-    marginBottom: 12,
-  },
-  subtext: {
-    fontSize: 12,
-    color: '#A79A85',
-    marginBottom: 16,
-  },
-  devHint: {
-    fontSize: 12,
-    color: '#6e7681',
-    textAlign: 'center',
-    marginTop: 12,
-  },
-  phoneRow: {
+  googleButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#181410',
-    borderRadius: 8,
+    justifyContent: 'center',
+    backgroundColor: '#2D261F',
     borderWidth: 1,
-    borderColor: '#3A3128',
-    paddingHorizontal: 12,
-    marginBottom: 20,
+    borderColor: '#4A3E33',
+    borderRadius: 8,
+    paddingVertical: 13,
+    marginBottom: 16,
+    gap: 10,
   },
-  countryCode: {
-    fontSize: 16,
-    color: '#E8A020',
-    fontWeight: 'bold',
-    marginRight: 8,
+  googleIconText: {
+    fontSize: 18,
+  },
+  googleButtonText: {
+    color: '#F4ECDD',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#3A3128',
+  },
+  dividerText: {
+    color: '#A79A85',
+    fontSize: 12,
+    marginHorizontal: 12,
+    fontWeight: '600',
+  },
+  inputGroup: {
+    marginBottom: 14,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#F4ECDD',
+    marginBottom: 6,
   },
   input: {
-    flex: 1,
-    color: '#F4ECDD',
-    fontSize: 16,
-    paddingVertical: 12,
-  },
-  otpInput: {
     backgroundColor: '#181410',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#3A3128',
     color: '#F4ECDD',
-    fontSize: 24,
-    textAlign: 'center',
-    letterSpacing: 8,
-    paddingVertical: 12,
-    marginBottom: 20,
+    fontSize: 15,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
   },
   button: {
     backgroundColor: '#E8A020',
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
+    marginTop: 8,
   },
   buttonText: {
     color: '#221803',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  backButton: {
-    marginTop: 16,
+  switchButton: {
+    marginTop: 18,
     alignItems: 'center',
   },
-  backText: {
+  switchText: {
     color: '#A79A85',
-    fontSize: 14,
+    fontSize: 13,
+  },
+  switchHighlight: {
+    color: '#E8A020',
+    fontWeight: 'bold',
+  },
+  devHint: {
+    fontSize: 11,
+    color: '#6e7681',
+    textAlign: 'center',
+    marginTop: 16,
   },
 });

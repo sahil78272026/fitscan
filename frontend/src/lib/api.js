@@ -89,10 +89,27 @@ export async function verifyOtp(phone, otp, name = null) {
   }, false);
 }
 
-export async function verifyFirebaseToken(idToken, phone = null, name = null) {
+export async function verifyFirebaseToken(idToken, email = null, name = null, avatarUrl = null, phone = null) {
   return request("/auth/firebase-verify", {
     method: "POST",
-    body: JSON.stringify({ firebase_token: idToken, phone, name }),
+    body: JSON.stringify({
+      firebase_token: idToken,
+      email,
+      name,
+      avatar_url: avatarUrl,
+      phone,
+    }),
+  }, false);
+}
+
+export async function loginWithEmail(email, name = null, avatarUrl = null) {
+  return request("/auth/email-login", {
+    method: "POST",
+    body: JSON.stringify({
+      email,
+      name,
+      avatar_url: avatarUrl,
+    }),
   }, false);
 }
 

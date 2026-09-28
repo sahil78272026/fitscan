@@ -3,7 +3,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import BottomTabBar from "@/components/BottomTabBar";
 
 export const metadata = {
-  title: "FitScan — Calorie Tracker",
+  title: "CoreControl — Calorie Tracker",
   description: "Track your daily calorie intake with AI-powered food analysis. Log meals, track progress, and hit your nutrition goals.",
 };
 

@@ -111,7 +111,7 @@ export default function ProgressScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.topHeader}>
-        <Text style={styles.brandTitle}>📈 FitScan Progress</Text>
+        <Text style={styles.brandTitle}>📈 CoreControl Progress</Text>
       </View>
 
       <ScrollView

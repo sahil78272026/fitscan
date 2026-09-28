@@ -10,7 +10,7 @@ from app.models.meal import Meal, FoodItem
 from app.models.settings import UserSettings
 from app.services.gemini_service import analyze_food
 
-logger = logging.getLogger("fitscan.meal_service")
+logger = logging.getLogger("corecontrol.meal_service")
 
 
 async def create_meal(

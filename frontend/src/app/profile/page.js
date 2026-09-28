@@ -201,11 +201,11 @@ export default function ProfilePage() {
         {/* User Card */}
         <section className={styles.userCard}>
           <div className={styles.avatar}>
-            {(user?.name || user?.phone || "U")[0].toUpperCase()}
+            {(user?.name || user?.email || user?.phone || "U")[0].toUpperCase()}
           </div>
           <div className={styles.userInfo}>
-            <h2 className={styles.userName}>{user?.name || "FitScan User"}</h2>
-            <p className={styles.userPhone}>{user?.phone || "Phone Not Provided"}</p>
+            <h2 className={styles.userName}>{user?.name || "CoreControl User"}</h2>
+            <p className={styles.userPhone}>{user?.email || user?.phone || "Account Active"}</p>
           </div>
         </section>
 

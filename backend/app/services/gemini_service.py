@@ -1,11 +1,12 @@
 import base64
 import json
 import logging
+import time
 from google import genai
 from google.genai import types
 from app.config import get_settings
 
-logger = logging.getLogger("fitscan.gemini")
+logger = logging.getLogger("corecontrol.gemini")
 
 SYSTEM_PROMPT = """You are an expert sports nutritionist and food scanner specializing in global and Indian cuisine. The user will provide text descriptions, an image, or both of what they ate or plan to eat.
 
@@ -148,6 +149,7 @@ async def analyze_food(raw_input: str, image_bytes: bytes | None = None, mime_ty
     prompt_text = raw_input if raw_input and raw_input.strip() else "Analyze the food in this image and provide complete calorie & macro breakdown."
     contents.append(prompt_text)
 
+    start_time = time.perf_counter()
     try:
         response = await client.aio.models.generate_content(
             model=settings.GEMINI_MODEL,
@@ -158,6 +160,8 @@ async def analyze_food(raw_input: str, image_bytes: bytes | None = None, mime_ty
                 temperature=0.1,
             ),
         )
+        duration = time.perf_counter() - start_time
+        logger.info(f"Gemini API call (analyze_food) completed in {duration:.2f}s ({duration * 1000:.0f}ms)")
 
         result = json.loads(response.text)
 
@@ -190,10 +194,12 @@ async def analyze_food(raw_input: str, image_bytes: bytes | None = None, mime_ty
         return result
 
     except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse Gemini response as JSON: {e}")
+        duration = time.perf_counter() - start_time
+        logger.error(f"Failed to parse Gemini response as JSON after {duration:.2f}s: {e}")
         raise ValueError("Failed to parse AI response. Please try again.")
     except Exception as e:
-        logger.error(f"Gemini API error: {e}")
+        duration = time.perf_counter() - start_time
+        logger.error(f"Gemini API error (analyze_food) after {duration:.2f}s: {e}")
         raise
 
 
@@ -329,6 +335,7 @@ async def recommend_curated_meals(
     )
 
     # First attempt: Try standard structured output prompt without search tool (fast & reliable)
+    t_start = time.perf_counter()
     try:
         response = await client.aio.models.generate_content(
             model=settings.GEMINI_MODEL,
@@ -338,11 +345,15 @@ async def recommend_curated_meals(
                 temperature=0.3,
             ),
         )
+        duration = time.perf_counter() - t_start
+        logger.info(f"Gemini API call (recommend_curated_meals) completed in {duration:.2f}s ({duration * 1000:.0f}ms)")
         return _parse_json_from_text(response.text)
     except Exception as e:
-        logger.warning(f"Standard JSON meal generation failed, attempting grounded search: {e}")
+        duration = time.perf_counter() - t_start
+        logger.warning(f"Standard JSON meal generation failed after {duration:.2f}s, attempting grounded search: {e}")
 
     # Second attempt: Grounded search without response_mime_type (unsupported together by Gemini API)
+    t_search_start = time.perf_counter()
     try:
         search_tool = types.Tool(google_search=types.GoogleSearch())
         response = await client.aio.models.generate_content(
@@ -353,9 +364,12 @@ async def recommend_curated_meals(
                 temperature=0.4,
             ),
         )
+        duration = time.perf_counter() - t_search_start
+        logger.info(f"Gemini API call with search (recommend_curated_meals) completed in {duration:.2f}s ({duration * 1000:.0f}ms)")
         return _parse_json_from_text(response.text)
     except Exception as err:
-        logger.error(f"Failed to generate meal recommendations: {err}")
+        duration = time.perf_counter() - t_search_start
+        logger.error(f"Failed to generate meal recommendations after {duration:.2f}s: {err}")
         raise ValueError("Unable to generate meal recommendations. Please try again.")
 
 
@@ -404,6 +418,7 @@ async def generate_multiple_meal_plans(
         fat_goal=fat_goal
     )
 
+    t_start = time.perf_counter()
     try:
         response = await client.aio.models.generate_content(
             model=settings.GEMINI_MODEL,
@@ -413,9 +428,12 @@ async def generate_multiple_meal_plans(
                 temperature=0.4,
             ),
         )
+        duration = time.perf_counter() - t_start
+        logger.info(f"Gemini API call (generate_multiple_meal_plans) completed in {duration:.2f}s ({duration * 1000:.0f}ms)")
         return _parse_json_from_text(response.text)
     except Exception as e:
-        logger.error(f"Failed to generate multiple meal plans: {e}")
+        duration = time.perf_counter() - t_start
+        logger.error(f"Failed to generate multiple meal plans after {duration:.2f}s: {e}")
         raise ValueError("Unable to generate candidate meal plans. Please try again.")
 
 

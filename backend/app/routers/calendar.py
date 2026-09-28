@@ -10,7 +10,7 @@ from app.models.meal import Meal
 from app.schemas.calendar import CalendarMonthResponse, CalendarDayResponse
 from app.middleware.auth import get_current_user
 
-logger = logging.getLogger("fitscan.routers.calendar")
+logger = logging.getLogger("corecontrol.routers.calendar")
 
 router = APIRouter(prefix="/api/calendar", tags=["Calendar"])
 

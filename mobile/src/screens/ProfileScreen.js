@@ -95,12 +95,12 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
         <View style={styles.userCard}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
-              {(user?.name || user?.phone || 'U')[0].toUpperCase()}
+              {(user?.name || user?.email || user?.phone || 'U')[0].toUpperCase()}
             </Text>
           </View>
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>{user?.name || 'FitScan User'}</Text>
-            <Text style={styles.userPhone}>{user?.phone || 'Phone Not Provided'}</Text>
+            <Text style={styles.userName}>{user?.name || 'CoreControl User'}</Text>
+            <Text style={styles.userPhone}>{user?.email || user?.phone || 'Account Active'}</Text>
           </View>
         </View>
 

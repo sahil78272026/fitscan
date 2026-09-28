@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "FitScan",
+    "name": "CoreControl",
     "slug": "fitscan-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -15,8 +15,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.fitscan.wellness",
       "infoPlist": {
-        "NSMotionUsageDescription": "FitScan needs access to your motion data to count your daily steps.",
-        "NSCameraUsageDescription": "FitScan needs camera access to scan your meals and track calories."
+        "NSMotionUsageDescription": "CoreControl needs access to your motion data to count your daily steps.",
+        "NSCameraUsageDescription": "CoreControl needs camera access to scan your meals and track calories."
       }
     },
     "android": {

@@ -8,7 +8,7 @@ from app.config import get_settings
 from app.models.user import User
 from app.models.settings import UserSettings
 
-logger = logging.getLogger("fitscan.auth_service")
+logger = logging.getLogger("corecontrol.auth_service")
 settings = get_settings()
 
 
@@ -51,11 +51,12 @@ def verify_otp(phone: str, otp: str) -> bool:
     return True
 
 
-def create_jwt_token(user_id: int, phone: str) -> str:
+def create_jwt_token(user_id: int, phone: str | None = None, email: str | None = None) -> str:
     """Create a JWT token for the authenticated user."""
     payload = {
         "sub": str(user_id),
         "phone": phone,
+        "email": email,
         "exp": datetime.now(timezone.utc) + timedelta(hours=settings.JWT_EXPIRY_HOURS),
         "iat": datetime.now(timezone.utc),
     }
@@ -75,22 +76,37 @@ def decode_jwt_token(token: str) -> dict | None:
         return None
 
 
-async def get_or_create_user(db: AsyncSession, phone: str, name: str | None = None) -> User:
-    """Find existing user by phone or create a new one."""
-    result = await db.execute(select(User).where(User.phone == phone))
-    user = result.scalar_one_or_none()
+async def get_or_create_user(
+    db: AsyncSession,
+    email: str | None = None,
+    phone: str | None = None,
+    name: str | None = None,
+    avatar_url: str | None = None,
+) -> User:
+    """Find existing user by email or phone or create a new one."""
+    user = None
+    if email:
+        result = await db.execute(select(User).where(User.email == email))
+        user = result.scalar_one_or_none()
+    if not user and phone:
+        result = await db.execute(select(User).where(User.phone == phone))
+        user = result.scalar_one_or_none()
 
     if user:
-        # Update last login
+        # Update last login and missing details
         user.last_login = datetime.now(timezone.utc)
         if name and not user.name:
             user.name = name
+        if email and not user.email:
+            user.email = email
+        if avatar_url and not user.avatar_url:
+            user.avatar_url = avatar_url
         await db.commit()
         await db.refresh(user)
-        logger.info(f"Existing user logged in: {phone} (id={user.id})")
+        logger.info(f"Existing user logged in: {user.email or user.phone} (id={user.id})")
     else:
         # Create new user
-        user = User(phone=phone, name=name)
+        user = User(email=email, phone=phone, name=name, avatar_url=avatar_url)
         db.add(user)
         await db.flush()
 
@@ -108,7 +124,7 @@ async def get_or_create_user(db: AsyncSession, phone: str, name: str | None = No
         db.add(user_settings)
         await db.commit()
         await db.refresh(user)
-        logger.info(f"New user created: {phone} (id={user.id}) with default settings")
+        logger.info(f"New user created: {user.email or user.phone} (id={user.id}) with default settings")
 
     return user
 
@@ -117,11 +133,21 @@ async def verify_firebase_id_token(firebase_token: str) -> dict:
     """Decode and extract user information from Firebase Auth ID token."""
     try:
         decoded = jwt.decode(firebase_token, options={"verify_signature": False})
+        email = decoded.get("email")
         phone_number = decoded.get("phone_number")
+        name = decoded.get("name")
+        picture = decoded.get("picture")
         uid = decoded.get("sub")
-        if not phone_number and not uid:
-            raise ValueError("Firebase token missing phone_number claim")
-        return {"phone_number": phone_number, "uid": uid, "claims": decoded}
+        if not email and not phone_number and not uid:
+            raise ValueError("Firebase token missing user identity claims")
+        return {
+            "email": email,
+            "phone_number": phone_number,
+            "name": name,
+            "picture": picture,
+            "uid": uid,
+            "claims": decoded,
+        }
     except Exception as e:
         logger.error(f"Failed to decode Firebase token: {e}")
         raise ValueError(f"Invalid Firebase token: {e}")

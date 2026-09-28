@@ -17,7 +17,7 @@ logging.basicConfig(
     level=getattr(logging, app_settings.LOG_LEVEL),
     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
 )
-logger = logging.getLogger("fitscan")
+logger = logging.getLogger("corecontrol")
 
 
 from sqlalchemy import text
@@ -48,6 +48,8 @@ async def init_db_schema(conn):
         ("food_items", "protein", "FLOAT DEFAULT 0.0"),
         ("food_items", "carbs", "FLOAT DEFAULT 0.0"),
         ("food_items", "fat", "FLOAT DEFAULT 0.0"),
+        ("users", "email", "VARCHAR(255)"),
+        ("users", "avatar_url", "VARCHAR(500)"),
     ]
 
     is_pg = "postgresql" in str(conn.engine.url)
@@ -66,22 +68,32 @@ async def init_db_schema(conn):
             except Exception:
                 pass
 
+    if is_pg:
+        try:
+            await conn.execute(text("ALTER TABLE users ALTER COLUMN phone DROP NOT NULL;"))
+        except Exception as e:
+            logger.debug(f"users phone drop not null note: {e}")
+        try:
+            await conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_users_email ON users (email);"))
+        except Exception as e:
+            logger.debug(f"users email index note: {e}")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Create tables & migrate schema on startup."""
-    logger.info("🏋️ FitScan starting up...")
+    logger.info("🏋️ CoreControl starting up...")
     async with engine.begin() as conn:
         await init_db_schema(conn)
     logger.info("✅ Database tables & macro schema verified")
     yield
-    logger.info("👋 FitScan shutting down...")
+    logger.info("👋 CoreControl shutting down...")
     await engine.dispose()
 
 
 
 app = FastAPI(
-    title="FitScan API",
+    title="CoreControl API",
     description="Calorie tracking powered by Gemini AI",
     version="1.0.0",
     lifespan=lifespan,
@@ -89,11 +101,19 @@ app = FastAPI(
 
 # CORS — support comma-separated origins + Netlify/Vercel preview patterns
 cors_origins = [o.strip() for o in app_settings.FRONTEND_ORIGIN.split(",") if o.strip()]
+for origin in [
+    "https://corecontrol.fit",
+    "https://www.corecontrol.fit",
+    "http://corecontrol.fit",
+    "corecontrol.fit",
+]:
+    if origin not in cors_origins:
+        cors_origins.append(origin)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
-    allow_origin_regex=r"https://.*\.netlify\.app|https://.*\.vercel\.app|http://localhost:\d+|http://127\.0\.0\.1:\d+|http://192\.168\.\d+\.\d+:\d+|http://10\.0\.2\.2:\d+",
+    allow_origin_regex=r"https://.*\.netlify\.app|https://.*\.vercel\.app|https?://(.*\.)?corecontrol\.fit|http://localhost:\d+|http://127\.0\.0\.1:\d+|http://192\.168\.\d+\.\d+:\d+|http://10\.0\.2\.2:\d+",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -112,4 +132,4 @@ app.include_router(steps.router)
 
 @app.api_route("/api/health", methods=["GET", "HEAD"])
 async def health_check():
-    return {"status": "healthy", "app": "FitScan"}
+    return {"status": "healthy", "app": "CoreControl"}

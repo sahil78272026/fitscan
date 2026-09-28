@@ -105,7 +105,7 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
         <div className={styles.wizardHeader}>
           <div className={styles.brandTitle}>
             <span className={styles.brandIcon}>✨</span>
-            <span className={styles.brandText}>FitScan Personalization</span>
+            <span className={styles.brandText}>CoreControl Personalization</span>
           </div>
           {onCancel && (
             <button className={styles.closeBtn} onClick={onCancel} title="Close">✕</button>
@@ -268,7 +268,7 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
               </div>
 
               <div className={styles.legalDisclaimerBox}>
-                ⚖️ <strong>Health & Medical Disclaimer:</strong> FitScan generates AI meal suggestions and macro estimates for general wellness and educational purposes only. FitScan is not a licensed medical provider and does not provide medical nutrition therapy. Consult a physician before beginning any diet program.
+                ⚖️ <strong>Health & Medical Disclaimer:</strong> CoreControl generates AI meal suggestions and macro estimates for general wellness and educational purposes only. CoreControl is not a licensed medical provider and does not provide medical nutrition therapy. Consult a physician before beginning any diet program.
               </div>
 
               <div className={styles.wizardFooter}>

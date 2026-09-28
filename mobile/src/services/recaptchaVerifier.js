@@ -44,8 +44,16 @@ function buildHTML(firebaseConfig) {
     var confirmationResult = null;
 
     function sendToRN(type, data) {
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: type, data: data }));
+      try {
+        if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({ type: type, data: data }));
+        }
+      } catch (e) {}
     }
+
+    window.onerror = function(msg, url, line) {
+      sendToRN('error', 'WebView error: ' + msg + ' at line ' + line);
+    };
 
     // Setup invisible reCAPTCHA once
     var recaptchaVerifier = null;
@@ -70,24 +78,28 @@ function buildHTML(firebaseConfig) {
         sendToRN('otp-error', 'reCAPTCHA not ready');
         return;
       }
-      auth.signInWithPhoneNumber(phoneNumber, recaptchaVerifier)
-        .then(function(result) {
-          confirmationResult = result;
-          sendToRN('otp-sent', 'OTP sent successfully');
-        })
-        .catch(function(err) {
-          sendToRN('otp-error', err.message || 'Failed to send OTP');
-          // Reset reCAPTCHA for retry
-          try {
-            recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
-              size: 'invisible',
-              callback: function() {},
-              'expired-callback': function() {
-                sendToRN('error', 'reCAPTCHA expired');
-              }
-            });
-          } catch(e) {}
-        });
+      try {
+        auth.signInWithPhoneNumber(phoneNumber, recaptchaVerifier)
+          .then(function(result) {
+            confirmationResult = result;
+            sendToRN('otp-sent', 'OTP sent successfully');
+          })
+          .catch(function(err) {
+            sendToRN('otp-error', err.message || 'Failed to send OTP');
+            // Reset reCAPTCHA for retry
+            try {
+              recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+                size: 'invisible',
+                callback: function() {},
+                'expired-callback': function() {
+                  sendToRN('error', 'reCAPTCHA expired');
+                }
+              });
+            } catch(e) {}
+          });
+      } catch(err) {
+        sendToRN('otp-error', err.message || 'signInWithPhoneNumber failed synchronously');
+      }
     };
 
     // Called from React Native to verify OTP
@@ -124,18 +136,66 @@ const FirebasePhoneAuthBridge = forwardRef(function FirebasePhoneAuthBridge(
   useImperativeHandle(ref, () => ({
     sendOtp: (phoneNumber) => {
       return new Promise((resolve, reject) => {
-        pendingCallbacks.current['otp'] = { resolve, reject };
-        // Use JSON.stringify to safely escape the phone number (especially the + sign)
+        // Enforce 10s timeout so app never hangs indefinitely
+        const timeoutId = setTimeout(() => {
+          if (pendingCallbacks.current['otp']) {
+            delete pendingCallbacks.current['otp'];
+            reject(new Error('Firebase SMS request timed out'));
+          }
+        }, 10000);
+
+        pendingCallbacks.current['otp'] = {
+          resolve: (res) => {
+            clearTimeout(timeoutId);
+            resolve(res);
+          },
+          reject: (err) => {
+            clearTimeout(timeoutId);
+            reject(err);
+          },
+        };
+
         const safePhone = JSON.stringify(phoneNumber);
-        const js = `window.sendOtp(${safePhone}); true;`;
+        const js = `
+          if (typeof window.sendOtp === 'function') {
+            window.sendOtp(${safePhone});
+          } else {
+            sendToRN('otp-error', 'Firebase bridge is still initializing');
+          }
+          true;
+        `;
         webViewRef.current?.injectJavaScript(js);
       });
     },
     verifyOtp: (code) => {
       return new Promise((resolve, reject) => {
-        pendingCallbacks.current['verify'] = { resolve, reject };
+        const timeoutId = setTimeout(() => {
+          if (pendingCallbacks.current['verify']) {
+            delete pendingCallbacks.current['verify'];
+            reject(new Error('OTP verification timed out'));
+          }
+        }, 10000);
+
+        pendingCallbacks.current['verify'] = {
+          resolve: (res) => {
+            clearTimeout(timeoutId);
+            resolve(res);
+          },
+          reject: (err) => {
+            clearTimeout(timeoutId);
+            reject(err);
+          },
+        };
+
         const safeCode = JSON.stringify(code);
-        const js = `window.verifyOtp(${safeCode}); true;`;
+        const js = `
+          if (typeof window.verifyOtp === 'function') {
+            window.verifyOtp(${safeCode});
+          } else {
+            sendToRN('verify-error', 'Firebase bridge is still initializing');
+          }
+          true;
+        `;
         webViewRef.current?.injectJavaScript(js);
       });
     },
@@ -173,6 +233,10 @@ const FirebasePhoneAuthBridge = forwardRef(function FirebasePhoneAuthBridge(
 
         case 'error':
           console.warn('[FirebasePhoneAuthBridge]', data);
+          if (pendingCallbacks.current['otp']) {
+            pendingCallbacks.current['otp'].reject(new Error(data));
+            delete pendingCallbacks.current['otp'];
+          }
           break;
 
         case 'debug':

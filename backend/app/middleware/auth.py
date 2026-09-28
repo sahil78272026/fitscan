@@ -8,7 +8,7 @@ from app.database import get_db
 from app.models.user import User
 from app.services.auth_service import decode_jwt_token
 
-logger = logging.getLogger("fitscan.auth_middleware")
+logger = logging.getLogger("corecontrol.auth_middleware")
 
 security = HTTPBearer()
 

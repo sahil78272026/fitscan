@@ -2,8 +2,8 @@ import Link from "next/link";
 import styles from "./page.module.css";
 
 export const metadata = {
-  title: "Privacy Policy | FitScan",
-  description: "FitScan Privacy Policy - How we collect, use, and protect your data.",
+  title: "Privacy Policy | CoreControl",
+  description: "CoreControl Privacy Policy - How we collect, use, and protect your data.",
 };
 
 export default function PrivacyPage() {
@@ -17,7 +17,7 @@ export default function PrivacyPage() {
           </Link>
           <div className={styles.brand}>
             <span className={styles.logoIcon}>🏋️</span>
-            <span className={styles.logoText}>FitScan</span>
+            <span className={styles.logoText}>CoreControl</span>
           </div>
         </header>
 
@@ -35,7 +35,7 @@ export default function PrivacyPage() {
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>1. Introduction</h2>
             <p className={styles.paragraph}>
-              Welcome to <strong>FitScan</strong> ("we", "our", or "us"). FitScan provides an AI-powered calorie counter, step tracking, body weight log, and meal planning service accessible via our website and mobile application (package name: <code>com.fitscan.wellness</code>).
+              Welcome to <strong>CoreControl</strong> ("we", "our", or "us"). CoreControl provides an AI-powered calorie counter, step tracking, body weight log, and meal planning service accessible via our website and mobile application (package name: <code>com.fitscan.wellness</code>).
             </p>
             <p className={styles.paragraph}>
               We respect your privacy and are committed to protecting the personal information you share with us. This Privacy Policy explains how we collect, use, disclose, and safeguard your data when you use our services.
@@ -88,14 +88,14 @@ export default function PrivacyPage() {
 
           {/* Section 4 */}
           <div className={styles.highlightBox}>
-            🔒 <strong>Data Sharing Commitment:</strong> FitScan does NOT sell, rent, or trade your personal health data, phone numbers, or uploaded meal photos to third-party advertisers or data brokers.
+            🔒 <strong>Data Sharing Commitment:</strong> CoreControl does NOT sell, rent, or trade your personal health data, phone numbers, or uploaded meal photos to third-party advertisers or data brokers.
           </div>
 
           {/* Section 5 */}
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>4. Third-Party Services</h2>
             <p className={styles.paragraph}>
-              FitScan integrates with trusted third-party cloud services to power core app features:
+              CoreControl integrates with trusted third-party cloud services to power core app features:
             </p>
             <ul className={styles.list}>
               <li className={styles.listItem}>
@@ -119,14 +119,14 @@ export default function PrivacyPage() {
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>6. Your Choices & Account Deletion</h2>
             <p className={styles.paragraph}>
-              You have full control over your data within FitScan:
+              You have full control over your data within CoreControl:
             </p>
             <ul className={styles.list}>
               <li className={styles.listItem}>
                 You can delete individual meal entries or weight logs at any time directly from the app dashboard.
               </li>
               <li className={styles.listItem}>
-                To request complete account or data deletion, you may log out or contact our support team at <code>privacy@fitscan.app</code>.
+                To request complete account or data deletion, you may log out or contact our support team at <code>privacy@corecontrol.app</code>.
               </li>
             </ul>
           </section>
@@ -138,8 +138,8 @@ export default function PrivacyPage() {
               If you have any questions or concerns regarding this Privacy Policy or your data, please reach out to us at:
             </p>
             <p className={styles.paragraph}>
-              <strong>FitScan Wellness Team</strong><br />
-              Email: <code>privacy@fitscan.app</code><br />
+              <strong>CoreControl Wellness Team</strong><br />
+              Email: <code>privacy@corecontrol.app</code><br />
               Web: <code>https://fitscan-zb5j.onrender.com</code>
             </p>
           </section>
@@ -147,7 +147,7 @@ export default function PrivacyPage() {
 
         {/* Footer */}
         <footer className={styles.footer}>
-          © 2026 FitScan Wellness. All rights reserved.
+          © 2026 CoreControl Wellness. All rights reserved.
         </footer>
       </div>
     </main>

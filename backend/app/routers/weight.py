@@ -12,7 +12,7 @@ from app.models.weight import WeightLog
 from app.services.meal_service import get_or_create_settings
 from app.middleware.auth import get_current_user
 
-logger = logging.getLogger("fitscan.routers.weight")
+logger = logging.getLogger("corecontrol.routers.weight")
 
 router = APIRouter(prefix="/api/weight", tags=["Weight Tracking"])
 

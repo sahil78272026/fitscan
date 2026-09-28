@@ -166,7 +166,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
       <View style={styles.topHeader}>
         <View style={styles.logoRow}>
           <Text style={styles.logoIcon}>🏋️</Text>
-          <Text style={styles.logoText}>FitScan</Text>
+          <Text style={styles.logoText}>CoreControl</Text>
         </View>
 
         <View style={styles.headerRight}>

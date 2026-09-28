@@ -1,5 +1,14 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { initializeAuth, getReactNativePersistence, signInWithPhoneNumber, PhoneAuthProvider } from 'firebase/auth';
+import {
+  initializeAuth,
+  getReactNativePersistence,
+  signInWithPhoneNumber,
+  PhoneAuthProvider,
+  GoogleAuthProvider,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithCredential,
+} from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
@@ -24,17 +33,32 @@ let auth;
 
 try {
   app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-  auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage),
-  });
+  const persistence = typeof getReactNativePersistence === 'function'
+    ? getReactNativePersistence(AsyncStorage)
+    : undefined;
+  auth = initializeAuth(app, persistence ? { persistence } : undefined);
 } catch (e) {
   // If auth was already initialized (hot reload), fall back to getAuth
   if (e.code === 'auth/already-initialized') {
     const { getAuth } = require('firebase/auth');
     auth = getAuth(app);
   } else {
-    console.warn('Firebase init error:', e);
+    try {
+      const { getAuth } = require('firebase/auth');
+      auth = getAuth(app);
+    } catch (fallbackErr) {
+      console.warn('Firebase init error:', e);
+    }
   }
 }
 
-export { app, auth, signInWithPhoneNumber, PhoneAuthProvider };
+export {
+  app,
+  auth,
+  GoogleAuthProvider,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithCredential,
+  signInWithPhoneNumber,
+  PhoneAuthProvider,
+};

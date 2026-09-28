@@ -196,7 +196,7 @@ export default function Home() {
       <main className={styles.main}>
         <div className={styles.loader}>
           <div className={styles.loaderSpinner} />
-          <span>Loading FitScan...</span>
+          <span>Loading CoreControl...</span>
         </div>
       </main>
     );
@@ -221,7 +221,7 @@ export default function Home() {
           <div className={styles.brand}>
             <h1 className={styles.logo}>
               <span className={styles.logoIcon}>🏋️</span>
-              FitScan
+              CoreControl
             </h1>
             <p className={styles.date}>{dateLabel}</p>
           </div>

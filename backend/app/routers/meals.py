@@ -13,7 +13,7 @@ from app.services.gemini_service import recommend_curated_meals
 from app.middleware.auth import get_current_user
 from datetime import date
 
-logger = logging.getLogger("fitscan.routers.meals")
+logger = logging.getLogger("corecontrol.routers.meals")
 
 router = APIRouter(prefix="/api/meals", tags=["Meals"])
 

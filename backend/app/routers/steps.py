@@ -11,7 +11,7 @@ from app.models.user import User
 from app.models.step import StepLog
 from app.middleware.auth import get_current_user
 
-logger = logging.getLogger("fitscan.routers.steps")
+logger = logging.getLogger("corecontrol.routers.steps")
 
 router = APIRouter(prefix="/api/steps", tags=["Step Tracking"])
 

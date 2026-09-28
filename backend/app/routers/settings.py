@@ -15,7 +15,7 @@ from app.services.meal_service import (
 from app.services.gemini_service import generate_multiple_meal_plans
 from app.middleware.auth import get_current_user
 
-logger = logging.getLogger("fitscan.routers.settings")
+logger = logging.getLogger("corecontrol.routers.settings")
 
 router = APIRouter(prefix="/api/settings", tags=["Settings"])
 
