@@ -142,3 +142,23 @@
   color: var(--color-text-tertiary);
   line-height: 1;
 }
+
+@media (max-width: 600px) {
+  .container {
+    padding: 0.75rem 0.4rem;
+    border-radius: 0.85rem;
+  }
+
+  .cell {
+    padding: 0.25rem 0.05rem;
+    min-height: 38px;
+  }
+
+  .cellNum {
+    font-size: 0.72rem;
+  }
+
+  .cellCalories {
+    font-size: 0.5rem;
+  }
+}

@@ -7,6 +7,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { auth } from './src/services/firebase';
 
 import LoginScreen from './src/screens/LoginScreen';
 import HomeScreen from './src/screens/HomeScreen';
@@ -87,6 +89,22 @@ export default function App() {
   }, []);
 
   const handleLogout = async () => {
+    try {
+      if (GoogleSignin && typeof GoogleSignin.signOut === 'function') {
+        await GoogleSignin.signOut();
+      }
+    } catch (e) {
+      console.warn('Google sign out error:', e);
+    }
+
+    try {
+      if (auth && typeof auth.signOut === 'function') {
+        await auth.signOut();
+      }
+    } catch (e) {
+      console.warn('Firebase sign out error:', e);
+    }
+
     await AsyncStorage.removeItem('fitscan_token');
     await AsyncStorage.removeItem('fitscan_user');
     setUser(null);

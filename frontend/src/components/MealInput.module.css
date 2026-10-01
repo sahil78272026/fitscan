@@ -259,10 +259,33 @@
   }
 
   .mealTypes {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.35rem;
+    width: 100%;
+  }
+
+  .typeBtn {
     justify-content: center;
+    padding: 0.45rem 0.2rem;
+    font-size: 0.76rem;
+    gap: 0.2rem;
+    min-width: 0;
+  }
+
+  .typeLabel {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .submitBtn {
     justify-content: center;
+  }
+}
+
+@media (max-width: 360px) {
+  .mealTypes {
+    grid-template-columns: repeat(2, 1fr);
   }
 }

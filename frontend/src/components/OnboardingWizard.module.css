@@ -220,20 +220,30 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
 }
 
-.inputGroup {
+.metricCardBox {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1rem 1.15rem;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  justify-content: space-between;
+  gap: 0.6rem;
+  transition: border-color 0.2s ease;
 }
 
-.inputGroupFull {
-  grid-column: span 2;
+.metricCardBox:focus-within {
+  border-color: rgba(168, 85, 247, 0.5);
+  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.15);
+}
+
+.metricHeader {
   display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .inputLabel {
@@ -242,22 +252,348 @@
   color: #d1d5db;
 }
 
-.input,
-.select {
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
-  padding: 0.75rem 0.9rem;
-  color: #fff;
-  font-size: 0.92rem;
-  outline: none;
+.unitToggleGroup {
+  display: flex;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.unitToggleBtn {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.input:focus,
-.select:focus {
+.unitActive {
+  background: #a855f7;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(168, 85, 247, 0.4);
+}
+
+.stepperContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.stepBtn {
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.stepBtn:hover {
+  background: rgba(168, 85, 247, 0.35);
+  color: #fff;
+}
+
+.stepBtn:active {
+  transform: scale(0.92);
+}
+
+.stepperValueWrapper {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.stepperInput {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.35rem;
+  font-weight: 700;
+  text-align: center;
+  width: 60px;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.stepperInput::-webkit-outer-spin-button,
+.stepperInput::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.stepperUnitLabel {
+  font-size: 0.78rem;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.ftInRow {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.ftInStepperBox {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.miniStepBtn {
+  width: 26px;
+  height: 26px;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.miniStepBtn:hover {
+  background: rgba(168, 85, 247, 0.35);
+  color: #fff;
+}
+
+.miniStepBtn:active {
+  transform: scale(0.92);
+}
+
+.ftInput {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-align: center;
+  width: 32px;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.ftInput::-webkit-outer-spin-button,
+.ftInput::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.genderPillGroup {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.genderPill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #d1d5db;
+  border-radius: 12px;
+  padding: 0.65rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.genderPill:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.genderActive {
+  background: rgba(168, 85, 247, 0.2);
   border-color: #a855f7;
-  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.2);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.25);
+}
+
+.genderIcon {
+  font-size: 1rem;
+}
+
+/* Activity Section */
+.activitySection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.activityGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.65rem;
+}
+
+.activityCard {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 0.75rem 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.activityCard:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.activityActive {
+  background: rgba(168, 85, 247, 0.12);
+  border-color: #a855f7;
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.2);
+}
+
+.activityIcon {
+  font-size: 1.35rem;
+  width: 34px;
+  height: 34px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.activityInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
+}
+
+.activityTitle {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.activityDesc {
+  font-size: 0.72rem;
+  color: #9ca3af;
+  line-height: 1.2;
+}
+
+.checkMark {
+  color: #a855f7;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+/* Live Calculation Box */
+.liveCalculationBox {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.12));
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 16px;
+  padding: 0.9rem 1.15rem;
+  margin-bottom: 1.25rem;
+}
+
+.liveHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.65rem;
+}
+
+.liveTitle {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #d8b4fe;
+}
+
+.bmiPill {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+
+.liveMetricsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 1rem;
+}
+
+.liveMetricCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.liveDivider {
+  width: 1px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.liveMetricLabel {
+  font-size: 0.72rem;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.liveMetricValue {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f3f4f6;
+}
+
+.liveTargetValue {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #34d399;
+}
+
+.liveGoalTag {
+  font-size: 0.68rem;
+  color: #a7f3d0;
+  font-weight: 500;
 }
 
 .legalDisclaimerBox {
@@ -321,6 +657,7 @@
 }
 
 @media (max-width: 640px) {
+  .metricGrid,
   .cardGrid2,
   .cardGrid3,
   .metricsFormGrid {

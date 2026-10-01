@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
@@ -10,6 +10,8 @@ import MealInput from "@/components/MealInput";
 import MealCard from "@/components/MealCard";
 import DateStrip from "@/components/DateStrip";
 import CalendarGrid from "@/components/CalendarGrid";
+import OnboardingWizard from "@/components/OnboardingWizard";
+import MealPlanSelector from "@/components/MealPlanSelector";
 import {
   getDailySummary,
   logMeal,
@@ -18,6 +20,9 @@ import {
   getCalendarMonth,
   getSettings,
   getAdherenceStats,
+  updateUserGoals,
+  getSuggestedMealPlans,
+  selectMealPlan,
 } from "@/lib/api";
 import styles from "./page.module.css";
 
@@ -48,7 +53,28 @@ export default function Home() {
   const [calendarYear, setCalendarYear] = useState(today.getFullYear());
   const [calendarMonth, setCalendarMonth] = useState(today.getMonth() + 1);
 
+  // Onboarding & Meal Plan State
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [planSelectorOpen, setPlanSelectorOpen] = useState(false);
+  const [userSettings, setUserSettings] = useState(null);
+  const [suggestedPlans, setSuggestedPlans] = useState(null);
+  const [dateLoading, setDateLoading] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const hasCheckedOnboarding = useRef(false);
+  const initialLoadedRef = useRef(false);
+  const loadedCalendarMonthRef = useRef({ year: today.getFullYear(), month: today.getMonth() + 1 });
+
   const isToday = isSameDay(selectedDate, today);
+
+  // Track window scroll for dynamic sticky header streak transition
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 60);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -87,49 +113,137 @@ export default function Home() {
 
   const fetchSettings = useCallback(async () => {
     try {
-      await getSettings();
+      const settings = await getSettings();
+      setUserSettings(settings);
+      if (!hasCheckedOnboarding.current) {
+        hasCheckedOnboarding.current = true;
+        // Prompt wizard if brand new user without metrics or meal plan
+        if (!settings?.height_cm || !settings?.weight_kg || !settings?.selected_meal_plan) {
+          setWizardOpen(true);
+        }
+      }
     } catch (err) {
       // Fail silently
     }
   }, []);
 
+  // Handle Wizard Complete -> Save goals & generate meal plans
+  const handleWizardComplete = async (goalData) => {
+    try {
+      const updatedSettings = await updateUserGoals(goalData);
+      setUserSettings(updatedSettings);
+      setWizardOpen(false);
+
+      // Open Plan Selector & fetch AI suggestions
+      setPlanSelectorOpen(true);
+      showToast("Metrics updated! Generating meal plans... ✨");
+
+      const plansData = await getSuggestedMealPlans();
+      setSuggestedPlans(plansData);
+    } catch (err) {
+      showToast(err.message || "Failed to save goals", "error");
+    }
+  };
+
+  // Handle Plan Selection -> Activate chosen plan
+  const handleSelectMealPlan = async (chosenPlan) => {
+    try {
+      const updated = await selectMealPlan(chosenPlan);
+      setUserSettings(updated);
+      setPlanSelectorOpen(false);
+      showToast(`Activated plan: ${chosenPlan.title}! 🎯`);
+      fetchSummary(selectedDate);
+    } catch (err) {
+      showToast(err.message || "Failed to activate meal plan", "error");
+    }
+  };
+
   const fetchCalendar = useCallback(async (year, month) => {
     try {
       const data = await getCalendarMonth(year, month);
-      setCalendarData(data);
+      setCalendarData((prev) => {
+        const prevDays = prev?.days || [];
+        const newDays = data?.days || [];
+        const map = new Map();
+        prevDays.forEach((d) => map.set(d.date, d));
+        newDays.forEach((d) => map.set(d.date, d));
+        return {
+          ...data,
+          days: Array.from(map.values()),
+        };
+      });
     } catch (err) {
       // Calendar is non-critical, fail silently
     }
   }, []);
 
-  // Fetch summary, stats, and settings when authenticated
+  // Initial load: Fetch summary, stats, settings, and calendar once upon authentication
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !initialLoadedRef.current) {
+      initialLoadedRef.current = true;
       setLoading(true);
-      Promise.all([
+
+      const d = selectedDate || today;
+      const day = d.getDay();
+      const monday = new Date(d);
+      monday.setDate(d.getDate() - ((day + 6) % 7));
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+
+      const promises = [
         fetchSummary(selectedDate),
         fetchStats(),
         fetchSettings(),
-      ]).finally(() => setLoading(false));
-    }
-  }, [selectedDate, isAuthenticated, fetchSummary, fetchStats, fetchSettings]);
+        fetchCalendar(calendarYear, calendarMonth),
+      ];
 
-  // Fetch calendar data for current month
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchCalendar(calendarYear, calendarMonth);
-    }
-  }, [calendarYear, calendarMonth, isAuthenticated, fetchCalendar]);
+      // If current week spans across two months (e.g. Sep 28 - Oct 4), fetch both months so all dots display!
+      const monYear = monday.getFullYear();
+      const monMonth = monday.getMonth() + 1;
+      const sunYear = sunday.getFullYear();
+      const sunMonth = sunday.getMonth() + 1;
+      if (monYear !== calendarYear || monMonth !== calendarMonth) {
+        promises.push(fetchCalendar(monYear, monMonth));
+      }
+      if (sunYear !== calendarYear || sunMonth !== calendarMonth) {
+        promises.push(fetchCalendar(sunYear, sunMonth));
+      }
 
-  // Also refresh calendar when the selected date's month changes
+      Promise.all(promises).finally(() => setLoading(false));
+    }
+  }, [isAuthenticated, selectedDate, today, calendarYear, calendarMonth, fetchSummary, fetchStats, fetchSettings, fetchCalendar]);
+
+  // When selectedDate changes: ONLY fetch daily summary (avoids calling 4 APIs & keeps DOM mounted)
   useEffect(() => {
+    if (!initialLoadedRef.current) return;
+    setDateLoading(true);
+    fetchSummary(selectedDate).finally(() => setDateLoading(false));
+
+    // Silently refresh calendar only if date crosses into a different month
     const newYear = selectedDate.getFullYear();
     const newMonth = selectedDate.getMonth() + 1;
-    if (newYear !== calendarYear || newMonth !== calendarMonth) {
+    if (newYear !== loadedCalendarMonthRef.current.year || newMonth !== loadedCalendarMonthRef.current.month) {
+      loadedCalendarMonthRef.current = { year: newYear, month: newMonth };
       setCalendarYear(newYear);
       setCalendarMonth(newMonth);
+      fetchCalendar(newYear, newMonth);
     }
-  }, [selectedDate]);
+  }, [selectedDate, fetchSummary, fetchCalendar]);
+
+  const handleWeekChange = useCallback((newWeekDates) => {
+    if (!newWeekDates || newWeekDates.length === 0) return;
+    const firstDay = newWeekDates[0];
+    const lastDay = newWeekDates[newWeekDates.length - 1];
+    const m1 = firstDay.getMonth() + 1;
+    const y1 = firstDay.getFullYear();
+    const m2 = lastDay.getMonth() + 1;
+    const y2 = lastDay.getFullYear();
+
+    fetchCalendar(y1, m1);
+    if (m1 !== m2 || y1 !== y2) {
+      fetchCalendar(y2, m2);
+    }
+  }, [fetchCalendar]);
 
   const handleDateSelect = (date) => {
     setSelectedDate(date);
@@ -137,8 +251,10 @@ export default function Home() {
   };
 
   const handleMonthChange = (year, month) => {
+    loadedCalendarMonthRef.current = { year, month };
     setCalendarYear(year);
     setCalendarMonth(month);
+    fetchCalendar(year, month);
   };
 
   const handleLogMeal = async (rawInput, mealType) => {
@@ -195,6 +311,11 @@ export default function Home() {
     return (
       <main className={styles.main}>
         <div className={styles.loader}>
+          <img
+            src="/corecontrol_logo.webp"
+            alt="CoreControl"
+            style={{ width: "64px", height: "64px", borderRadius: "16px", objectFit: "cover", marginBottom: "0.25rem", boxShadow: "0 4px 16px rgba(0,0,0,0.4)" }}
+          />
           <div className={styles.loaderSpinner} />
           <span>Loading CoreControl...</span>
         </div>
@@ -215,26 +336,54 @@ export default function Home() {
         </div>
       )}
 
+      {/* Onboarding Wizard Modal for New Users */}
+      {wizardOpen && (
+        <OnboardingWizard
+          initialSettings={userSettings}
+          onComplete={handleWizardComplete}
+          onCancel={() => setWizardOpen(false)}
+        />
+      )}
+
+      {/* Meal Plan Selector Modal */}
+      {planSelectorOpen && (
+        <MealPlanSelector
+          initialPlans={suggestedPlans}
+          onSelectPlan={handleSelectMealPlan}
+          onBackToWizard={() => {
+            setPlanSelectorOpen(false);
+            setWizardOpen(true);
+          }}
+        />
+      )}
+
       <div className={styles.container}>
         {/* Header */}
         <header className={styles.header}>
           <div className={styles.brand}>
             <h1 className={styles.logo}>
-              <span className={styles.logoIcon}>🏋️</span>
+              <img
+                src="/corecontrol_logo.webp"
+                alt="CoreControl"
+                className={styles.logoImage}
+              />
               CoreControl
             </h1>
             <p className={styles.date}>{dateLabel}</p>
           </div>
         </header>
 
-        {/* Date Strip */}
-        <section>
+        {/* Date Strip (Sticky weekly bar) */}
+        <section className={styles.stickyDateSection}>
           <DateStrip
             selectedDate={selectedDate}
             onDateSelect={handleDateSelect}
             calendarData={calendarData}
             calendarOpen={calendarOpen}
             onToggleCalendar={() => setCalendarOpen(!calendarOpen)}
+            adherenceStats={adherenceStats}
+            isScrolled={isScrolled}
+            onWeekChange={handleWeekChange}
           />
         </section>
 
@@ -259,10 +408,19 @@ export default function Home() {
             <div className={styles.loaderSpinner} />
           </div>
         ) : (
-          <>
+          <div className={styles.mainContent} style={{ opacity: dateLoading ? 0.65 : 1, transition: "opacity 0.2s ease" }}>
             {/* Compact Streak Badge */}
             {adherenceStats && (
-              <Link href="/progress" className={styles.streakBadge}>
+              <Link
+                href="/progress"
+                className={styles.streakBadge}
+                style={{
+                  opacity: isScrolled ? 0 : 1,
+                  transform: isScrolled ? "scale(0.95) translateY(-8px)" : "scale(1) translateY(0)",
+                  pointerEvents: isScrolled ? "none" : "auto",
+                  transition: "opacity 0.25s ease, transform 0.25s ease",
+                }}
+              >
                 <span>🔥 <strong>{adherenceStats.current_streak}</strong> day streak</span>
                 <span className={styles.streakDot}>•</span>
                 <span>{adherenceStats.weekly_adherence_score}% weekly</span>
@@ -296,11 +454,16 @@ export default function Home() {
                 <h2 className={styles.sectionTitle}>
                   {isToday ? "Today's Meals" : `Meals on ${selectedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
                 </h2>
-                {summary?.meal_count > 0 && (
-                  <span className={styles.mealCount}>
-                    {summary.meal_count} meal{summary.meal_count !== 1 ? "s" : ""}
-                  </span>
-                )}
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  {dateLoading && (
+                    <span className={styles.loadingPill}>Updating...</span>
+                  )}
+                  {summary?.meal_count > 0 && (
+                    <span className={styles.mealCount}>
+                      {summary.meal_count} meal{summary.meal_count !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {summary?.meals?.length === 0 ? (
@@ -321,7 +484,7 @@ export default function Home() {
                 </div>
               )}
             </section>
-          </>
+          </div>
         )}
 
       </div>

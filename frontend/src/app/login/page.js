@@ -109,7 +109,11 @@ export default function LoginPage() {
     <main className={styles.main}>
       <div className={styles.container}>
         <div className={styles.brand}>
-          <span className={styles.brandIcon}>🏋️</span>
+          <img
+            src="/corecontrol_logo.webp"
+            alt="CoreControl Logo"
+            className={styles.brandLogo}
+          />
           <h1 className={styles.brandName}>CoreControl</h1>
           <p className={styles.brandTagline}>Track your calories with AI</p>
         </div>

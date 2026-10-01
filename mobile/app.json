@@ -2,15 +2,11 @@
   "expo": {
     "name": "CoreControl",
     "slug": "fitscan-mobile",
+    "scheme": "fitscan",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#181410"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.fitscan.wellness",
@@ -40,7 +36,18 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-asset"
+      "expo-asset",
+      "expo-web-browser",
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#181410"
+        }
+      ]
+
     ],
     "extra": {
       "eas": {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,9 +10,11 @@ import {
   Platform,
   Alert,
   ScrollView,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { verifyFirebaseToken, loginWithEmail } from '../services/api';
 import {
   auth,
@@ -21,7 +23,16 @@ import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithCredential,
 } from '../services/firebase';
+
+try {
+  GoogleSignin.configure({
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  });
+} catch (e) {
+  // Fallback if native module not available (e.g. web)
+}
 
 export default function LoginScreen({ onLoginSuccess }) {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -29,6 +40,43 @@ export default function LoginScreen({ onLoginSuccess }) {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleIconFailed, setGoogleIconFailed] = useState(false);
+  const isAuthInProgress = useRef(false);
+
+  const handleGoogleSuccess = async (idToken) => {
+    if (isAuthInProgress.current) return;
+    isAuthInProgress.current = true;
+    setLoading(true);
+    try {
+      if (isFirebaseConfigured() && auth) {
+        const credential = GoogleAuthProvider.credential(idToken);
+        const userCred = await signInWithCredential(auth, credential);
+        const firebaseIdToken = await userCred.user.getIdToken();
+        const res = await verifyFirebaseToken(
+          firebaseIdToken,
+          userCred.user.email,
+          userCred.user.displayName,
+          userCred.user.photoURL
+        );
+        await AsyncStorage.setItem('fitscan_token', res.token);
+        await AsyncStorage.setItem('fitscan_user', JSON.stringify(res.user));
+        onLoginSuccess(res.user);
+      } else {
+        const res = await verifyFirebaseToken(idToken);
+        await AsyncStorage.setItem('fitscan_token', res.token);
+        await AsyncStorage.setItem('fitscan_user', JSON.stringify(res.user));
+        onLoginSuccess(res.user);
+      }
+    } catch (err) {
+      console.warn('Google auth error:', err);
+      Alert.alert('Google Sign-In Failed', err.message || 'Failed to authenticate');
+    } finally {
+      setLoading(false);
+      setGoogleLoading(false);
+      isAuthInProgress.current = false;
+    }
+  };
 
   const handleEmailAuth = async () => {
     const cleanEmail = email.trim().toLowerCase();
@@ -88,9 +136,11 @@ export default function LoginScreen({ onLoginSuccess }) {
 
   const handleGoogleAuth = async () => {
     setLoading(true);
+    setGoogleLoading(true);
     try {
       if (Platform.OS === 'web' && isFirebaseConfigured() && auth) {
         const provider = new GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
         const userCred = await signInWithPopup(auth, provider);
         const idToken = await userCred.user.getIdToken();
         const res = await verifyFirebaseToken(
@@ -103,17 +153,38 @@ export default function LoginScreen({ onLoginSuccess }) {
         await AsyncStorage.setItem('fitscan_user', JSON.stringify(res.user));
         onLoginSuccess(res.user);
       } else {
-        // Mobile / Dev Google One-Tap Login
-        const res = await loginWithEmail('google.user@corecontrol.app', 'Google User');
-        await AsyncStorage.setItem('fitscan_token', res.token);
-        await AsyncStorage.setItem('fitscan_user', JSON.stringify(res.user));
-        onLoginSuccess(res.user);
+        await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+        const response = await GoogleSignin.signIn();
+        const idToken = response.data?.idToken || response.idToken;
+        if (!idToken) {
+          throw new Error('No ID token received from Google');
+        }
+        await handleGoogleSuccess(idToken);
       }
     } catch (err) {
       console.warn('Google auth error:', err);
-      Alert.alert('Google Sign-In', err.message || 'Failed to sign in with Google');
+      if (err.code === statusCodes?.SIGN_IN_CANCELLED) {
+        // User cancelled the prompt
+      } else if (err.code === statusCodes?.IN_PROGRESS) {
+        // Sign in already in progress
+      } else if (err.code === statusCodes?.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert('Google Play Services', 'Google Play Services are not available on this device.');
+      } else if (
+        err.message &&
+        (err.message.includes('RNGoogleSignin') ||
+          err.message.includes('TurboModuleRegistry') ||
+          err.message.includes('null is not an object'))
+      ) {
+        Alert.alert(
+          'Development Build Required',
+          'Native Google Sign-In requires an Android Development Build because standard Expo Go cannot run native Google Play libraries. Use Email/Password in Expo Go or run a development build.'
+        );
+      } else {
+        Alert.alert('Google Sign-In Error', err.message || 'Failed to sign in with Google');
+      }
     } finally {
       setLoading(false);
+      setGoogleLoading(false);
     }
   };
 
@@ -136,10 +207,30 @@ export default function LoginScreen({ onLoginSuccess }) {
               style={styles.googleButton}
               onPress={handleGoogleAuth}
               disabled={loading}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
             >
-              <Text style={styles.googleIconText}>🌐</Text>
-              <Text style={styles.googleButtonText}>Continue with Google</Text>
+              {googleLoading ? (
+                <View style={styles.googleLoadingRow}>
+                  <ActivityIndicator size="small" color="#1F1F1F" />
+                  <Text style={styles.googleLoadingText}>Signing in with Google...</Text>
+                </View>
+              ) : (
+                <>
+                  <View style={styles.googleIconWrapper}>
+                    {googleIconFailed ? (
+                      <Text style={styles.fallbackGoogleText}>G</Text>
+                    ) : (
+                      <Image
+                        source={{ uri: 'https://developers.google.com/identity/images/g-logo.png' }}
+                        style={styles.googleLogo}
+                        resizeMode="contain"
+                        onError={() => setGoogleIconFailed(true)}
+                      />
+                    )}
+                  </View>
+                  <Text style={styles.googleButtonText}>Continue with Google</Text>
+                </>
+              )}
             </TouchableOpacity>
 
             <View style={styles.dividerRow}>
@@ -271,21 +362,51 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#2D261F',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#4A3E33',
-    borderRadius: 8,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
     paddingVertical: 13,
+    paddingHorizontal: 16,
     marginBottom: 16,
-    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  googleIconText: {
-    fontSize: 18,
+  googleIconWrapper: {
+    width: 22,
+    height: 22,
+    marginRight: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  googleLogo: {
+    width: 20,
+    height: 20,
+  },
+  fallbackGoogleText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#4285F4',
   },
   googleButtonText: {
-    color: '#F4ECDD',
+    color: '#1F1F1F',
     fontSize: 15,
     fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  googleLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  googleLoadingText: {
+    color: '#4B5563',
+    fontSize: 14,
+    fontWeight: '500',
   },
   dividerRow: {
     flexDirection: 'row',

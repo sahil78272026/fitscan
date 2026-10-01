@@ -5,6 +5,10 @@ import BottomTabBar from "@/components/BottomTabBar";
 export const metadata = {
   title: "CoreControl — Calorie Tracker",
   description: "Track your daily calorie intake with AI-powered food analysis. Log meals, track progress, and hit your nutrition goals.",
+  icons: {
+    icon: "/corecontrol_logo.webp",
+    apple: "/corecontrol_logo.webp",
+  },
 };
 
 export default function RootLayout({ children }) {

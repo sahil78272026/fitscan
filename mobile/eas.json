@@ -20,7 +20,15 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://fitscan-zb5j.onrender.com/api"
+        "EAS_GRADLE_CACHE":"1",
+        "EXPO_PUBLIC_API_URL": "https://fitscan-zb5j.onrender.com/api",
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyBlRK5Ez-RS27HUijdoK3ygNIEauAMGVBI",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "fitscan-54e95.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "fitscan-54e95",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "fitscan-54e95.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "672726878490",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:672726878490:web:833a52fedb95d4ff60c4a3",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "672726878490-89h61ufvba6j8h374u60nqeir1ber6ei.apps.googleusercontent.com"
       }
     },
     "production": {
@@ -28,13 +36,15 @@
         "buildType": "app-bundle"
       },
       "env": {
+        "EAS_GRADLE_CACHE":"1",
         "EXPO_PUBLIC_API_URL": "https://fitscan-zb5j.onrender.com/api",
         "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyBlRK5Ez-RS27HUijdoK3ygNIEauAMGVBI",
         "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "fitscan-54e95.firebaseapp.com",
         "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "fitscan-54e95",
         "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "fitscan-54e95.firebasestorage.app",
         "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "672726878490",
-        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:672726878490:web:833a52fedb95d4ff60c4a3"
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:672726878490:web:833a52fedb95d4ff60c4a3",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "672726878490-89h61ufvba6j8h374u60nqeir1ber6ei.apps.googleusercontent.com"
       }
     }
   },

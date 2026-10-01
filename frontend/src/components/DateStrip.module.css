@@ -1,7 +1,144 @@
 .container {
   display: flex;
   flex-direction: column;
+  gap: 0.45rem;
+  width: 100%;
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 0.25rem;
+}
+
+.dateInfo {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
+}
+
+.dateLabel {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  letter-spacing: -0.01em;
+}
+
+.todayBadge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: var(--color-primary-glow);
+  color: var(--color-primary);
+  border: 1px solid rgba(232, 160, 32, 0.3);
+  padding: 0.12rem 0.5rem;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.streakPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: scale(0.7) translateX(-6px);
+  transition: all 0.35s cubic-bezier(0.34, 1.4, 0.64, 1);
+  text-decoration: none;
+  background: rgba(232, 160, 32, 0.12);
+  border: 1px solid rgba(232, 160, 32, 0.35);
+  border-radius: 9999px;
+  color: var(--color-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0;
+  margin-left: 0;
+}
+
+.streakPill.streakPillVisible {
+  max-width: 90px;
+  padding: 0.14rem 0.5rem;
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1) translateX(0);
+  box-shadow: 0 2px 8px rgba(232, 160, 32, 0.2);
+  margin-left: 0.15rem;
+}
+
+.streakPill:hover {
+  background: rgba(232, 160, 32, 0.22);
+  border-color: var(--color-primary);
+  transform: scale(1.05);
+}
+
+.streakPill:active {
+  transform: scale(0.94);
+}
+
+.streakFlame {
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.streakCount {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.todayBtn {
+  padding: 0.2rem 0.55rem;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 2rem;
+  color: var(--color-primary);
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.todayBtn:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-glow);
+}
+
+.calendarToggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 0.45rem;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.calendarToggle:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.calendarToggle.calendarActive {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
 }
 
 .strip {
@@ -10,51 +147,66 @@
   gap: 0.25rem;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 1rem;
-  padding: 0.5rem;
+  border-radius: 0.85rem;
+  padding: 0.35rem 0.3rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .navBtn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: transparent;
-  border: none;
-  color: var(--color-text-tertiary);
-  font-size: 1.3rem;
+  width: 34px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--color-text-secondary);
   cursor: pointer;
-  border-radius: 0.5rem;
-  transition: all 0.15s ease;
+  border-radius: 0.6rem;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
+  padding: 0;
+  user-select: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .navBtn:hover {
-  color: var(--color-text-primary);
+  color: var(--color-primary);
   background: var(--color-surface-elevated);
+  border-color: rgba(232, 160, 32, 0.4);
+  transform: translateY(-1px);
+}
+
+.navBtn:active {
+  transform: scale(0.92);
+  background: var(--color-primary-glow);
+  border-color: var(--color-primary);
 }
 
 .days {
   display: flex;
   flex: 1;
-  justify-content: space-around;
-  gap: 0.15rem;
+  justify-content: space-between;
+  gap: 2px;
+  min-width: 0;
 }
 
 .day {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.15rem;
-  padding: 0.4rem 0.5rem;
+  justify-content: center;
+  gap: 0.12rem;
+  padding: 0.35rem 0.05rem;
   background: transparent;
   border: none;
-  border-radius: 0.6rem;
+  border-radius: 0.5rem;
   cursor: pointer;
   transition: all 0.15s ease;
   position: relative;
-  min-width: 42px;
+  flex: 1;
+  min-width: 0;
 }
 
 .day:hover {
@@ -76,15 +228,15 @@
 }
 
 .dayName {
-  font-size: 0.6rem;
+  font-size: 0.58rem;
   font-weight: 500;
   color: var(--color-text-tertiary);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
 }
 
 .dayNum {
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 600;
   color: var(--color-text-primary);
   line-height: 1;
@@ -100,54 +252,4 @@
 
 .day.selected .dot {
   background: rgba(255, 255, 255, 0.7);
-}
-
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.todayBtn {
-  padding: 0.3rem 0.7rem;
-  background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: 2rem;
-  color: var(--color-primary);
-  font-family: inherit;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.todayBtn:hover {
-  border-color: var(--color-primary);
-  background: var(--color-primary-glow);
-}
-
-.calendarToggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: 0.5rem;
-  color: var(--color-text-tertiary);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.calendarToggle:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-}
-
-.calendarToggle.calendarActive {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: white;
 }

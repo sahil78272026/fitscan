@@ -26,6 +26,8 @@ import {
 import CalendarGrid from '../components/CalendarGrid';
 import DateStrip from '../components/DateStrip';
 import AdherenceCard from '../components/AdherenceCard';
+import OnboardingModal from '../components/OnboardingModal';
+import MealPlanSelectorModal from '../components/MealPlanSelectorModal';
 
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -47,6 +49,12 @@ export default function HomeScreen({ navigation, user, onLogout }) {
 
   // Adherence & Streak State
   const [adherenceStats, setAdherenceStats] = useState(null);
+
+  // Onboarding & Meal Plan State
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [planSelectorOpen, setPlanSelectorOpen] = useState(false);
+  const [userSettings, setUserSettings] = useState(null);
+  const hasCheckedOnboarding = React.useRef(false);
 
   const formatDateStr = (d) => {
     const y = d.getFullYear();
@@ -78,10 +86,20 @@ export default function HomeScreen({ navigation, user, onLogout }) {
       setCalendarYear(selYear);
       setCalendarMonth(selMonth);
 
-      // Fetch calendar & adherence streak stats
+      // Fetch calendar, adherence streak stats, and check onboarding status
       await Promise.all([
         fetchCalendar(selYear, selMonth),
         getAdherenceStats().then(setAdherenceStats).catch(() => null),
+        getSettings().then((settings) => {
+          setUserSettings(settings);
+          if (!hasCheckedOnboarding.current) {
+            hasCheckedOnboarding.current = true;
+            // If new user with unconfigured metrics, prompt onboarding wizard
+            if (!settings?.height_cm || !settings?.weight_kg || !settings?.selected_meal_plan) {
+              setWizardOpen(true);
+            }
+          }
+        }).catch(() => null),
       ]);
     } catch (err) {
       console.warn('Dashboard load error:', err);
@@ -90,6 +108,18 @@ export default function HomeScreen({ navigation, user, onLogout }) {
       setRefreshing(false);
     }
   }, [selectedDate, fetchCalendar]);
+
+  const handleWizardComplete = (updatedSettings) => {
+    setUserSettings(updatedSettings);
+    setWizardOpen(false);
+    setPlanSelectorOpen(true);
+  };
+
+  const handlePlanSelected = (updatedSettings) => {
+    setUserSettings(updatedSettings);
+    setPlanSelectorOpen(false);
+    loadData();
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -359,6 +389,21 @@ export default function HomeScreen({ navigation, user, onLogout }) {
           )}
         </View>
       </ScrollView>
+
+      {/* Onboarding Wizard Modal for New Users */}
+      <OnboardingModal
+        visible={wizardOpen}
+        initialSettings={userSettings}
+        onClose={() => setWizardOpen(false)}
+        onComplete={handleWizardComplete}
+      />
+
+      {/* AI Meal Plan Generator Modal */}
+      <MealPlanSelectorModal
+        visible={planSelectorOpen}
+        onClose={() => setPlanSelectorOpen(false)}
+        onPlanSelected={handlePlanSelected}
+      />
     </SafeAreaView>
   );
 }
