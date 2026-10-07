@@ -12,6 +12,8 @@ import DateStrip from "@/components/DateStrip";
 import CalendarGrid from "@/components/CalendarGrid";
 import OnboardingWizard from "@/components/OnboardingWizard";
 import MealPlanSelector from "@/components/MealPlanSelector";
+import MissedMealBanner from "@/components/MissedMealBanner";
+import FloatingScanButton from "@/components/FloatingScanButton";
 import {
   getDailySummary,
   logMeal,
@@ -38,7 +40,7 @@ function isSameDay(d1, d2) {
 }
 
 export default function Home() {
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
 
   const today = useMemo(() => new Date(), []);
@@ -60,6 +62,7 @@ export default function Home() {
   const [suggestedPlans, setSuggestedPlans] = useState(null);
   const [dateLoading, setDateLoading] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [targetMealType, setTargetMealType] = useState(null);
   const hasCheckedOnboarding = useRef(false);
   const initialLoadedRef = useRef(false);
   const loadedCalendarMonthRef = useRef({ year: today.getFullYear(), month: today.getMonth() + 1 });
@@ -301,6 +304,25 @@ export default function Home() {
     }
   };
 
+  const handleTriggerMealLog = (mealType) => {
+    setTargetMealType(mealType);
+    const inputEl = document.getElementById("meal-input");
+    if (inputEl) {
+      inputEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(() => inputEl.focus(), 300);
+    }
+  };
+
+  const handleFloatingScanClick = () => {
+    if (!isToday) {
+      setSelectedDate(today);
+    }
+    const fileInput = document.getElementById("meal-file-input");
+    if (fileInput) {
+      fileInput.click();
+    }
+  };
+
   const dateLabel = selectedDate.toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -436,6 +458,17 @@ export default function Home() {
               <MacroProgressBar summary={summary} />
             </section>
 
+            {/* Missed Meal Alert Banner (Personalized, randomized, with planned macros) */}
+            {isToday && (
+              <MissedMealBanner
+                user={user}
+                userSettings={userSettings}
+                summary={summary}
+                isToday={isToday}
+                onLogMeal={handleTriggerMealLog}
+              />
+            )}
+
             {/* Meal Input (Text or Image Scan) — only for today */}
             {isToday && (
               <section className={styles.section}>
@@ -444,6 +477,7 @@ export default function Home() {
                   onScanImage={handleScanMealImage}
                   isLoading={submitting}
                   recentItems={summary?.recent_items || []}
+                  activeMealType={targetMealType}
                 />
               </section>
             )}
@@ -488,6 +522,12 @@ export default function Home() {
         )}
 
       </div>
+
+      {/* Floating Glowing Scan Food Photo FAB */}
+      <FloatingScanButton
+        onClick={handleFloatingScanClick}
+        isLoading={submitting}
+      />
     </main>
   );
 }

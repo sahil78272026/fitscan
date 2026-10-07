@@ -1,0 +1,254 @@
+.banner {
+  background: linear-gradient(135deg, rgba(232, 160, 32, 0.12) 0%, rgba(34, 29, 23, 0.95) 50%, rgba(199, 80, 47, 0.1) 100%);
+  border: 1px solid rgba(232, 160, 32, 0.38);
+  border-radius: 18px;
+  padding: 1.15rem 1.25rem;
+  margin-bottom: 1.25rem;
+  position: relative;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28), 0 0 16px rgba(232, 160, 32, 0.08);
+  backdrop-filter: blur(12px);
+  animation: slideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.banner::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(to bottom, var(--color-primary, #E8A020), var(--color-fat, #C7502F));
+  border-radius: 4px 0 0 4px;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.dismissBtn {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--color-text-secondary, #A79A85);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.dismissBtn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--color-text-primary, #F4ECDD);
+  transform: scale(1.08);
+}
+
+.topRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+  padding-right: 2rem;
+  flex-wrap: wrap;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(232, 160, 32, 0.18);
+  color: var(--color-primary, #E8A020);
+  border: 1px solid rgba(232, 160, 32, 0.35);
+}
+
+.multiMealTabs {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.mealTab {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--color-text-secondary, #A79A85);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.mealTab:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-primary, #F4ECDD);
+}
+
+.activeMealTab {
+  background: var(--color-primary, #E8A020);
+  color: #181410;
+  border-color: var(--color-primary, #E8A020);
+  font-weight: 700;
+}
+
+.content {
+  margin-top: 0.2rem;
+}
+
+.title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-text-primary, #F4ECDD);
+  margin-bottom: 0.25rem;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary, #A79A85);
+  margin-bottom: 0.85rem;
+  line-height: 1.4;
+}
+
+.planDishName {
+  color: var(--color-primary, #E8A020);
+  font-weight: 600;
+}
+
+.macroGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.95rem;
+}
+
+.macroPill {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 0.5rem 0.35rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  text-align: center;
+}
+
+.macroLabel {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-tertiary, #706555);
+}
+
+.macroValue {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--color-text-primary, #F4ECDD);
+}
+
+.caloriesPill .macroValue {
+  color: var(--color-primary, #E8A020);
+}
+
+.proteinPill .macroValue {
+  color: var(--color-protein, #7BA05B);
+}
+
+.carbsPill .macroValue {
+  color: var(--color-carbs, #D9A441);
+}
+
+.fatPill .macroValue {
+  color: var(--color-fat, #C7502F);
+}
+
+.actionRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.logNowBtn {
+  flex: 1;
+  background: linear-gradient(135deg, var(--color-primary, #E8A020), #d98816);
+  color: #181410;
+  border: none;
+  border-radius: 11px;
+  padding: 0.65rem 1rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(232, 160, 32, 0.25);
+}
+
+.logNowBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(232, 160, 32, 0.35);
+  filter: brightness(1.05);
+}
+
+.snoozeBtn {
+  background: transparent;
+  color: var(--color-text-secondary, #A79A85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 11px;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.snoozeBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-primary, #F4ECDD);
+}
+
+@media (max-width: 480px) {
+  .macroGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.4rem;
+  }
+  
+  .actionRow {
+    flex-direction: column;
+  }
+
+  .logNowBtn, .snoozeBtn {
+    width: 100%;
+  }
+}

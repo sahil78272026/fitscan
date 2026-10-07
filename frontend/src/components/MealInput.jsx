@@ -19,12 +19,21 @@ function getMealTypeFromTime() {
   return "snack"; // late night
 }
 
-export default function MealInput({ onSubmit, onScanImage, isLoading, recentItems = [] }) {
+export default function MealInput({ onSubmit, onScanImage, isLoading, recentItems = [], activeMealType }) {
   const [rawInput, setRawInput] = useState("");
-  const [mealType, setMealType] = useState(getMealTypeFromTime);
+  const [selectedMealType, setSelectedMealType] = useState(null);
+  const [prevActiveMealType, setPrevActiveMealType] = useState(activeMealType);
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const fileInputRef = useRef(null);
+
+  if (activeMealType !== prevActiveMealType) {
+    setPrevActiveMealType(activeMealType);
+    setSelectedMealType(activeMealType);
+  }
+
+  const mealType = selectedMealType ?? getMealTypeFromTime();
+  const setMealType = (val) => setSelectedMealType(val);
 
   // Filter recent items to only show those matching the selected meal type
   const filteredRecentItems = useMemo(
@@ -45,6 +54,10 @@ export default function MealInput({ onSubmit, onScanImage, isLoading, recentItem
     if (file) {
       setSelectedFile(file);
       setPreviewUrl(URL.createObjectURL(file));
+      const formEl = document.getElementById("meal-input-form");
+      if (formEl) {
+        formEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
     }
   };
 
@@ -70,7 +83,7 @@ export default function MealInput({ onSubmit, onScanImage, isLoading, recentItem
   };
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit}>
+    <form id="meal-input-form" className={styles.form} onSubmit={handleSubmit}>
       <div className={styles.headerRow}>
         <h3 className={styles.title}>Log a Meal</h3>
         <button
@@ -84,6 +97,7 @@ export default function MealInput({ onSubmit, onScanImage, isLoading, recentItem
         </button>
         <input
           ref={fileInputRef}
+          id="meal-file-input"
           type="file"
           accept="image/*"
           capture="environment"
