@@ -4,17 +4,60 @@ import { useState, useEffect } from "react";
 import { getSuggestedMealPlans } from "@/lib/api";
 import styles from "./MealPlanSelector.module.css";
 
+const AI_STEPS = [
+  {
+    icon: "🎯",
+    title: "Analyzing Nutrition Targets",
+    detail: "Reading your daily calories, protein split, and fitness goal...",
+  },
+  {
+    icon: "🥗",
+    title: "Filtering Dietary Preferences",
+    detail: "Matching cuisine styles, dietary restrictions, and budget tier...",
+  },
+  {
+    icon: "🍳",
+    title: "Balancing Daily Meals",
+    detail: "Designing optimal portions for breakfast, lunch, and dinner...",
+  },
+  {
+    icon: "💰",
+    title: "Estimating Costs & Macros",
+    detail: "Auditing ingredient pricing and macronutrient distribution...",
+  },
+  {
+    icon: "✨",
+    title: "Finalizing 3 Custom Plans",
+    detail: "Polishing descriptions and recipes for your review...",
+  },
+];
+
 export default function MealPlanSelector({ initialPlans, onSelectPlan, onBackToWizard }) {
   const [plans, setPlans] = useState(initialPlans?.plans || []);
   const [loading, setLoading] = useState(!initialPlans?.plans?.length);
   const [error, setError] = useState(null);
   const [selectingId, setSelectingId] = useState(null);
+  const [activeStepIndex, setActiveStepIndex] = useState(0);
 
   useEffect(() => {
     if (!initialPlans?.plans?.length) {
       loadMealPlans();
     }
   }, [initialPlans]);
+
+  // Step sequencer interval during AI generation
+  useEffect(() => {
+    if (!loading) {
+      setActiveStepIndex(0);
+      return;
+    }
+    setActiveStepIndex(0);
+    const interval = setInterval(() => {
+      setActiveStepIndex((prev) => (prev < AI_STEPS.length - 1 ? prev + 1 : prev));
+    }, 2400);
+
+    return () => clearInterval(interval);
+  }, [loading]);
 
   const loadMealPlans = async () => {
     setLoading(true);
@@ -41,13 +84,84 @@ export default function MealPlanSelector({ initialPlans, onSelectPlan, onBackToW
   };
 
   if (loading) {
+    const progressPercent = Math.min(
+      95,
+      Math.round(((activeStepIndex + 1) / AI_STEPS.length) * 100)
+    );
+
     return (
       <div className={styles.selectorOverlay}>
         <div className={styles.loadingContainer}>
-          <div className={styles.aiSpinner} />
-          <h2 className={styles.loadingTitle}>🤖 Generating Custom Meal Plans...</h2>
+          <div className={styles.aiGlowIconWrapper}>
+            <div className={styles.aiGlowPulse} />
+            <span className={styles.aiGlowEmoji}>✨</span>
+          </div>
+
+          <h2 className={styles.loadingTitle}>Crafting Your AI Meal Plans</h2>
           <p className={styles.loadingSubtitle}>
-            Gemini AI is analyzing local ingredient costs, your macronutrient targets, and dietary preference to craft 3 unique meal plans.
+            Gemini is evaluating your target macros and local ingredient costs.
+          </p>
+
+          {/* Progress Bar */}
+          <div className={styles.progressContainer}>
+            <div className={styles.progressHeader}>
+              <span className={styles.progressLabel}>
+                Step {activeStepIndex + 1} of {AI_STEPS.length}
+              </span>
+              <span className={styles.progressValue}>{progressPercent}%</span>
+            </div>
+            <div className={styles.progressBarTrack}>
+              <div
+                className={styles.progressBarFill}
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Step Sequencer List */}
+          <div className={styles.stepsList}>
+            {AI_STEPS.map((step, idx) => {
+              const isCompleted = idx < activeStepIndex;
+              const isCurrent = idx === activeStepIndex;
+              const isPending = idx > activeStepIndex;
+
+              return (
+                <div
+                  key={step.title}
+                  className={`${styles.stepItem} ${
+                    isCompleted
+                      ? styles.stepCompleted
+                      : isCurrent
+                      ? styles.stepActive
+                      : styles.stepPending
+                  }`}
+                >
+                  <div className={styles.stepStatusIcon}>
+                    {isCompleted ? (
+                      <span className={styles.checkIcon}>✓</span>
+                    ) : isCurrent ? (
+                      <span className={styles.stepMiniSpinner} />
+                    ) : (
+                      <span className={styles.pendingDot} />
+                    )}
+                  </div>
+
+                  <div className={styles.stepContent}>
+                    <div className={styles.stepTitleRow}>
+                      <span className={styles.stepEmoji}>{step.icon}</span>
+                      <span className={styles.stepTitleText}>{step.title}</span>
+                    </div>
+                    {isCurrent && (
+                      <p className={styles.stepDetailText}>{step.detail}</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <p className={styles.loadingFooterNote}>
+            ⏱️ High-precision macro calculation usually takes ~5–10 seconds
           </p>
         </div>
       </div>

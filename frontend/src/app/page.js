@@ -68,6 +68,19 @@ export default function Home() {
   const loadedCalendarMonthRef = useRef({ year: today.getFullYear(), month: today.getMonth() + 1 });
 
   const isToday = isSameDay(selectedDate, today);
+  const hasActiveMealPlan = Boolean(
+    userSettings?.selected_meal_plan &&
+    (typeof userSettings.selected_meal_plan === "object"
+      ? Object.keys(userSettings.selected_meal_plan).length > 0
+      : Boolean(userSettings.selected_meal_plan))
+  );
+  const hasGoalSet = Boolean(
+    userSettings?.height_cm &&
+    userSettings?.weight_kg &&
+    hasActiveMealPlan &&
+    !wizardOpen &&
+    !planSelectorOpen
+  );
 
   // Track window scroll for dynamic sticky header streak transition
   useEffect(() => {
@@ -459,7 +472,7 @@ export default function Home() {
             </section>
 
             {/* Missed Meal Alert Banner (Personalized, randomized, with planned macros) */}
-            {isToday && (
+            {isToday && hasActiveMealPlan && (
               <MissedMealBanner
                 user={user}
                 userSettings={userSettings}
@@ -524,10 +537,12 @@ export default function Home() {
       </div>
 
       {/* Floating Glowing Scan Food Photo FAB */}
-      <FloatingScanButton
-        onClick={handleFloatingScanClick}
-        isLoading={submitting}
-      />
+      {hasGoalSet && isToday && (
+        <FloatingScanButton
+          onClick={handleFloatingScanClick}
+          isLoading={submitting}
+        />
+      )}
     </main>
   );
 }

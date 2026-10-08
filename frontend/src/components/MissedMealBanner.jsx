@@ -105,7 +105,20 @@ export default function MissedMealBanner({
   const [dismissedMeals, setDismissedMeals] = useState(getStoredDismissals);
   const [promptOffset, setPromptOffset] = useState(() => Math.floor(Math.random() * 5));
 
-  if (!currentTime || !isToday) {
+  // Do not show banner if user has no active meal plan selected
+  const activePlan = (() => {
+    const raw = userSettings?.selected_meal_plan;
+    if (!raw) return null;
+    if (typeof raw === "object") return Object.keys(raw).length > 0 ? raw : null;
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" && Object.keys(parsed).length > 0 ? parsed : null;
+    } catch {
+      return null;
+    }
+  })();
+
+  if (!currentTime || !isToday || !activePlan) {
     return null;
   }
 
@@ -169,7 +182,7 @@ export default function MissedMealBanner({
   const promptTitle = messageGenerator(firstName);
 
   // Macro calculations
-  const planMeals = userSettings?.selected_meal_plan?.meals || [];
+  const planMeals = activePlan?.meals || [];
   const planMeal = planMeals.find(
     (m) => m.meal_type?.toLowerCase() === activeMealType
   );
