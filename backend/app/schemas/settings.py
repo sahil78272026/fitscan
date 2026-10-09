@@ -21,8 +21,14 @@ class CalorieGoalUpdate(BaseModel):
     calorie_goal: int = Field(..., gt=0, le=10000, description="Daily calorie target")
 
 
+from datetime import datetime
+
 class SelectMealPlanPayload(BaseModel):
     meal_plan: Dict[str, Any] = Field(..., description="The meal plan object selected by user")
+
+
+class SubscriptionTierUpdate(BaseModel):
+    tier: str = Field(..., pattern="^(free|pro)$")
 
 
 class SettingsResponse(BaseModel):
@@ -40,6 +46,10 @@ class SettingsResponse(BaseModel):
     start_weight_kg: Optional[float] = None
     activity_level: Optional[str] = "moderate"
     selected_meal_plan: Optional[Any] = None
+    subscription_tier: Optional[str] = "free"
+    last_plan_change_at: Optional[datetime] = None
+    can_change_plan: bool = True
+    days_until_next_plan_change: int = 0
 
     class Config:
         from_attributes = True

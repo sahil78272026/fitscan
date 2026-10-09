@@ -382,7 +382,57 @@
   .actionRow {
     flex-direction: column;
   }
-  .primaryBtn, .secondaryBtn {
+  .primaryBtn, .secondaryBtn, .proActionBtn {
     width: 100%;
   }
+}
+
+.proPlanBadge {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(99, 102, 241, 0.25));
+  border: 1px solid rgba(168, 85, 247, 0.5);
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.3);
+}
+
+.rotationBadgeReady {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34d399;
+  font-weight: 700;
+}
+
+.rotationBadgeCooldown {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.rotationBadgeCooldown:hover {
+  background: rgba(245, 158, 11, 0.22);
+}
+
+.proActionBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #a855f7, #6366f1);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 0.85rem 1.75rem;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 18px rgba(168, 85, 247, 0.35);
+}
+
+.proActionBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(168, 85, 247, 0.5);
 }

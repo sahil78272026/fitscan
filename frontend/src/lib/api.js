@@ -184,6 +184,13 @@ export async function selectMealPlan(mealPlan) {
   });
 }
 
+export async function updateSubscriptionTier(tier) {
+  return request("/settings/subscription", {
+    method: "PUT",
+    body: JSON.stringify({ tier }),
+  });
+}
+
 // --- Calendar & Stats ---
 
 export async function getCalendarMonth(year, month) {

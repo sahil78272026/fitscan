@@ -23,6 +23,8 @@ class UserSettings(Base):
     start_weight_kg = Column(Float, nullable=True)
     activity_level = Column(String(50), nullable=True, default="moderate")
     selected_meal_plan = Column(Text, nullable=True)
+    subscription_tier = Column(String(20), nullable=True, default="free")
+    last_plan_change_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 

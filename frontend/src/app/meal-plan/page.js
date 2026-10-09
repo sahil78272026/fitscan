@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { getSettings } from "@/lib/api";
+import ProUpgradeModal from "@/components/ProUpgradeModal";
 import styles from "./page.module.css";
 
 const MEAL_TYPE_ICONS = {
@@ -20,6 +21,7 @@ export default function MealPlanPage() {
 
   const [userSettings, setUserSettings] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
 
   // Auth Protection
   useEffect(() => {
@@ -58,6 +60,7 @@ export default function MealPlanPage() {
   }
 
   const selectedPlan = userSettings?.selected_meal_plan;
+  const isPro = (userSettings?.subscription_tier || "free").toLowerCase() === "pro";
 
   return (
     <main className={styles.main}>
@@ -87,6 +90,19 @@ export default function MealPlanPage() {
                 <span className={styles.planBadge}>
                   ✨ Active Plan
                 </span>
+                {isPro ? (
+                  <span className={styles.proPlanBadge}>👑 CoreControl Pro</span>
+                ) : userSettings?.can_change_plan ? (
+                  <span className={styles.rotationBadgeReady}>🟢 1 Free Weekly Rotation</span>
+                ) : (
+                  <span
+                    className={styles.rotationBadgeCooldown}
+                    onClick={() => setUpgradeModalOpen(true)}
+                    title="Click to upgrade to Pro"
+                  >
+                    ⏳ Next Free Rotation in {userSettings?.days_until_next_plan_change || 1}d
+                  </span>
+                )}
                 <span className={styles.planBadge}>
                   {(userSettings?.goal_type || "fat_loss").replace("_", " ").toUpperCase()}
                 </span>
@@ -188,12 +204,32 @@ export default function MealPlanPage() {
             {/* Action Bar */}
             <section className={styles.actionRow}>
               <Link href="/profile" className={styles.primaryBtn}>
-                🔄 Change Meal Plan
+                🔄 {isPro ? "Rotate Meal Plan (Unlimited Pro ✨)" : "Change Meal Plan"}
               </Link>
+              {!isPro && (
+                <button
+                  type="button"
+                  className={styles.proActionBtn}
+                  onClick={() => setUpgradeModalOpen(true)}
+                >
+                  👑 Unlock Unlimited Plan Rotations with Pro
+                </button>
+              )}
             </section>
           </>
         )}
       </div>
+
+      {/* Pro Upgrade Modal */}
+      <ProUpgradeModal
+        isOpen={upgradeModalOpen}
+        onClose={() => setUpgradeModalOpen(false)}
+        currentTier={userSettings?.subscription_tier || "free"}
+        daysRemaining={userSettings?.days_until_next_plan_change || 0}
+        onSuccess={(updated) => {
+          setUserSettings(updated);
+        }}
+      />
     </main>
   );
 }

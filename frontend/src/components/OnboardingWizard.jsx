@@ -44,6 +44,13 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
   const [heightUnit, setHeightUnit] = useState("cm");
   const [submitting, setSubmitting] = useState(false);
 
+  const isPro = (initialSettings?.subscription_tier || "free").toLowerCase() === "pro";
+  const isOnPlanCooldown =
+    !isPro &&
+    Boolean(initialSettings?.selected_meal_plan) &&
+    initialSettings?.can_change_plan === false;
+  const daysLeft = initialSettings?.days_until_next_plan_change || 1;
+
   useEffect(() => {
     if (initialSettings) {
       if (initialSettings.goal_type) setGoalType(initialSettings.goal_type);
@@ -549,12 +556,31 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
                 ⚖️ <strong>Health & Medical Disclaimer:</strong> CoreControl generates AI meal suggestions and macro estimates for general wellness and educational purposes only. CoreControl is not a licensed medical provider and does not provide medical nutrition therapy. Consult a physician before beginning any diet program.
               </div>
 
+              {isOnPlanCooldown && (
+                <div style={{
+                  background: "rgba(245, 158, 11, 0.12)",
+                  border: "1px solid rgba(245, 158, 11, 0.3)",
+                  borderRadius: "12px",
+                  padding: "0.85rem 1rem",
+                  fontSize: "0.82rem",
+                  color: "#fbbf24",
+                  lineHeight: "1.45",
+                  marginTop: "1rem"
+                }}>
+                  🔒 <strong>7-Day Meal Plan Cycle Active:</strong> Goals and meal plans operate on a 7-day synchronized cycle (<strong>{daysLeft} day(s)</strong> remaining on Free tier). Upgrade to CoreControl Pro to recalibrate anytime!
+                </div>
+              )}
+
               <div className={styles.wizardFooter}>
                 <button type="button" className={styles.backBtn} onClick={handleBack}>
                   ← Back
                 </button>
                 <button type="submit" className={styles.primaryBtn} disabled={submitting}>
-                  {submitting ? "Calculating & Generating Plans..." : "Generate Custom Meal Plans ✨"}
+                  {submitting
+                    ? "Calculating & Saving..."
+                    : isOnPlanCooldown
+                    ? "Save Updated Metrics & Goals 🎯"
+                    : "Generate Custom Meal Plans ✨"}
                 </button>
               </div>
             </form>

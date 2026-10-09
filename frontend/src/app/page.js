@@ -150,12 +150,19 @@ export default function Home() {
       setUserSettings(updatedSettings);
       setWizardOpen(false);
 
-      // Open Plan Selector & fetch AI suggestions
-      setPlanSelectorOpen(true);
-      showToast("Metrics updated! Generating meal plans... ✨");
+      const isProUser = (updatedSettings?.subscription_tier || "free").toLowerCase() === "pro";
+      const canChange = updatedSettings?.can_change_plan !== false || !updatedSettings?.selected_meal_plan;
 
-      const plansData = await getSuggestedMealPlans();
-      setSuggestedPlans(plansData);
+      if (isProUser || canChange) {
+        // Open Plan Selector & fetch AI suggestions
+        setPlanSelectorOpen(true);
+        showToast("Metrics updated! Generating meal plans... ✨");
+        const plansData = await getSuggestedMealPlans();
+        setSuggestedPlans(plansData);
+      } else {
+        showToast("Body stats & target calories updated! 🎯");
+        fetchSummary(selectedDate);
+      }
     } catch (err) {
       showToast(err.message || "Failed to save goals", "error");
     }

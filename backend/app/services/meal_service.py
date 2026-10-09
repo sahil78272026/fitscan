@@ -1,6 +1,7 @@
 import json
 import logging
-from datetime import date
+import math
+from datetime import date, datetime, timezone, timedelta
 from sqlalchemy import select, func, distinct, desc
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -212,8 +213,41 @@ async def get_or_create_settings(db: AsyncSession, user_id: int) -> UserSettings
     return settings
 
 
+def get_plan_change_availability(settings: UserSettings) -> tuple[bool, int]:
+    """
+    Check if the user is allowed to change/rotate their meal plan.
+    - Pro users: Unlimited changes anytime.
+    - Free users: 1 change per rolling 7 days (first-time onboarding is always allowed).
+    Returns: (can_change: bool, days_until_next_change: int)
+    """
+    tier = (getattr(settings, "subscription_tier", "free") or "free").lower()
+    if tier == "pro":
+        return True, 0
+
+    last_change = getattr(settings, "last_plan_change_at", None)
+    selected_plan = getattr(settings, "selected_meal_plan", None)
+
+    # First time user or no active meal plan chosen yet -> allow change
+    if not last_change or not selected_plan:
+        return True, 0
+
+    if last_change.tzinfo is None:
+        last_change = last_change.replace(tzinfo=timezone.utc)
+
+    now = datetime.now(timezone.utc)
+    elapsed = now - last_change
+    cooldown = timedelta(days=7)
+
+    if elapsed >= cooldown:
+        return True, 0
+
+    remaining_seconds = (cooldown - elapsed).total_seconds()
+    days_left = max(1, math.ceil(remaining_seconds / 86400))
+    return False, days_left
+
+
 def parse_settings_response_dict(settings: UserSettings) -> dict:
-    """Helper to convert UserSettings to dict with parsed selected_meal_plan."""
+    """Helper to convert UserSettings to dict with parsed selected_meal_plan and subscription status."""
     selected_plan = None
     if settings.selected_meal_plan:
         if isinstance(settings.selected_meal_plan, str):
@@ -223,6 +257,8 @@ def parse_settings_response_dict(settings: UserSettings) -> dict:
                 selected_plan = None
         elif isinstance(settings.selected_meal_plan, dict):
             selected_plan = settings.selected_meal_plan
+
+    can_change, days_left = get_plan_change_availability(settings)
 
     return {
         "calorie_goal": settings.calorie_goal,
@@ -239,6 +275,10 @@ def parse_settings_response_dict(settings: UserSettings) -> dict:
         "start_weight_kg": settings.start_weight_kg,
         "activity_level": settings.activity_level,
         "selected_meal_plan": selected_plan,
+        "subscription_tier": getattr(settings, "subscription_tier", "free") or "free",
+        "last_plan_change_at": getattr(settings, "last_plan_change_at", None),
+        "can_change_plan": can_change,
+        "days_until_next_plan_change": days_left,
     }
 
 
@@ -381,6 +421,7 @@ async def save_selected_meal_plan(db: AsyncSession, user_id: int, meal_plan: dic
     """Save the user's selected meal plan and update target macros if available."""
     settings = await get_or_create_settings(db, user_id)
     settings.selected_meal_plan = json.dumps(meal_plan)
+    settings.last_plan_change_at = datetime.now(timezone.utc)
 
     if "daily_calories" in meal_plan and meal_plan["daily_calories"]:
         settings.calorie_goal = int(meal_plan["daily_calories"])
