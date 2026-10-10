@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import ConfirmDeleteMealModal from "./ConfirmDeleteMealModal";
 import styles from "./MealCard.module.css";
 
 const MEAL_ICONS = {
@@ -13,11 +14,21 @@ const MEAL_ICONS = {
 export default function MealCard({ meal, onDelete }) {
   const [expanded, setExpanded] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-  const handleDelete = async (e) => {
+  const handleDeleteClick = (e) => {
     e.stopPropagation();
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
     setDeleting(true);
-    await onDelete(meal.id);
+    try {
+      await onDelete(meal.id);
+    } finally {
+      setDeleting(false);
+      setShowConfirmModal(false);
+    }
   };
 
   const timeStr = new Date(meal.logged_at).toLocaleTimeString("en-US", {
@@ -54,7 +65,7 @@ export default function MealCard({ meal, onDelete }) {
           {onDelete && (
             <button
               className={styles.deleteBtn}
-              onClick={handleDelete}
+              onClick={handleDeleteClick}
               disabled={deleting}
               title="Delete meal"
             >
@@ -119,6 +130,16 @@ export default function MealCard({ meal, onDelete }) {
           <polyline points="6,9 12,15 18,9" />
         </svg>
       </div>
+
+      {showConfirmModal && (
+        <ConfirmDeleteMealModal
+          isOpen={showConfirmModal}
+          onClose={() => setShowConfirmModal(false)}
+          onConfirm={handleConfirmDelete}
+          meal={meal}
+          isDeleting={deleting}
+        />
+      )}
     </div>
   );
 }
