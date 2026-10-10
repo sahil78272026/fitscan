@@ -117,6 +117,19 @@ export async function getMe() {
   return request("/auth/me");
 }
 
+export async function deleteAccount() {
+  return request("/auth/me", {
+    method: "DELETE",
+  });
+}
+
+export async function requestPublicDataDeletion(identifier, reason = null) {
+  return request("/auth/request-data-deletion", {
+    method: "POST",
+    body: JSON.stringify({ identifier, reason }),
+  }, false);
+}
+
 // --- Meals ---
 
 export async function getDailySummary(date = null) {

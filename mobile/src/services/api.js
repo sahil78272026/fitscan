@@ -104,6 +104,12 @@ export async function getMe() {
   return request('/auth/me');
 }
 
+export async function deleteAccount() {
+  return request('/auth/me', {
+    method: 'DELETE',
+  });
+}
+
 // --- Daily Summary & Calendar ---
 export async function getDailySummary(date = null) {
   const query = date ? `?date=${date}` : '';

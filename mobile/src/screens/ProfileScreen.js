@@ -12,7 +12,9 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getSettings } from '../services/api';
+import { getSettings, deleteAccount } from '../services/api';
+import { auth } from '../services/firebase';
+import { deleteUser } from 'firebase/auth';
 import OnboardingModal from '../components/OnboardingModal';
 import MealPlanSelectorModal from '../components/MealPlanSelectorModal';
 
@@ -21,6 +23,7 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
   const [loading, setLoading] = useState(true);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [planSelectorOpen, setPlanSelectorOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchSettings = async () => {
     try {
@@ -47,6 +50,45 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
   const handlePlanSelected = (updatedSettings) => {
     setUserSettings(updatedSettings);
     setPlanSelectorOpen(false);
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account & Data',
+      'Are you sure you want to permanently delete your account? All your personal logs, meals, weights, step counts, and settings will be permanently erased. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Permanently Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              // 1. Delete all personal logs and profile from PostgreSQL backend
+              await deleteAccount();
+
+              // 2. Delete user authentication identity from Firebase Auth
+              if (auth && auth.currentUser) {
+                try {
+                  await deleteUser(auth.currentUser);
+                } catch (fbErr) {
+                  console.warn('Firebase user deletion error:', fbErr);
+                }
+              }
+
+              Alert.alert('Account Deleted', 'Your account and personal data have been permanently removed.');
+              if (onLogout) {
+                await onLogout();
+              }
+            } catch (err) {
+              Alert.alert('Error', err.message || 'Failed to delete account. Please try again.');
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -202,6 +244,22 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
         <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
           <Text style={styles.logoutBtnText}>🚪 Logout of Account</Text>
         </TouchableOpacity>
+
+        {/* Account Deletion (Apple Guideline 5.1.1 & Google Play Compliance) */}
+        <TouchableOpacity
+          style={styles.deleteAccountBtn}
+          onPress={handleDeleteAccount}
+          disabled={deleting}
+        >
+          {deleting ? (
+            <ActivityIndicator color="#ff7b72" size="small" />
+          ) : (
+            <Text style={styles.deleteAccountBtnText}>🗑️ Delete Account & All Data</Text>
+          )}
+        </TouchableOpacity>
+        <Text style={styles.deleteWarningText}>
+          Permanently erases your user profile, meal logs, weights, and health metrics.
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -454,11 +512,32 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#C7502F',
     marginTop: 10,
-    marginBottom: 30,
+    marginBottom: 8,
   },
   logoutBtnText: {
     color: '#C7502F',
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  deleteAccountBtn: {
+    backgroundColor: 'rgba(248, 81, 73, 0.08)',
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(248, 81, 73, 0.35)',
+    marginTop: 6,
+  },
+  deleteAccountBtnText: {
+    color: '#ff7b72',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  deleteWarningText: {
+    color: '#8b949e',
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 6,
+    marginBottom: 30,
   },
 });

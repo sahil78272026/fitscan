@@ -18,7 +18,10 @@ import {
   selectMealPlan,
   logWeight,
   getWeightHistory,
+  deleteAccount,
 } from "@/lib/api";
+import { auth } from "@/lib/firebase";
+import { deleteUser } from "firebase/auth";
 import styles from "./page.module.css";
 
 export default function ProfilePage() {
@@ -35,6 +38,7 @@ export default function ProfilePage() {
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [suggestedPlans, setSuggestedPlans] = useState(null);
   const [toasts, setToasts] = useState([]);
+  const [deleting, setDeleting] = useState(false);
 
   // Auth Protection
   useEffect(() => {
@@ -124,6 +128,37 @@ export default function ProfilePage() {
       showToast("Calorie goal updated! 🎯");
     } catch (err) {
       showToast("Failed to update calorie goal", "error");
+    }
+  };
+
+  // Handle Permanent Account & Data Deletion
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to permanently delete your account?\n\nThis will immediately and permanently erase all your meal logs, weight records, food photos, and personal targets. This action cannot be undone."
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    try {
+      // 1. Delete from PostgreSQL
+      await deleteAccount();
+
+      // 2. Delete from Firebase Auth
+      if (auth?.currentUser) {
+        try {
+          await deleteUser(auth.currentUser);
+        } catch (fbErr) {
+          console.warn("Firebase Auth deletion error:", fbErr);
+        }
+      }
+
+      showToast("Account and data permanently deleted.");
+      setTimeout(() => {
+        logout();
+      }, 1000);
+    } catch (err) {
+      showToast(err.message || "Failed to delete account", "error");
+      setDeleting(false);
     }
   };
 
@@ -398,8 +433,8 @@ export default function ProfilePage() {
           </div>
         </section>
 
-        {/* Account Management & Logout */}
-        <section style={{ borderTop: "1px solid var(--color-border)", paddingTop: "1.5rem" }}>
+        {/* Account Management, Logout & Deletion */}
+        <section style={{ borderTop: "1px solid var(--color-border)", paddingTop: "1.5rem", display: "flex", flexDirection: "column", gap: "0.75rem", alignItems: "flex-start" }}>
           <button className={styles.logoutBtn} onClick={logout}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -408,6 +443,23 @@ export default function ProfilePage() {
             </svg>
             Logout of Account
           </button>
+
+          <button
+            className={styles.deleteAccountBtn}
+            onClick={handleDeleteAccount}
+            disabled={deleting}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              <line x1="10" y1="11" x2="10" y2="17" />
+              <line x1="14" y1="11" x2="14" y2="17" />
+            </svg>
+            {deleting ? "Permanently Deleting..." : "Delete Account & All Data"}
+          </button>
+          <span style={{ fontSize: "0.75rem", color: "var(--color-text-tertiary)" }}>
+            Permanently erases all meals, macro history, weight logs, and personal metrics.
+          </span>
         </section>
       </div>
 

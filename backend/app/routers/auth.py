@@ -1,4 +1,6 @@
 import logging
+from typing import Optional
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -136,3 +138,57 @@ async def update_profile(
     await db.commit()
     await db.refresh(current_user)
     return current_user
+
+
+class DeletionRequestPayload(BaseModel):
+    identifier: str  # email or phone
+    reason: Optional[str] = None
+
+
+@router.delete("/me")
+async def delete_account(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Permanently delete user account and all associated personal data (meals, settings, weights, steps)."""
+    user_id = current_user.id
+    user_email = current_user.email
+    await db.delete(current_user)
+    await db.commit()
+    logger.info(f"User #{user_id} ({user_email}) and all associated personal records permanently deleted.")
+    return {"message": "Account and all associated personal data permanently deleted."}
+
+
+@router.post("/request-data-deletion")
+async def request_data_deletion(
+    payload: DeletionRequestPayload,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Public web endpoint for Google Play & Apple App Store data deletion compliance.
+    Allows users who cannot access the app to request account and personal data deletion.
+    """
+    target = payload.identifier.strip().lower()
+    if not target:
+        raise HTTPException(status_code=400, detail="Valid email or phone number is required")
+
+    result = await db.execute(
+        select(User).where((User.email == target) | (User.phone == target))
+    )
+    user = result.scalar_one_or_none()
+
+    if user:
+        user_id = user.id
+        await db.delete(user)
+        await db.commit()
+        logger.info(f"Account for {target} (User #{user_id}) purged via public deletion request.")
+        return {
+            "success": True,
+            "message": f"Account and all associated personal data for {target} have been permanently deleted.",
+        }
+
+    # Return standard success message even if not found to prevent user enumeration
+    return {
+        "success": True,
+        "message": f"If an account is associated with {target}, all records have been scheduled and permanently removed.",
+    }

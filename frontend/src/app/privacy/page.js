@@ -164,7 +164,7 @@ export default function PrivacyPage() {
                 You can delete individual meal entries, step logs, or weight logs at any time directly from the app dashboard.
               </li>
               <li className={styles.listItem}>
-                To request complete account or data deletion, you may log out or contact our support team at <code>privacy@corecontrol.fit</code>. Upon receiving your request, all personal data associated with your account will be permanently deleted from our servers within 30 days.
+                To request complete account or data deletion, you may delete your account directly from your Profile settings in the app or visit our public <Link href="/delete-account" style={{ color: "#58a6ff", textDecoration: "underline" }}>Account & Data Deletion Portal</Link>. You can also email our team at <code>privacy@corecontrol.fit</code>.
               </li>
             </ul>
           </section>

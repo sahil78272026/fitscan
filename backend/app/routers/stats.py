@@ -25,8 +25,8 @@ async def get_adherence_stats(
     settings = await get_or_create_settings(db, current_user.id)
     calorie_goal = settings.calorie_goal or 2000
 
-    # Query last 30 days of daily calorie totals
-    thirty_days_ago = today - timedelta(days=30)
+    # Query past 90 days of daily calorie totals for streak tracking
+    query_start_date = today - timedelta(days=90)
     result = await db.execute(
         select(
             Meal.meal_date,
@@ -36,7 +36,7 @@ async def get_adherence_stats(
         )
         .where(
             Meal.user_id == current_user.id,
-            Meal.meal_date >= thirty_days_ago,
+            Meal.meal_date >= query_start_date,
         )
         .group_by(Meal.meal_date)
         .order_by(Meal.meal_date.desc())
@@ -98,9 +98,7 @@ async def get_adherence_stats(
 
     weekly_adherence_score = round(sum(weekly_scores) / 7.0, 1)
 
-    # 3. Badges System
-    total_images_logged = sum(d["image_count"] for d in daily_map.values())
-
+    # 3. Badges System (Continuous app engagement ladder)
     badges = [
         {
             "id": "streak_3",
@@ -118,17 +116,17 @@ async def get_adherence_stats(
         },
         {
             "id": "macro_master",
-            "title": "Macro Master",
+            "title": "15-Day Macro Master",
             "icon": "🎯",
-            "description": "Achieve an 80%+ weekly adherence score",
-            "unlocked": weekly_adherence_score >= 80.0,
+            "description": "Log meals for 15 consecutive days",
+            "unlocked": current_streak >= 15,
         },
         {
-            "id": "ai_visionary",
-            "title": "AI Visionary",
-            "icon": "📷",
-            "description": "Log 3+ meals using AI Photo Scan",
-            "unlocked": total_images_logged >= 3,
+            "id": "streak_30",
+            "title": "30-Day Legend",
+            "icon": "🏆",
+            "description": "Log meals for 30 consecutive days",
+            "unlocked": current_streak >= 30,
         },
     ]
 
