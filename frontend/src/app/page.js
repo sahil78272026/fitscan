@@ -26,6 +26,7 @@ import {
   getSuggestedMealPlans,
   selectMealPlan,
 } from "@/lib/api";
+import { uploadMealImageToFirebase } from "@/lib/firebase";
 import styles from "./page.module.css";
 
 function formatDateStr(d) {
@@ -300,7 +301,13 @@ export default function Home() {
     setSubmitting(true);
     try {
       const dateStr = formatDateStr(selectedDate);
-      await scanMealImage(imageFile, rawInput, mealType, dateStr);
+      let imageUrl = null;
+      try {
+        imageUrl = await uploadMealImageToFirebase(imageFile, user?.id || "user");
+      } catch (uploadErr) {
+        console.warn("Firebase image upload failed:", uploadErr);
+      }
+      await scanMealImage(imageFile, rawInput, mealType, dateStr, imageUrl);
       await fetchSummary(selectedDate);
       await fetchStats();
       await fetchCalendar(calendarYear, calendarMonth);

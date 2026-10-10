@@ -180,3 +180,29 @@
 .card.expanded .chevron {
   transform: rotate(180deg);
 }
+
+.mealThumb {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.imageContainer {
+  width: 100%;
+  max-height: 220px;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+  border: 1px solid var(--color-border);
+}
+
+.expandedImage {
+  width: 100%;
+  height: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  display: block;
+}

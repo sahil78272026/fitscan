@@ -52,6 +52,31 @@ try {
   }
 }
 
+import { getStorage, ref, uploadBytes, uploadString, getDownloadURL } from 'firebase/storage';
+
+export const storage = getStorage(app);
+
+export async function uploadMealImageToFirebase(imageUriOrBase64, isBase64 = false, userId = 'anonymous') {
+  if (!isFirebaseConfigured()) return null;
+  const filename = `meals/${userId}/${Date.now()}_${Math.random().toString(36).substring(2, 9)}.jpg`;
+  const storageRef = ref(storage, filename);
+
+  if (isBase64) {
+    let cleanB64 = imageUriOrBase64;
+    if (cleanB64.includes(',')) {
+      cleanB64 = cleanB64.split(',')[1];
+    }
+    await uploadString(storageRef, cleanB64, 'base64', { contentType: 'image/jpeg' });
+  } else {
+    const response = await fetch(imageUriOrBase64);
+    const blob = await response.blob();
+    await uploadBytes(storageRef, blob, { contentType: 'image/jpeg' });
+  }
+
+  const downloadUrl = await getDownloadURL(storageRef);
+  return downloadUrl;
+}
+
 export {
   app,
   auth,
@@ -61,4 +86,8 @@ export {
   signInWithCredential,
   signInWithPhoneNumber,
   PhoneAuthProvider,
+  ref,
+  uploadBytes,
+  uploadString,
+  getDownloadURL,
 };

@@ -140,22 +140,24 @@ export async function getStepHistory(days = 7) {
 }
 
 // --- Meals ---
-export async function logMeal(rawInput, mealType, mealDate = null) {
+export async function logMeal(rawInput, mealType, mealDate = null, imageUrl = null) {
   const body = { raw_input: rawInput, meal_type: mealType };
   if (mealDate) body.meal_date = mealDate;
+  if (imageUrl) body.image_url = imageUrl;
   return request('/meals', {
     method: 'POST',
     body: JSON.stringify(body),
   });
 }
 
-export async function scanMealImageBase64(photoBase64, rawInput = '', mealType = 'lunch', mealDate = null) {
+export async function scanMealImageBase64(photoBase64, rawInput = '', mealType = 'lunch', mealDate = null, imageUrl = null) {
   const body = {
     photo_base64: photoBase64,
     raw_input: rawInput,
     meal_type: mealType,
   };
   if (mealDate) body.meal_date = mealDate;
+  if (imageUrl) body.image_url = imageUrl;
 
   return request('/meals/scan-image-base64', {
     method: 'POST',
@@ -163,7 +165,7 @@ export async function scanMealImageBase64(photoBase64, rawInput = '', mealType =
   });
 }
 
-export async function scanMealImage(imageUri, rawInput = '', mealType = 'lunch', mealDate = null) {
+export async function scanMealImage(imageUri, rawInput = '', mealType = 'lunch', mealDate = null, imageUrl = null) {
   const actualUri = typeof imageUri === 'string'
     ? imageUri
     : (imageUri?.uri || imageUri?.localUri || '');
@@ -178,6 +180,7 @@ export async function scanMealImage(imageUri, rawInput = '', mealType = 'lunch',
   if (rawInput) formData.append('raw_input', String(rawInput));
   if (mealType) formData.append('meal_type', String(mealType));
   if (mealDate) formData.append('meal_date', String(mealDate));
+  if (imageUrl) formData.append('image_url', String(imageUrl));
 
   const url = `${API_BASE_URL}/meals/scan-image`;
   const headers = {};

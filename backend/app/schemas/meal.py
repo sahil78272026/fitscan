@@ -28,6 +28,7 @@ class MealCreate(BaseModel):
     raw_input: str = Field(..., min_length=1, max_length=500, description="What did you eat? e.g. '2 eggs, 1 toast, black coffee'")
     meal_type: str = Field(..., pattern="^(breakfast|lunch|dinner|snack)$", description="Type of meal")
     meal_date: Optional[date] = Field(None, description="Target date for the meal (YYYY-MM-DD)")
+    image_url: Optional[str] = Field(None, max_length=500, description="Optional image URL for the meal")
 
 
 class MealResponse(BaseModel):

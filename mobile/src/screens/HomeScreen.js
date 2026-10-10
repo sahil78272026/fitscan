@@ -11,6 +11,8 @@ import {
   Platform,
   StatusBar,
   Alert,
+  Image,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -40,6 +42,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
   const [mealType, setMealType] = useState('lunch');
   const [submitting, setSubmitting] = useState(false);
   const [newWeight, setNewWeight] = useState('');
+  const [previewImage, setPreviewImage] = useState(null);
 
   // Calendar State
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -371,14 +374,27 @@ export default function HomeScreen({ navigation, user, onLogout }) {
           ) : (
             summary?.meals?.map((m) => (
               <View key={m.id} style={styles.mealItem}>
-                <View style={styles.mealItemHeader}>
-                  <Text style={styles.mealTypeBadge}>{m.meal_type.toUpperCase()}</Text>
-                  <Text style={styles.mealCals}>{m.total_calories} kcal</Text>
+                <View style={styles.mealContentRow}>
+                  {m.image_url ? (
+                    <TouchableOpacity
+                      onPress={() => setPreviewImage(m.image_url)}
+                      activeOpacity={0.8}
+                      style={styles.mealThumbContainer}
+                    >
+                      <Image source={{ uri: m.image_url }} style={styles.mealThumb} resizeMode="cover" />
+                    </TouchableOpacity>
+                  ) : null}
+                  <View style={styles.mealTextCol}>
+                    <View style={styles.mealItemHeader}>
+                      <Text style={styles.mealTypeBadge}>{m.meal_type.toUpperCase()}</Text>
+                      <Text style={styles.mealCals}>{m.total_calories} kcal</Text>
+                    </View>
+                    <Text style={styles.mealInputText}>{m.raw_input}</Text>
+                    <Text style={styles.mealMacroSub}>
+                      P: {m.total_protein}g | C: {m.total_carbs}g | F: {m.total_fat}g
+                    </Text>
+                  </View>
                 </View>
-                <Text style={styles.mealInputText}>{m.raw_input}</Text>
-                <Text style={styles.mealMacroSub}>
-                  P: {m.total_protein}g | C: {m.total_carbs}g | F: {m.total_fat}g
-                </Text>
                 {isToday && (
                   <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteMeal(m.id)}>
                     <Text style={styles.deleteText}>🗑️ Delete</Text>
@@ -389,6 +405,31 @@ export default function HomeScreen({ navigation, user, onLogout }) {
           )}
         </View>
       </ScrollView>
+
+      {/* Meal Image Full Preview Modal */}
+      <Modal
+        visible={!!previewImage}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setPreviewImage(null)}
+      >
+        <View style={styles.imageModalBg}>
+          <TouchableOpacity
+            style={styles.imageModalClose}
+            onPress={() => setPreviewImage(null)}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Text style={styles.imageModalCloseText}>✕ Close</Text>
+          </TouchableOpacity>
+          {previewImage && (
+            <Image
+              source={{ uri: previewImage }}
+              style={styles.imageModalImg}
+              resizeMode="contain"
+            />
+          )}
+        </View>
+      </Modal>
 
       {/* Onboarding Wizard Modal for New Users */}
       <OnboardingModal
@@ -739,5 +780,52 @@ const styles = StyleSheet.create({
   deleteText: {
     color: '#C7502F',
     fontSize: 12,
+  },
+  mealContentRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  mealThumbContainer: {
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#2C251D',
+    borderWidth: 1,
+    borderColor: '#3A3128',
+  },
+  mealThumb: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+  },
+  mealTextCol: {
+    flex: 1,
+  },
+  imageModalBg: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  imageModalClose: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 54 : 32,
+    right: 20,
+    zIndex: 10,
+    backgroundColor: '#2C251D',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  imageModalCloseText: {
+    color: '#F4ECDD',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  imageModalImg: {
+    width: '100%',
+    height: '80%',
+    borderRadius: 12,
   },
 });

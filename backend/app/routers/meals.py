@@ -23,6 +23,7 @@ class ScanImageBase64Request(BaseModel):
     raw_input: Optional[str] = None
     meal_type: str = "lunch"
     meal_date: Optional[str] = None
+    image_url: Optional[str] = None
 
 
 @router.post("", response_model=MealResponse, status_code=201)
@@ -38,7 +39,8 @@ async def log_meal(
             user_id=current_user.id,
             raw_input=payload.raw_input,
             meal_type=payload.meal_type,
-            target_meal_date=payload.meal_date
+            target_meal_date=payload.meal_date,
+            image_url=payload.image_url,
         )
         return meal
     except ValueError as e:
@@ -70,7 +72,8 @@ async def scan_meal_image_base64(
             meal_type=payload.meal_type,
             target_meal_date=target_date,
             image_bytes=image_bytes,
-            mime_type="image/jpeg"
+            mime_type="image/jpeg",
+            image_url=payload.image_url,
         )
         return meal
     except ValueError as e:
@@ -86,6 +89,7 @@ async def scan_meal_image(
     raw_input: Optional[str] = Form(None),
     meal_type: str = Form("lunch"),
     meal_date: Optional[str] = Form(None),
+    image_url: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -103,7 +107,8 @@ async def scan_meal_image(
             meal_type=meal_type,
             target_meal_date=target_date,
             image_bytes=image_bytes,
-            mime_type=mime_type
+            mime_type=mime_type,
+            image_url=image_url,
         )
         return meal
     except ValueError as e:

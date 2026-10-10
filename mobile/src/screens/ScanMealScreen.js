@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { logMeal, scanMealImage, scanMealImageBase64 } from '../services/api';
+import { uploadMealImageToFirebase, auth } from '../services/firebase';
 
 export default function ScanMealScreen({ navigation, route }) {
   const [imageUri, setImageUri] = useState(null);
@@ -78,10 +79,23 @@ export default function ScanMealScreen({ navigation, route }) {
 
     setLoading(true);
     try {
+      let uploadedImageUrl = null;
+      const currentUid = auth?.currentUser?.uid || 'user';
+
       if (photoBase64) {
-        await scanMealImageBase64(photoBase64, rawInput.trim(), mealType, mealDate);
+        try {
+          uploadedImageUrl = await uploadMealImageToFirebase(photoBase64, true, currentUid);
+        } catch (uploadErr) {
+          console.warn('Firebase photo upload failed, proceeding with scan:', uploadErr);
+        }
+        await scanMealImageBase64(photoBase64, rawInput.trim(), mealType, mealDate, uploadedImageUrl);
       } else if (imageUri) {
-        await scanMealImage(imageUri, rawInput.trim(), mealType, mealDate);
+        try {
+          uploadedImageUrl = await uploadMealImageToFirebase(imageUri, false, currentUid);
+        } catch (uploadErr) {
+          console.warn('Firebase photo upload failed, proceeding with scan:', uploadErr);
+        }
+        await scanMealImage(imageUri, rawInput.trim(), mealType, mealDate, uploadedImageUrl);
       } else {
         await logMeal(rawInput.trim(), mealType, mealDate);
       }

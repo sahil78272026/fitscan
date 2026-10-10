@@ -137,21 +137,23 @@ export async function getDailySummary(date = null) {
   return request(`/daily-summary${query}`);
 }
 
-export async function logMeal(rawInput, mealType, mealDate = null) {
+export async function logMeal(rawInput, mealType, mealDate = null, imageUrl = null) {
   const body = { raw_input: rawInput, meal_type: mealType };
   if (mealDate) body.meal_date = mealDate;
+  if (imageUrl) body.image_url = imageUrl;
   return request("/meals", {
     method: "POST",
     body: JSON.stringify(body),
   });
 }
 
-export async function scanMealImage(imageFile, rawInput = "", mealType = "lunch", mealDate = null) {
+export async function scanMealImage(imageFile, rawInput = "", mealType = "lunch", mealDate = null, imageUrl = null) {
   const formData = new FormData();
   formData.append("image", imageFile);
   if (rawInput) formData.append("raw_input", rawInput);
   if (mealType) formData.append("meal_type", mealType);
   if (mealDate) formData.append("meal_date", mealDate);
+  if (imageUrl) formData.append("image_url", imageUrl);
 
   return requestForm("/meals/scan-image", formData);
 }

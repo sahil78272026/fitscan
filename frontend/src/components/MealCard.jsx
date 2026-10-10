@@ -33,7 +33,16 @@ export default function MealCard({ meal, onDelete }) {
     >
       <div className={styles.header}>
         <div className={styles.left}>
-          <span className={styles.icon}>{MEAL_ICONS[meal.meal_type] || "🍽️"}</span>
+          {meal.image_url ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={meal.image_url}
+              alt={meal.meal_type}
+              className={styles.mealThumb}
+            />
+          ) : (
+            <span className={styles.icon}>{MEAL_ICONS[meal.meal_type] || "🍽️"}</span>
+          )}
           <div className={styles.info}>
             <span className={styles.mealType}>{meal.meal_type}</span>
             <span className={styles.time}>{timeStr}</span>
@@ -60,6 +69,16 @@ export default function MealCard({ meal, onDelete }) {
 
       {expanded && (
         <div className={styles.items}>
+          {meal.image_url && (
+            <div className={styles.imageContainer}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={meal.image_url}
+                alt={meal.raw_input || meal.meal_type}
+                className={styles.expandedImage}
+              />
+            </div>
+          )}
           <div className={styles.rawInput}>&ldquo;{meal.raw_input}&rdquo;</div>
 
           {/* Macro breakdown summary */}

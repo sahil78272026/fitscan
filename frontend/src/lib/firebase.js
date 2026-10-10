@@ -26,17 +26,30 @@ export const isFirebaseConfigured = () => {
   );
 };
 
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+
 let app;
 let auth;
+let storage;
 
 if (typeof window !== "undefined") {
   app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
   auth = getAuth(app);
+  storage = getStorage(app);
+}
+
+export async function uploadMealImageToFirebase(file, userId = "anonymous") {
+  if (!isFirebaseConfigured() || !storage) return null;
+  const filename = `meals/${userId}/${Date.now()}_${Math.random().toString(36).substring(2, 9)}_${file.name || "meal.jpg"}`;
+  const storageRef = ref(storage, filename);
+  await uploadBytes(storageRef, file, { contentType: file.type || "image/jpeg" });
+  return await getDownloadURL(storageRef);
 }
 
 export {
   app,
   auth,
+  storage,
   GoogleAuthProvider,
   signInWithPopup,
   signInWithEmailAndPassword,
