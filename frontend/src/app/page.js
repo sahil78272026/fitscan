@@ -27,6 +27,7 @@ import {
   selectMealPlan,
 } from "@/lib/api";
 import { uploadMealImageToFirebase } from "@/lib/firebase";
+import confetti from "canvas-confetti";
 import styles from "./page.module.css";
 
 function formatDateStr(d) {
@@ -281,11 +282,21 @@ export default function Home() {
     fetchCalendar(year, month);
   };
 
+  const triggerConfettiReward = () => {
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.65 },
+      zIndex: 9999,
+    });
+  };
+
   const handleLogMeal = async (rawInput, mealType) => {
     setSubmitting(true);
     try {
       const dateStr = formatDateStr(selectedDate);
       await logMeal(rawInput, mealType, dateStr);
+      triggerConfettiReward();
       await fetchSummary(selectedDate);
       await fetchStats();
       await fetchCalendar(calendarYear, calendarMonth);
@@ -308,6 +319,7 @@ export default function Home() {
         console.warn("Firebase image upload failed:", uploadErr);
       }
       await scanMealImage(imageFile, rawInput, mealType, dateStr, imageUrl);
+      triggerConfettiReward();
       await fetchSummary(selectedDate);
       await fetchStats();
       await fetchCalendar(calendarYear, calendarMonth);
