@@ -11,13 +11,13 @@ export default function FloatingScanButton({ onClick, isLoading = false }) {
         className={styles.fabButton}
         onClick={onClick}
         disabled={isLoading}
-        aria-label="Scan food photo with AI"
-        title="Snap or upload a food photo"
+        aria-label="Scan food photo"
+        title="Scan food photo"
       >
         <span className={styles.iconWrapper}>
           <svg
-            width="16"
-            height="16"
+            width="20"
+            height="20"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -29,8 +29,6 @@ export default function FloatingScanButton({ onClick, isLoading = false }) {
             <circle cx="12" cy="13" r="4" />
           </svg>
         </span>
-        <span className={styles.label}>Scan Food</span>
-        <span className={styles.sparkle}>✨</span>
       </button>
     </div>
   );

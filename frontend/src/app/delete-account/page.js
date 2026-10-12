@@ -82,7 +82,7 @@ export default function DeleteAccountPage() {
             ← Back to App
           </Link>
           <div className={styles.brand}>
-            <img src="/corecontrol_logo.webp" alt="CoreControl Logo" className={styles.logoImage} />
+            <img src="/corecontrol_logo.png" alt="CoreControl Logo" className={styles.logoImage} />
             <span className={styles.logoText}>CoreControl</span>
           </div>
         </header>

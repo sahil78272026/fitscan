@@ -110,7 +110,7 @@ export default function LoginPage() {
       <div className={styles.container}>
         <div className={styles.brand}>
           <img
-            src="/corecontrol_logo.webp"
+            src="/corecontrol_logo.png"
             alt="CoreControl Logo"
             className={styles.brandLogo}
           />

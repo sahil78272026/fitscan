@@ -12,7 +12,7 @@
 @keyframes fabFadeIn {
   from {
     opacity: 0;
-    transform: translateY(8px) scale(0.96);
+    transform: translateY(8px) scale(0.94);
   }
   to {
     opacity: 1;
@@ -29,20 +29,17 @@
 
 .fabButton {
   position: relative;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 0.42rem;
-  padding: 0.52rem 0.92rem;
-  border-radius: 9999px;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.25);
   background: linear-gradient(135deg, #FFC147 0%, #E8A020 50%, #C7502F 100%);
   color: #181410;
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
   cursor: pointer;
   outline: none;
-  text-decoration: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, filter 0.2s ease;
@@ -51,14 +48,14 @@
 }
 
 .fabButton:hover {
-  transform: translateY(-2px) scale(1.02);
-  filter: brightness(1.06);
+  transform: translateY(-2px) scale(1.06);
+  filter: brightness(1.08);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45),
               0 0 14px rgba(232, 160, 32, 0.45);
 }
 
 .fabButton:active {
-  transform: translateY(1px) scale(0.97);
+  transform: translateY(1px) scale(0.94);
 }
 
 .fabButton:disabled {
@@ -66,16 +63,16 @@
   cursor: not-allowed;
 }
 
-/* Subtle ambient glow behind button */
+/* Ambient circular glow halo */
 .fabGlowHalo {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 90%;
-  height: 90%;
-  border-radius: 9999px;
-  background: radial-gradient(circle, rgba(232, 160, 32, 0.3) 0%, rgba(232, 160, 32, 0) 70%);
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(232, 160, 32, 0.35) 0%, rgba(232, 160, 32, 0) 70%);
   filter: blur(8px);
   pointer-events: none;
   z-index: -1;
@@ -86,23 +83,4 @@
   align-items: center;
   justify-content: center;
   line-height: 1;
-}
-
-.label {
-  white-space: nowrap;
-  font-family: inherit;
-  font-weight: 700;
-}
-
-.sparkle {
-  font-size: 0.76rem;
-  line-height: 1;
-}
-
-/* Compact on smaller screens */
-@media (max-width: 380px) {
-  .fabButton {
-    padding: 0.46rem 0.8rem;
-    font-size: 0.78rem;
-  }
 }

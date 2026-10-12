@@ -373,7 +373,7 @@ export default function Home() {
       <main className={styles.main}>
         <div className={styles.loader}>
           <img
-            src="/corecontrol_logo.webp"
+            src="/corecontrol_logo.png"
             alt="CoreControl"
             style={{ width: "64px", height: "64px", borderRadius: "16px", objectFit: "cover", marginBottom: "0.25rem", boxShadow: "0 4px 16px rgba(0,0,0,0.4)" }}
           />
@@ -422,14 +422,14 @@ export default function Home() {
         {/* Header */}
         <header className={styles.header}>
           <div className={styles.brand}>
-            <h1 className={styles.logo}>
+            <div className={styles.logoRow}>
               <img
-                src="/corecontrol_logo.webp"
+                src="/corecontrol_logo.png"
                 alt="CoreControl"
                 className={styles.logoImage}
               />
-              CoreControl
-            </h1>
+              <h1 className={styles.logoTitle}>CoreControl</h1>
+            </div>
             <p className={styles.date}>{dateLabel}</p>
           </div>
         </header>
