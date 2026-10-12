@@ -231,89 +231,75 @@ export default function MissedMealBanner({
 
   return (
     <div className={styles.banner} role="alert">
-      <button
-        type="button"
-        className={styles.dismissBtn}
-        onClick={() => handleDismiss(activeMealType)}
-        aria-label="Dismiss banner"
-        title="Dismiss reminder"
-      >
-        ✕
-      </button>
+      <div className={styles.mainCol}>
+        <div className={styles.headerLine}>
+          <span className={styles.badge}>
+            <span className={styles.badgePulse}>●</span>
+            <span>{config.icon} Missed {config.label}</span>
+          </span>
 
-      <div className={styles.topRow}>
-        <span className={styles.badge}>
-          <span>{config.icon}</span>
-          <span>Missed {config.label}</span>
-        </span>
+          {missedMeals.length > 1 && (
+            <div className={styles.miniTabs}>
+              {missedMeals.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  className={`${styles.miniTab} ${
+                    activeMealType === type ? styles.activeMiniTab : ""
+                  }`}
+                  onClick={() => setSelectedMealType(type)}
+                  title={`Switch to ${MEAL_CONFIG[type].label}`}
+                >
+                  {MEAL_CONFIG[type].icon}
+                </button>
+              ))}
+            </div>
+          )}
 
-        {missedMeals.length > 1 && (
-          <div className={styles.multiMealTabs}>
-            {missedMeals.map((type) => (
-              <button
-                key={type}
-                type="button"
-                className={`${styles.mealTab} ${
-                  activeMealType === type ? styles.activeMealTab : ""
-                }`}
-                onClick={() => setSelectedMealType(type)}
-              >
-                <span>{MEAL_CONFIG[type].icon}</span>
-                <span>{MEAL_CONFIG[type].label}</span>
-              </button>
-            ))}
-          </div>
-        )}
+          <span className={styles.headline}>
+            <strong>{firstName}</strong>, {dishName ? `planned: ${dishName}` : `missing ~${targetCalories} kcal`}
+          </span>
+        </div>
+
+        <div className={styles.macroStrip}>
+          <span className={styles.macroTag}>
+            <strong style={{ color: "#E8A020" }}>{targetCalories}</strong> kcal
+          </span>
+          <span className={styles.dot}>•</span>
+          <span className={styles.macroTag}>
+            <strong style={{ color: "#7BA05B" }}>{targetProtein}g</strong> protein
+          </span>
+          <span className={styles.dot}>•</span>
+          <span className={styles.macroTag}>
+            <strong style={{ color: "#D9A441" }}>{targetCarbs}g</strong> carbs
+          </span>
+          <span className={styles.dot}>•</span>
+          <span className={styles.macroTag}>
+            <strong style={{ color: "#C7502F" }}>{targetFat}g</strong> fat
+          </span>
+        </div>
       </div>
 
-      <div className={styles.content}>
-        <h3 className={styles.title}>{promptTitle}</h3>
-        <p className={styles.subtitle}>
-          {dishName ? (
-            <>
-              Planned dish: <span className={styles.planDishName}>{dishName}</span> · Missing macros:
-            </>
-          ) : (
-            `Target macros for your ${config.label.toLowerCase()}:`
-          )}
-        </p>
+      <div className={styles.actions}>
+        <button
+          type="button"
+          className={styles.logBtn}
+          onClick={handleLogClick}
+          title={`Log ${config.label} now`}
+        >
+          <span>Log</span>
+          <span className={styles.arrow}>→</span>
+        </button>
 
-        <div className={styles.macroGrid}>
-          <div className={`${styles.macroPill} ${styles.caloriesPill}`}>
-            <span className={styles.macroLabel}>Calories</span>
-            <span className={styles.macroValue}>{targetCalories} kcal</span>
-          </div>
-          <div className={`${styles.macroPill} ${styles.proteinPill}`}>
-            <span className={styles.macroLabel}>Protein</span>
-            <span className={styles.macroValue}>{targetProtein}g</span>
-          </div>
-          <div className={`${styles.macroPill} ${styles.carbsPill}`}>
-            <span className={styles.macroLabel}>Carbs</span>
-            <span className={styles.macroValue}>{targetCarbs}g</span>
-          </div>
-          <div className={`${styles.macroPill} ${styles.fatPill}`}>
-            <span className={styles.macroLabel}>Fat</span>
-            <span className={styles.macroValue}>{targetFat}g</span>
-          </div>
-        </div>
-
-        <div className={styles.actionRow}>
-          <button
-            type="button"
-            className={styles.logNowBtn}
-            onClick={handleLogClick}
-          >
-            <span>Log {config.label} Now</span>
-            <span>→</span>
-          </button>
-          <button
-            type="button"
-            className={styles.snoozeBtn}
-            onClick={() => handleDismiss(activeMealType)}
-          >
-            I&apos;ll Eat Later
-          </button>
-        </div>
+        <button
+          type="button"
+          className={styles.closeBtn}
+          onClick={() => handleDismiss(activeMealType)}
+          aria-label="Dismiss reminder"
+          title="Dismiss for 45 mins"
+        >
+          ✕
+        </button>
       </div>
     </div>
   );

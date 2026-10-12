@@ -25,7 +25,8 @@ export default function MealInput({ onSubmit, onScanImage, isLoading, recentItem
   const [prevActiveMealType, setPrevActiveMealType] = useState(activeMealType);
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
-  const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
 
   if (activeMealType !== prevActiveMealType) {
     setPrevActiveMealType(activeMealType);
@@ -49,11 +50,88 @@ export default function MealInput({ onSubmit, onScanImage, isLoading, recentItem
     });
   };
 
-  const handleFileChange = (e) => {
+// Compress and downscale captured image to prevent mobile browser memory crashes (OOM)
+async function compressImageFile(file, maxWidth = 1280, maxHeight = 1280, quality = 0.75) {
+  if (!file || !file.type.startsWith("image/")) return file;
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      let { width, height } = img;
+
+      // Only resize if image dimensions exceed maximum limits
+      if (width > maxWidth || height > maxHeight) {
+        if (width / height > maxWidth / maxHeight) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        } else {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+
+      if (!ctx) {
+        resolve(file);
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            resolve(file);
+            return;
+          }
+          const compressedFile = new File(
+            [blob],
+            file.name.replace(/\.[^/.]+$/, ".jpg"),
+            {
+              type: "image/jpeg",
+              lastModified: Date.now(),
+            }
+          );
+          resolve(compressedFile);
+        },
+        "image/jpeg",
+        quality
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(file);
+    };
+
+    img.src = objectUrl;
+  });
+}
+
+  const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
+      // Clear previous preview object URL to free memory
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+      }
+      try {
+        const compressed = await compressImageFile(file);
+        setSelectedFile(compressed);
+        setPreviewUrl(URL.createObjectURL(compressed));
+      } catch (err) {
+        console.warn("Client image compression error, using raw file:", err);
+        setSelectedFile(file);
+        setPreviewUrl(URL.createObjectURL(file));
+      }
       const formEl = document.getElementById("meal-input-form");
       if (formEl) {
         formEl.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -65,7 +143,8 @@ export default function MealInput({ onSubmit, onScanImage, isLoading, recentItem
     setSelectedFile(null);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
+    if (galleryInputRef.current) galleryInputRef.current.value = "";
   };
 
   const handleSubmit = async (e) => {
@@ -86,21 +165,44 @@ export default function MealInput({ onSubmit, onScanImage, isLoading, recentItem
     <form id="meal-input-form" className={styles.form} onSubmit={handleSubmit}>
       <div className={styles.headerRow}>
         <h3 className={styles.title}>Log a Meal</h3>
-        <button
-          type="button"
-          className={styles.photoAttachBtn}
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isLoading}
-          title="Snap/Upload food photo"
-        >
-          📷 Scan Food Photo
-        </button>
+        <div className={styles.photoActions}>
+          <button
+            type="button"
+            className={styles.photoAttachBtn}
+            onClick={() => cameraInputRef.current?.click()}
+            disabled={isLoading}
+            title="Snap live food photo with camera"
+          >
+            📷 Camera
+          </button>
+          <button
+            type="button"
+            className={styles.galleryAttachBtn}
+            onClick={() => galleryInputRef.current?.click()}
+            disabled={isLoading}
+            title="Choose food photo from gallery or files"
+          >
+            🖼️ Gallery
+          </button>
+        </div>
+
+        {/* Live Camera input with capture="environment" */}
         <input
-          ref={fileInputRef}
+          ref={cameraInputRef}
           id="meal-file-input"
           type="file"
           accept="image/*"
           capture="environment"
+          onChange={handleFileChange}
+          style={{ display: "none" }}
+        />
+
+        {/* File Browser / Gallery input without capture */}
+        <input
+          ref={galleryInputRef}
+          id="meal-gallery-input"
+          type="file"
+          accept="image/*"
           onChange={handleFileChange}
           style={{ display: "none" }}
         />
