@@ -59,6 +59,17 @@ async def set_calorie_goal(
     return parse_settings_response_dict(settings)
 
 
+@router.put("/morning-briefing", response_model=SettingsResponse)
+async def set_morning_briefing_preferences(
+    payload: UserGoalUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update morning briefing schedule, frequency, or toggle status."""
+    settings = await update_user_goals(db, current_user.id, payload.model_dump(exclude_unset=True))
+    return parse_settings_response_dict(settings)
+
+
 @router.post("/meal-plans/suggest")
 async def suggest_meal_plans(
     current_user: User = Depends(get_current_user),

@@ -15,6 +15,18 @@ class UserGoalUpdate(BaseModel):
     protein_goal: Optional[int] = Field(None, gt=0, le=1000)
     carbs_goal: Optional[int] = Field(None, gt=0, le=1000)
     fat_goal: Optional[int] = Field(None, gt=0, le=1000)
+    # Morning Briefing Preferences:
+    morning_briefing_enabled: Optional[bool] = None
+    morning_briefing_start_hour: Optional[int] = Field(None, ge=0, le=23)
+    morning_briefing_end_hour: Optional[int] = Field(None, ge=0, le=23)
+    morning_briefing_frequency: Optional[str] = Field(None, pattern="^(daily|weekdays|weekly)$")
+
+
+class MorningBriefingPreferencesUpdate(BaseModel):
+    enabled: bool = True
+    start_hour: int = Field(6, ge=0, le=23)
+    end_hour: int = Field(11, ge=0, le=23)
+    frequency: str = Field("daily", pattern="^(daily|weekdays|weekly)$")
 
 
 class CalorieGoalUpdate(BaseModel):
@@ -50,6 +62,10 @@ class SettingsResponse(BaseModel):
     last_plan_change_at: Optional[datetime] = None
     can_change_plan: bool = True
     days_until_next_plan_change: int = 0
+    morning_briefing_enabled: bool = True
+    morning_briefing_start_hour: int = 6
+    morning_briefing_end_hour: int = 11
+    morning_briefing_frequency: str = "daily"
 
     class Config:
         from_attributes = True

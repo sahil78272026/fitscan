@@ -268,3 +268,17 @@ export async function getAdherenceStats() {
   return request('/stats/adherence');
 }
 
+// --- Morning Briefing ---
+export async function getMorningBriefing(clientHour = null) {
+  const hourParam = clientHour !== null ? `?client_hour=${clientHour}` : `?client_hour=${new Date().getHours()}`;
+  return request(`/daily-summary/morning-briefing${hourParam}`);
+}
+
+export async function updateMorningBriefingPreferences(preferences) {
+  return request('/settings/morning-briefing', {
+    method: 'PUT',
+    body: JSON.stringify(preferences),
+  });
+}
+
+

@@ -259,54 +259,81 @@ For each plan, the sum of the 4 meals (Breakfast, Lunch, Snack, Dinner):
 - sum(meal.carbs) MUST equal approximately {carbs_goal} g (within ±5%).
 - sum(meal.fat) MUST equal approximately {fat_goal} g (within ±5%).
 
+LANGUAGE & BREVITY RULES (CRITICAL):
+- Use direct, human, crisp language. ZERO robotic fluff or filler words.
+- dish_name: MUST be exactly 2 to 3 words only (e.g., "Paneer Bhurji Toast", "Dal Tadka Rice", "Egg Bhurji Roti", "Chicken Quinoa Bowl", "Sprouted Moong Salad"). NO long compound names.
+- Tagline: Max 8-10 words. Simple reason why it works (e.g. "High protein vegetarian plan using affordable daily staples.").
+- ingredients: Array of 3 to 5 bullet items with exact quantities (e.g. ["100g paneer", "2 whole wheat rotis", "1 tsp oil & cumin"]). NO long paragraphs.
+- description: Single short prep sentence under 12 words (e.g. "Sauté paneer with spices and serve warm with rotis.").
+
 Return ONLY a valid JSON object matching this exact structure (do NOT include markdown codeblocks or extra text):
 {{
   "plans": [
     {{
       "plan_id": "plan_1",
-      "title": "Short Inspiring Title matched to Goal & Diet",
-      "tagline": "1-line explanation of why this plan fits their goal",
+      "title": "Short Title (2-3 words)",
+      "tagline": "Brief 1-line reason why this matches their goal.",
       "daily_calories": {calorie_goal},
       "protein_g": {protein_goal},
       "carbs_g": {carbs_goal},
       "fat_g": {fat_goal},
-      "estimated_cost": "Estimated Cost String (e.g. ~₹180/day)",
+      "estimated_cost": "~₹180/day",
       "meals": [
         {{
           "meal_type": "Breakfast",
-          "dish_name": "Name of Dish matching diet_type",
+          "dish_name": "Paneer Bhurji Toast",
           "calories": 450,
           "protein": 30.0,
           "carbs": 45.0,
           "fat": 12.0,
-          "description": "Short description of ingredients and preparation."
+          "ingredients": [
+            "100g paneer",
+            "2 brown bread slices",
+            "1 tsp oil & onion"
+          ],
+          "description": "Sauté paneer with spices and serve on toasted bread."
         }},
         {{
           "meal_type": "Lunch",
-          "dish_name": "Name of Dish matching diet_type",
+          "dish_name": "Dal Tadka Rice",
           "calories": 600,
           "protein": 45.0,
           "carbs": 65.0,
           "fat": 18.0,
-          "description": "Short description of ingredients and preparation."
+          "ingredients": [
+            "1 bowl toor dal",
+            "1 cup cooked rice",
+            "1 cucumber salad"
+          ],
+          "description": "Cook dal with turmeric and temper with cumin and ghee."
         }},
         {{
           "meal_type": "Snack",
-          "dish_name": "Name of Dish matching diet_type",
+          "dish_name": "Sprouted Moong Salad",
           "calories": 250,
           "protein": 15.0,
           "carbs": 30.0,
           "fat": 8.0,
-          "description": "Short description of ingredients and preparation."
+          "ingredients": [
+            "1 cup boiled sprouts",
+            "Chopped tomatoes & lemon",
+            "10g roasted peanuts"
+          ],
+          "description": "Toss sprouts with lemon juice and roasted peanuts."
         }},
         {{
           "meal_type": "Dinner",
-          "dish_name": "Name of Dish matching diet_type",
+          "dish_name": "Soya Chunks Curry",
           "calories": 500,
           "protein": 40.0,
           "carbs": 45.0,
           "fat": 15.0,
-          "description": "Short description of ingredients and preparation."
+          "ingredients": [
+            "40g soya chunks",
+            "2 wheat rotis",
+            "Tomato onion gravy"
+          ],
+          "description": "Simmer boiled soya in light curry and serve with rotis."
         }}
       ]
     }}
@@ -435,6 +462,146 @@ async def generate_multiple_meal_plans(
         duration = time.perf_counter() - t_start
         logger.error(f"Failed to generate multiple meal plans after {duration:.2f}s: {e}")
         raise ValueError("Unable to generate candidate meal plans. Please try again.")
+
+
+MORNING_BRIEFING_PROMPT = """You are a direct, supportive personal fitness coach.
+A user just opened their app this morning. Review their nutrition from yesterday.
+
+USER TARGETS:
+- Name: {user_name}
+- Goal: {goal_type}
+- Targets: {calorie_goal} kcal | {protein_goal}g Protein
+
+YESTERDAY:
+- Logged: {yesterday_calories} kcal (Target: {calorie_goal} kcal)
+- Protein: {yesterday_protein}g (Target: {protein_goal}g)
+- Meals Logged: {yesterday_meal_count}
+{yesterday_meals_summary}
+
+STYLE RULES:
+- ZERO fluff. NO flowery greetings or corporate cheerleader words ("champion", "thrive", "fueling journey").
+- greeting: Exactly "Good morning, {user_name}!" (or "Good morning!").
+- status_badge: 1 to 2 words only ("On Target", "Low Protein", "High Calories", "Fresh Start").
+- feedback: Exactly ONE direct, human sentence (max 15 words) reviewing yesterday.
+- improvements: Exactly 2 practical bullet points (each under 10 words).
+- focus_today: Short phrase under 6 words.
+
+Return ONLY valid JSON matching this schema:
+{{
+  "greeting": "Good morning, {user_name}!",
+  "status_badge": "On Target | Low Protein | High Calories | Fresh Start",
+  "feedback": "One clear sentence reviewing calories and protein.",
+  "improvements": [
+    "🍳 Tip 1 (under 10 words)",
+    "💧 Tip 2 (under 10 words)"
+  ],
+  "focus_today": "Short focus (max 6 words)."
+}}
+"""
+
+
+async def generate_morning_briefing(
+    user_name: str,
+    goal_type: str,
+    diet_type: str,
+    calorie_goal: int,
+    protein_goal: int,
+    carbs_goal: int,
+    fat_goal: int,
+    yesterday_calories: int,
+    yesterday_protein: float,
+    yesterday_carbs: float,
+    yesterday_fat: float,
+    yesterday_meal_count: int,
+    yesterday_meals: list[dict]
+) -> dict:
+    """
+    Generate an intelligent AI morning welcome, feedback, and daily improvement briefing.
+    """
+    settings = get_settings()
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+
+    # Format yesterday meals summary
+    if not yesterday_meals:
+        meals_text = "No meals logged yesterday."
+    else:
+        meal_lines = []
+        for m in yesterday_meals:
+            meal_type = m.get("meal_type", "meal").capitalize()
+            cals = m.get("total_calories", 0)
+            items = ", ".join([it.get("name", "") for it in m.get("food_items", []) if it.get("name")])
+            meal_lines.append(f"- {meal_type} ({cals} kcal): {items or m.get('raw_input', 'Logged food')}")
+        meals_text = "\n".join(meal_lines)
+
+    goal_labels = {
+        "fat_loss": "Fat Loss",
+        "weight_loss": "Weight Loss",
+        "muscle_building": "Muscle Building",
+        "muscle_maintain": "Maintenance",
+    }
+
+    clean_name = (user_name or "there").strip().split(" ")[0].capitalize()
+
+    prompt = MORNING_BRIEFING_PROMPT.format(
+        user_name=clean_name,
+        goal_type=goal_labels.get(goal_type, goal_type or "Fat Loss"),
+        calorie_goal=calorie_goal,
+        protein_goal=protein_goal,
+        carbs_goal=carbs_goal,
+        fat_goal=fat_goal,
+        yesterday_calories=yesterday_calories,
+        yesterday_protein=yesterday_protein,
+        yesterday_carbs=yesterday_carbs,
+        yesterday_fat=yesterday_fat,
+        yesterday_meal_count=yesterday_meal_count,
+        yesterday_meals_summary=meals_text
+    )
+
+    t_start = time.perf_counter()
+    try:
+        response = await client.aio.models.generate_content(
+            model=settings.GEMINI_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.3,
+            ),
+        )
+        duration = time.perf_counter() - t_start
+        logger.info(f"Gemini API call (generate_morning_briefing) completed in {duration:.2f}s")
+        return _parse_json_from_text(response.text)
+    except Exception as e:
+        duration = time.perf_counter() - t_start
+        logger.error(f"Failed to generate morning briefing after {duration:.2f}s: {e}")
+        # Crisp, human fallback with zero fluff
+        if yesterday_meal_count == 0:
+            return {
+                "greeting": f"Good morning, {clean_name}! ☀️",
+                "status_badge": "Fresh Start",
+                "feedback": "No meals were logged yesterday. Start fresh today by tracking your breakfast.",
+                "improvements": [
+                    "🍳 Have a high-protein breakfast to stay full longer.",
+                    "💧 Drink a large glass of water to start your day."
+                ],
+                "focus_today": f"Hit your {calorie_goal} kcal target and track early."
+            }
+
+        prot_diff = protein_goal - yesterday_protein
+        badge = "On Target" if yesterday_calories <= calorie_goal + 100 else "Calorie Surplus"
+        if prot_diff > 30:
+            badge = "Protein Low"
+
+        return {
+            "greeting": f"Good morning, {clean_name}! ☀️",
+            "status_badge": badge,
+            "feedback": f"Yesterday: {yesterday_calories} of {calorie_goal} kcal logged, with {yesterday_protein}g protein.",
+            "improvements": [
+                f"🍳 Aim for {protein_goal}g protein across today's meals.",
+                "🥗 Keep dinner portions clean to hit your deficit."
+            ],
+            "focus_today": f"Hit your {protein_goal}g protein goal today."
+        }
+
 
 
 

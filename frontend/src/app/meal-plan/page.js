@@ -178,7 +178,17 @@ export default function MealPlanPage() {
 
                         <div>
                           <h4 className={styles.dishName}>{meal.dish_name}</h4>
-                          <p className={styles.dishDescription}>{meal.description}</p>
+                          {meal.ingredients && meal.ingredients.length > 0 ? (
+                            <ul className={styles.ingredientsList}>
+                              {meal.ingredients.map((ing, iIdx) => (
+                                <li key={iIdx} className={styles.ingredientItem}>
+                                  • {ing}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : meal.description ? (
+                            <p className={styles.dishDescription}>{meal.description}</p>
+                          ) : null}
                         </div>
 
                         <div className={styles.mealMacroRow}>

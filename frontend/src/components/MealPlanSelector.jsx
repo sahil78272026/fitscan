@@ -296,7 +296,20 @@ export default function MealPlanSelector({ initialPlans, onSelectPlan, onBackToW
                         <span className={styles.mealTypeBadge}>{m.meal_type}</span>
                         <span className={styles.mealDishName}>{m.dish_name}</span>
                       </div>
-                      <p className={styles.mealDesc}>{m.description}</p>
+
+                      {/* Bulleted Ingredients */}
+                      {m.ingredients && m.ingredients.length > 0 ? (
+                        <ul className={styles.ingredientsList}>
+                          {m.ingredients.map((ing, ingIdx) => (
+                            <li key={ingIdx} className={styles.ingredientItem}>
+                              • {ing}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : m.description ? (
+                        <p className={styles.mealDesc}>{m.description}</p>
+                      ) : null}
+
                       <div className={styles.mealItemMacros}>
                         <span>{m.calories} kcal</span> • <span>{m.protein}g P</span> • <span>{m.carbs}g C</span> • <span>{m.fat}g F</span>
                       </div>

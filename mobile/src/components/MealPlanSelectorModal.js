@@ -101,9 +101,20 @@ export default function MealPlanSelectorModal({ visible, onClose, onPlanSelected
                 {/* Meals preview */}
                 <View style={styles.mealsPreview}>
                   {plan.meals?.map((m, mIdx) => (
-                    <Text key={mIdx} style={styles.mealPreviewItem}>
-                      • <Text style={{ fontWeight: 'bold', color: '#c9d1d9' }}>{m.meal_type}</Text>: {m.dish_name} ({m.calories} kcal)
-                    </Text>
+                    <View key={mIdx} style={{ marginBottom: 6 }}>
+                      <Text style={styles.mealPreviewItem}>
+                        <Text style={{ fontWeight: 'bold', color: '#c9d1d9' }}>{m.meal_type}</Text>: {m.dish_name} ({m.calories} kcal)
+                      </Text>
+                      {m.ingredients && m.ingredients.length > 0 ? (
+                        <View style={{ paddingLeft: 10, marginTop: 2 }}>
+                          {m.ingredients.map((ing, ingIdx) => (
+                            <Text key={ingIdx} style={[styles.mealPreviewItem, { fontSize: 11, color: '#8b949e' }]}>
+                              • {ing}
+                            </Text>
+                          ))}
+                        </View>
+                      ) : null}
+                    </View>
                   ))}
                 </View>
 

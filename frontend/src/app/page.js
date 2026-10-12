@@ -13,9 +13,11 @@ import CalendarGrid from "@/components/CalendarGrid";
 import OnboardingWizard from "@/components/OnboardingWizard";
 import MealPlanSelector from "@/components/MealPlanSelector";
 import MissedMealBanner from "@/components/MissedMealBanner";
+import MorningBriefingCard from "@/components/MorningBriefingCard";
 import FloatingScanButton from "@/components/FloatingScanButton";
 import {
   getDailySummary,
+  getMorningBriefing,
   logMeal,
   scanMealImage,
   deleteMeal,
@@ -65,6 +67,8 @@ export default function Home() {
   const [dateLoading, setDateLoading] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [targetMealType, setTargetMealType] = useState(null);
+  const [morningBriefing, setMorningBriefing] = useState(null);
+  const [briefingDismissed, setBriefingDismissed] = useState(false);
   const hasCheckedOnboarding = useRef(false);
   const initialLoadedRef = useRef(false);
   const loadedCalendarMonthRef = useRef({ year: today.getFullYear(), month: today.getMonth() + 1 });
@@ -145,6 +149,23 @@ export default function Home() {
     }
   }, []);
 
+  const fetchBriefing = useCallback(async () => {
+    try {
+      const todayKey = formatDateStr(new Date());
+      const dismissedDate = localStorage.getItem("corecontrol_briefing_dismissed_date");
+      if (dismissedDate === todayKey) {
+        setBriefingDismissed(true);
+        return;
+      }
+      const data = await getMorningBriefing();
+      if (data && data.visible && data.briefing) {
+        setMorningBriefing(data);
+      }
+    } catch (err) {
+      // Non-critical, fail silently
+    }
+  }, []);
+
   // Handle Wizard Complete -> Save goals & generate meal plans
   const handleWizardComplete = async (goalData) => {
     try {
@@ -219,6 +240,7 @@ export default function Home() {
         fetchSummary(selectedDate),
         fetchStats(),
         fetchSettings(),
+        fetchBriefing(),
         fetchCalendar(calendarYear, calendarMonth),
       ];
 
@@ -496,6 +518,18 @@ export default function Home() {
               />
               <MacroProgressBar summary={summary} />
             </section>
+
+            {/* Morning Welcome Feedback & Improvements Card */}
+            {isToday && morningBriefing && !briefingDismissed && (
+              <MorningBriefingCard
+                briefingData={morningBriefing}
+                onDismiss={() => {
+                  setBriefingDismissed(true);
+                  localStorage.setItem("corecontrol_briefing_dismissed_date", formatDateStr(new Date()));
+                }}
+                onLogBreakfast={() => handleTriggerMealLog("breakfast")}
+              />
+            )}
 
             {/* Missed Meal Alert Banner (Personalized, randomized, with planned macros) */}
             {isToday && hasActiveMealPlan && (

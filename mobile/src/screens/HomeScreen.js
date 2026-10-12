@@ -19,6 +19,7 @@ import {
   getDailySummary,
   getCalendarMonth,
   getAdherenceStats,
+  getMorningBriefing,
   logMeal,
   deleteMeal,
   getSettings,
@@ -28,8 +29,10 @@ import {
 import CalendarGrid from '../components/CalendarGrid';
 import DateStrip from '../components/DateStrip';
 import AdherenceCard from '../components/AdherenceCard';
+import MorningBriefingCard from '../components/MorningBriefingCard';
 import OnboardingModal from '../components/OnboardingModal';
 import MealPlanSelectorModal from '../components/MealPlanSelectorModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -52,6 +55,10 @@ export default function HomeScreen({ navigation, user, onLogout }) {
 
   // Adherence & Streak State
   const [adherenceStats, setAdherenceStats] = useState(null);
+
+  // Morning Briefing State
+  const [morningBriefing, setMorningBriefing] = useState(null);
+  const [briefingDismissed, setBriefingDismissed] = useState(false);
 
   // Onboarding & Meal Plan State
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -90,7 +97,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
       setCalendarMonth(selMonth);
 
       // Fetch calendar, adherence streak stats, and check onboarding status
-      await Promise.all([
+      const promises = [
         fetchCalendar(selYear, selMonth),
         getAdherenceStats().then(setAdherenceStats).catch(() => null),
         getSettings().then((settings) => {
@@ -103,7 +110,30 @@ export default function HomeScreen({ navigation, user, onLogout }) {
             }
           }
         }).catch(() => null),
-      ]);
+      ];
+
+      if (isToday) {
+        promises.push(
+          (async () => {
+            try {
+              const todayStr = formatDateStr(new Date());
+              const dismissed = await AsyncStorage.getItem('briefing_dismissed_date');
+              if (dismissed === todayStr) {
+                setBriefingDismissed(true);
+                return;
+              }
+              const briefingRes = await getMorningBriefing();
+              if (briefingRes && briefingRes.visible && briefingRes.briefing) {
+                setMorningBriefing(briefingRes);
+              }
+            } catch (bErr) {
+              // fail silently
+            }
+          })()
+        );
+      }
+
+      await Promise.all(promises);
     } catch (err) {
       console.warn('Dashboard load error:', err);
     } finally {
@@ -320,6 +350,21 @@ export default function HomeScreen({ navigation, user, onLogout }) {
             </View>
           </View>
         </View>
+
+        {/* Morning Welcome Feedback & Improvements Card */}
+        {isToday && morningBriefing && !briefingDismissed && (
+          <MorningBriefingCard
+            briefingData={morningBriefing}
+            onDismiss={async () => {
+              setBriefingDismissed(true);
+              const todayStr = formatDateStr(new Date());
+              await AsyncStorage.setItem('briefing_dismissed_date', todayStr);
+            }}
+            onLogBreakfast={() => {
+              setMealType('breakfast');
+            }}
+          />
+        )}
 
         {/* Quick Log Meal Section */}
         {isToday && (

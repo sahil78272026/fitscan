@@ -247,6 +247,21 @@
   margin: 0;
 }
 
+.ingredientsList {
+  list-style: none;
+  padding: 0;
+  margin: 0.35rem 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.ingredientItem {
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
 .mealMacroRow {
   display: flex;
   align-items: center;

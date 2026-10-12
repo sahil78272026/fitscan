@@ -141,7 +141,15 @@ export default function MealPlanScreen({ navigation }) {
                     </View>
 
                     <Text style={styles.dishName}>{m.dish_name}</Text>
-                    <Text style={styles.dishDesc}>{m.description}</Text>
+                    {m.ingredients && m.ingredients.length > 0 ? (
+                      <View style={{ marginVertical: 6, gap: 3 }}>
+                        {m.ingredients.map((ing, ingIdx) => (
+                          <Text key={ingIdx} style={styles.dishDesc}>• {ing}</Text>
+                        ))}
+                      </View>
+                    ) : m.description ? (
+                      <Text style={styles.dishDesc}>{m.description}</Text>
+                    ) : null}
 
                     <View style={styles.macroSubRow}>
                       <Text style={styles.macroSubItem}>Protein: <Text style={{ color: '#F4ECDD', fontWeight: 'bold' }}>{m.protein}g</Text></Text>

@@ -10,9 +10,10 @@ import {
   Platform,
   StatusBar,
   Alert,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getSettings, deleteAccount } from '../services/api';
+import { getSettings, updateMorningBriefingPreferences, deleteAccount } from '../services/api';
 import { auth } from '../services/firebase';
 import { deleteUser } from 'firebase/auth';
 import OnboardingModal from '../components/OnboardingModal';
@@ -503,6 +504,62 @@ const styles = StyleSheet.create({
     color: '#221803',
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  briefingToggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  briefingToggleTitle: {
+    color: '#F4ECDD',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  briefingToggleSub: {
+    color: '#A79A85',
+    fontSize: 12,
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  briefingOptions: {
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#3A3128',
+  },
+  briefingOptionLabel: {
+    color: '#A79A85',
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+  },
+  frequencyRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  frequencyPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    backgroundColor: '#181410',
+    borderWidth: 1,
+    borderColor: '#3A3128',
+  },
+  frequencyPillActive: {
+    backgroundColor: 'rgba(232, 160, 32, 0.18)',
+    borderColor: '#E8A020',
+  },
+  frequencyPillText: {
+    color: '#A79A85',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  frequencyPillTextActive: {
+    color: '#E8A020',
+    fontWeight: '700',
   },
   logoutBtn: {
     backgroundColor: '#221D17',

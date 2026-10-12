@@ -25,6 +25,11 @@ class UserSettings(Base):
     selected_meal_plan = Column(Text, nullable=True)
     subscription_tier = Column(String(20), nullable=True, default="free")
     last_plan_change_at = Column(DateTime(timezone=True), nullable=True)
+    morning_briefing_enabled = Column(Integer, nullable=True, default=1)  # 1 = true, 0 = false (SQLite/PG compat)
+    morning_briefing_start_hour = Column(Integer, nullable=True, default=6)  # 6 AM
+    morning_briefing_end_hour = Column(Integer, nullable=True, default=11)  # 11 AM
+    morning_briefing_frequency = Column(String(20), nullable=True, default="daily")  # daily, weekdays, weekly
+    morning_briefing_cache = Column(Text, nullable=True)  # JSON {date: "YYYY-MM-DD", data: {...}}
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 

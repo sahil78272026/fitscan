@@ -279,6 +279,10 @@ def parse_settings_response_dict(settings: UserSettings) -> dict:
         "last_plan_change_at": getattr(settings, "last_plan_change_at", None),
         "can_change_plan": can_change,
         "days_until_next_plan_change": days_left,
+        "morning_briefing_enabled": bool(getattr(settings, "morning_briefing_enabled", 1) != 0),
+        "morning_briefing_start_hour": getattr(settings, "morning_briefing_start_hour", 6) if getattr(settings, "morning_briefing_start_hour", None) is not None else 6,
+        "morning_briefing_end_hour": getattr(settings, "morning_briefing_end_hour", 11) if getattr(settings, "morning_briefing_end_hour", None) is not None else 11,
+        "morning_briefing_frequency": getattr(settings, "morning_briefing_frequency", "daily") or "daily",
     }
 
 
@@ -380,6 +384,16 @@ async def update_user_goals(
     for field in ["goal_type", "diet_type", "budget_tier", "age", "gender", "height_cm", "weight_kg", "activity_level"]:
         if field in goal_data and goal_data[field] is not None:
             setattr(settings, field, goal_data[field])
+
+    # Morning Briefing Preferences
+    if "morning_briefing_enabled" in goal_data and goal_data["morning_briefing_enabled"] is not None:
+        settings.morning_briefing_enabled = 1 if goal_data["morning_briefing_enabled"] else 0
+    if "morning_briefing_start_hour" in goal_data and goal_data["morning_briefing_start_hour"] is not None:
+        settings.morning_briefing_start_hour = int(goal_data["morning_briefing_start_hour"])
+    if "morning_briefing_end_hour" in goal_data and goal_data["morning_briefing_end_hour"] is not None:
+        settings.morning_briefing_end_hour = int(goal_data["morning_briefing_end_hour"])
+    if "morning_briefing_frequency" in goal_data and goal_data["morning_briefing_frequency"] is not None:
+        settings.morning_briefing_frequency = str(goal_data["morning_briefing_frequency"])
 
     # Preserve initial starting weight benchmark
     if "weight_kg" in goal_data and goal_data["weight_kg"] is not None:
