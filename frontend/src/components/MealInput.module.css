@@ -21,20 +21,48 @@
   align-items: center;
 }
 
+.photoActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .photoAttachBtn {
-  background: rgba(59, 130, 246, 0.12);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  color: #60a5fa;
+  background: rgba(232, 160, 32, 0.12);
+  border: 1px solid rgba(232, 160, 32, 0.35);
+  color: #E8A020;
   border-radius: 8px;
-  padding: 0.4rem 0.75rem;
+  padding: 0.4rem 0.65rem;
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .photoAttachBtn:hover {
-  background: rgba(59, 130, 246, 0.25);
+  background: rgba(232, 160, 32, 0.25);
+}
+
+.galleryAttachBtn {
+  background: rgba(167, 154, 133, 0.12);
+  border: 1px solid rgba(167, 154, 133, 0.3);
+  color: #F4ECDD;
+  border-radius: 8px;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.galleryAttachBtn:hover {
+  background: rgba(167, 154, 133, 0.22);
 }
 
 .previewContainer {
