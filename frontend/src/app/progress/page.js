@@ -57,6 +57,7 @@ export default function ProgressPage() {
   }, [isAuthenticated, fetchStats, fetchWeight, weightTimeframe]);
 
   const handleLogWeight = async (weightKg) => {
+    if (!weightKg || weightKg < 25 || weightKg > 300) return;
     try {
       await logWeight(weightKg);
       await fetchWeight(weightTimeframe);
@@ -86,7 +87,7 @@ export default function ProgressPage() {
       <div className={styles.container}>
         {/* Header */}
         <header className={styles.header}>
-          <h1 className={styles.pageTitle}>📊 Progress & Adherence</h1>
+          <h1 className={styles.pageTitle}>Progress & Adherence</h1>
         </header>
 
         {loading ? (

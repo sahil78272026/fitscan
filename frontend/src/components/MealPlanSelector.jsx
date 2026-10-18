@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { getSuggestedMealPlans } from "@/lib/api";
-import ProUpgradeModal from "@/components/ProUpgradeModal";
 import styles from "./MealPlanSelector.module.css";
 
 const AI_STEPS = [
@@ -39,7 +38,6 @@ export default function MealPlanSelector({ initialPlans, onSelectPlan, onBackToW
   const [error, setError] = useState(null);
   const [selectingId, setSelectingId] = useState(null);
   const [activeStepIndex, setActiveStepIndex] = useState(0);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   useEffect(() => {
     if (!initialPlans?.plans?.length) {
@@ -56,7 +54,7 @@ export default function MealPlanSelector({ initialPlans, onSelectPlan, onBackToW
     setActiveStepIndex(0);
     const interval = setInterval(() => {
       setActiveStepIndex((prev) => (prev < AI_STEPS.length - 1 ? prev + 1 : prev));
-    }, 2400);
+    }, 3600);
 
     return () => clearInterval(interval);
   }, [loading]);
@@ -171,54 +169,37 @@ export default function MealPlanSelector({ initialPlans, onSelectPlan, onBackToW
   }
 
   if (error) {
-    const isCooldownError =
-      error.toLowerCase().includes("free tier allows") ||
-      error.toLowerCase().includes("pro");
-
     return (
       <div className={styles.selectorOverlay}>
         <div className={styles.errorContainer}>
-          <span className={styles.errorIcon}>{isCooldownError ? "⏳" : "⚠️"}</span>
+          <span className={styles.errorIcon}>⚠️</span>
           <h3 style={{ fontSize: "1.1rem", marginBottom: "0.85rem", lineHeight: "1.4" }}>
             {error}
           </h3>
-
-          {isCooldownError ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", width: "100%", marginTop: "0.5rem" }}>
-              <button
-                className={styles.retryBtn}
-                style={{ background: "linear-gradient(135deg, #a855f7, #6366f1)" }}
-                onClick={() => setShowUpgradeModal(true)}
-              >
-                👑 Unlock Unlimited Rotations with Pro
-              </button>
-              {onBackToWizard && (
-                <button
-                  className={styles.changeMetricsBtn}
-                  onClick={onBackToWizard}
-                  style={{ width: "100%" }}
-                >
-                  ← Close & Keep Existing Plan
-                </button>
-              )}
-            </div>
-          ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", width: "100%", marginTop: "0.5rem" }}>
             <button className={styles.retryBtn} onClick={loadMealPlans}>
               🔄 Retry AI Generation
             </button>
-          )}
+            {onBackToWizard && (
+              <button
+                className={styles.changeMetricsBtn}
+                onClick={onBackToWizard}
+                style={{ width: "100%" }}
+              >
+                ← Back
+              </button>
+            )}
+            {onClose && (
+              <button
+                className={styles.changeMetricsBtn}
+                onClick={onClose}
+                style={{ width: "100%" }}
+              >
+                ✕ Close
+              </button>
+            )}
+          </div>
         </div>
-
-        {showUpgradeModal && (
-          <ProUpgradeModal
-            isOpen={showUpgradeModal}
-            onClose={() => setShowUpgradeModal(false)}
-            onSuccess={() => {
-              setShowUpgradeModal(false);
-              loadMealPlans();
-            }}
-          />
-        )}
       </div>
     );
   }

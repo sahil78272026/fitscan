@@ -2,7 +2,7 @@
   min-height: 100vh;
   display: flex;
   justify-content: center;
-  padding: 2rem var(--container-padding) 5.5rem;
+  padding: 2rem var(--container-padding) 7.5rem;
   position: relative;
   z-index: 1;
 }
@@ -306,6 +306,37 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  max-height: 260px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.35rem;
+  padding-bottom: 0.5rem;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(232, 160, 32, 0.4) transparent;
+}
+
+.mealsList > * {
+  flex-shrink: 0;
+}
+
+.mealsList::-webkit-scrollbar {
+  width: 6px;
+}
+
+.mealsList::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 999px;
+}
+
+.mealsList::-webkit-scrollbar-thumb {
+  background-color: rgba(232, 160, 32, 0.4);
+  border-radius: 999px;
+}
+
+.mealsList::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-primary);
 }
 
 /* Empty State */
@@ -314,15 +345,16 @@
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  padding: 3rem 1rem;
+  padding: 2.25rem 1rem;
   background: var(--color-surface);
   border: 1px dashed var(--color-border);
   border-radius: 1rem;
+  text-align: center;
 }
 
 .emptyIcon {
-  font-size: 2.5rem;
-  opacity: 0.5;
+  font-size: 2.25rem;
+  opacity: 0.6;
 }
 
 .emptyText {
@@ -331,9 +363,49 @@
   font-weight: 500;
 }
 
-.emptyHint {
-  font-size: 0.8rem;
-  color: var(--color-text-tertiary);
+.emptyActions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.logFirstMealBtn {
+  background: var(--color-primary);
+  color: #221803;
+  font-weight: 700;
+  font-size: 0.88rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 0.75rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px var(--color-primary-glow);
+}
+
+.logFirstMealBtn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+.scanFirstMealBtn {
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  font-weight: 600;
+  font-size: 0.88rem;
+  padding: 0.65rem 1.15rem;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.scanFirstMealBtn:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 /* Loading State */
@@ -371,7 +443,7 @@
   }
 
   .main {
-    padding: 1.25rem 0.75rem 5.5rem;
+    padding: 1.25rem 0.75rem 7.5rem;
   }
 
   .container,

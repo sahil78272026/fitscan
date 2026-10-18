@@ -2,9 +2,20 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 export default function AdherenceCard({ stats }) {
-  if (!stats) return null;
-
-  const { current_streak = 0, weekly_adherence_score = 0, seven_day_grid = [], badges = [] } = stats;
+  const {
+    current_streak = 0,
+    weekly_adherence_score = 0,
+    seven_day_grid = [
+      { day_name: 'Mon', status: 'no_log', date: '1' },
+      { day_name: 'Tue', status: 'no_log', date: '2' },
+      { day_name: 'Wed', status: 'no_log', date: '3' },
+      { day_name: 'Thu', status: 'no_log', date: '4' },
+      { day_name: 'Fri', status: 'no_log', date: '5' },
+      { day_name: 'Sat', status: 'no_log', date: '6' },
+      { day_name: 'Sun', status: 'no_log', date: '7' },
+    ],
+    badges = [],
+  } = stats || {};
 
   const getStatusSymbol = (status) => {
     switch (status) {
@@ -54,7 +65,7 @@ export default function AdherenceCard({ stats }) {
 
       {/* 7-Day Consistency Dots */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📅 7-Day Consistency</Text>
+        <Text style={styles.sectionTitle}>7-Day Consistency</Text>
         <View style={styles.gridRow}>
           {seven_day_grid.map((d) => (
             <View key={d.date} style={styles.dayCol}>
@@ -70,7 +81,7 @@ export default function AdherenceCard({ stats }) {
       {/* Badges & Achievements */}
       {badges.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🏆 Badges & Achievements</Text>
+          <Text style={styles.sectionTitle}>Badges & Achievements</Text>
           <View style={styles.badgesGrid}>
             {badges.map((b) => (
               <View

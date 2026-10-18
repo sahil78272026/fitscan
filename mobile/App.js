@@ -7,12 +7,17 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { auth } from './src/services/firebase';
+
+let GoogleSignin = null;
+try {
+  GoogleSignin = require('@react-native-google-signin/google-signin').GoogleSignin;
+} catch (e) {
+  // Gracefully fallback when running inside Expo Go
+}
 
 import LoginScreen from './src/screens/LoginScreen';
 import HomeScreen from './src/screens/HomeScreen';
-import StreakScreen from './src/screens/StreakScreen';
 import MealPlanScreen from './src/screens/MealPlanScreen';
 import ProgressScreen from './src/screens/ProgressScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
@@ -44,11 +49,10 @@ function MainTabs({ user, onLogout }) {
           fontWeight: '600',
         },
         tabBarIcon: ({ color, focused }) => {
-          let icon = '🏠';
-          if (route.name === 'Today') icon = '🏠';
-          else if (route.name === 'Streak') icon = '🔥';
+          let icon = '🍽️';
+          if (route.name === 'Today') icon = '🍽️';
           else if (route.name === 'Meals') icon = '📋';
-          else if (route.name === 'Progress') icon = '📈';
+          else if (route.name === 'Progress') icon = '📊';
           else if (route.name === 'Profile') icon = '👤';
           return <Text style={{ fontSize: 18 }}>{icon}</Text>;
         },
@@ -57,7 +61,6 @@ function MainTabs({ user, onLogout }) {
       <Tab.Screen name="Today">
         {(props) => <HomeScreen {...props} user={user} onLogout={onLogout} />}
       </Tab.Screen>
-      <Tab.Screen name="Streak" component={StreakScreen} />
       <Tab.Screen name="Meals" component={MealPlanScreen} />
       <Tab.Screen name="Progress" component={ProgressScreen} />
       <Tab.Screen name="Profile">

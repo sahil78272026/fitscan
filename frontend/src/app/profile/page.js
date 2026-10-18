@@ -8,7 +8,6 @@ import GoalEditor from "@/components/GoalEditor";
 import OnboardingWizard from "@/components/OnboardingWizard";
 import MealPlanSelector from "@/components/MealPlanSelector";
 import WeightChart from "@/components/WeightChart";
-import ProUpgradeModal from "@/components/ProUpgradeModal";
 import ConfirmPlanChangeModal from "@/components/ConfirmPlanChangeModal";
 import {
   getSettings,
@@ -35,7 +34,6 @@ export default function ProfilePage() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [planSelectorOpen, setPlanSelectorOpen] = useState(false);
   const [confirmChangeModalOpen, setConfirmChangeModalOpen] = useState(false);
-  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [suggestedPlans, setSuggestedPlans] = useState(null);
   const [toasts, setToasts] = useState([]);
   const [deleting, setDeleting] = useState(false);
@@ -90,19 +88,12 @@ export default function ProfilePage() {
       setUserSettings(updatedSettings);
       setWizardOpen(false);
 
-      const isProUser = (updatedSettings?.subscription_tier || "free").toLowerCase() === "pro";
-      const canChange = updatedSettings?.can_change_plan !== false || !updatedSettings?.selected_meal_plan;
+      // Open Plan Selector & fetch AI suggestions
+      setPlanSelectorOpen(true);
+      showToast("Metrics updated! Generating meal plans... ✨");
 
-      if (isProUser || canChange) {
-        // Open Plan Selector & fetch AI suggestions
-        setPlanSelectorOpen(true);
-        showToast("Metrics updated! Generating meal plans... ✨");
-
-        const plansData = await getSuggestedMealPlans();
-        setSuggestedPlans(plansData);
-      } else {
-        showToast("Body stats & macro targets updated! 🎯");
-      }
+      const plansData = await getSuggestedMealPlans();
+      setSuggestedPlans(plansData);
     } catch (err) {
       showToast(err.message || "Failed to save goals", "error");
     }
@@ -162,16 +153,13 @@ export default function ProfilePage() {
     }
   };
 
-  const isPro = (userSettings?.subscription_tier || "free").toLowerCase() === "pro";
-
   const handleOpenPlanSelector = () => {
-    // If on cooldown on free tier, prompt pro upgrade modal directly!
-    if (!isPro && userSettings && userSettings.can_change_plan === false) {
-      setUpgradeModalOpen(true);
+    if (userSettings && userSettings.can_change_plan === false) {
+      const hours = userSettings.hours_until_next_plan_change || 1;
+      showToast(`Meal plans can be updated once every 24 hours. Next change available in ${hours} hour(s).`, "info");
       return;
     }
-
-    // Require confirmation alert modal before executing expensive Gemini AI call
+    // Require confirmation alert modal before executing Gemini AI call
     setConfirmChangeModalOpen(true);
   };
 
@@ -182,11 +170,6 @@ export default function ProfilePage() {
   };
 
   const handleOpenWizard = () => {
-    // If on cooldown on free tier, guide user with pro upgrade modal
-    if (!isPro && userSettings && userSettings.can_change_plan === false) {
-      setUpgradeModalOpen(true);
-      return;
-    }
     setWizardOpen(true);
   };
 
@@ -247,7 +230,6 @@ export default function ProfilePage() {
         onClose={() => setConfirmChangeModalOpen(false)}
         onConfirm={handleConfirmPlanChange}
         currentPlan={selectedPlan}
-        isPro={isPro}
       />
 
       {/* Meal Plan Selector Modal */}
@@ -266,7 +248,7 @@ export default function ProfilePage() {
       <div className={styles.container}>
         {/* Header */}
         <header className={styles.header}>
-          <h1 className={styles.pageTitle}>👤 Profile & Goals</h1>
+          <h1 className={styles.pageTitle}>Profile & Goals</h1>
         </header>
 
         {/* User Card */}
@@ -277,17 +259,6 @@ export default function ProfilePage() {
           <div className={styles.userInfo}>
             <div className={styles.userTopRow}>
               <h2 className={styles.userName}>{user?.name || "CoreControl User"}</h2>
-              {isPro ? (
-                <span className={styles.proBadgePill}>👑 PRO MEMBER</span>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.upgradeHeaderBtn}
-                  onClick={() => setUpgradeModalOpen(true)}
-                >
-                  ⭐ Free Tier • Upgrade
-                </button>
-              )}
             </div>
             <p className={styles.userPhone}>{user?.email || user?.phone || "Account Active"}</p>
           </div>
@@ -299,13 +270,16 @@ export default function ProfilePage() {
             <div>
               <div className={styles.planBadgeRow}>
                 <span className={styles.planBadge}>Active Meal Plan</span>
-                {isPro ? (
-                  <span className={styles.rotationBadgePro}>👑 Pro • Unlimited Rotations</span>
-                ) : userSettings?.can_change_plan ? (
-                  <span className={styles.rotationBadgeReady}>🟢 1 Free Rotation Available</span>
-                ) : (
-                  <span className={styles.rotationBadgeCooldown}>
-                    ⏳ Free rotation cooldown: {userSettings?.days_until_next_plan_change || 1}d left
+                {userSettings?.can_change_plan === false && (
+                  <span
+                    className={styles.planBadge}
+                    style={{
+                      background: "rgba(234, 88, 12, 0.15)",
+                      color: "#fb923c",
+                      borderColor: "rgba(234, 88, 12, 0.35)",
+                    }}
+                  >
+                    ⏳ Next change in {userSettings.hours_until_next_plan_change || 1}h
                   </span>
                 )}
               </div>
@@ -338,42 +312,26 @@ export default function ProfilePage() {
           <div className={styles.actionBtnRow}>
             {selectedPlan && (
               <Link href="/meal-plan" className={styles.primaryBtn} style={{ textDecoration: "none", textAlign: "center" }}>
-                📖 View Full Meal Plan Schedule →
+                View Full Meal Plan Schedule →
               </Link>
             )}
             <button className={selectedPlan ? styles.secondaryBtn : styles.primaryBtn} onClick={handleOpenPlanSelector}>
-              🔄 {selectedPlan ? (
-                !isPro && userSettings && userSettings.can_change_plan === false
-                  ? `Rotate Plan (${userSettings.days_until_next_plan_change}d cooldown) 👑`
+              {selectedPlan ? (
+                userSettings?.can_change_plan === false
+                  ? `Change Plan (${userSettings.hours_until_next_plan_change || 1}h cooldown)`
                   : "Change Meal Plan"
               ) : "Generate Meal Plans"}
             </button>
             <button className={styles.secondaryBtn} onClick={handleOpenWizard}>
-              ⚙️ {!isPro && userSettings?.can_change_plan === false
-                ? `Recalibrate Goals & Plan (${userSettings.days_until_next_plan_change}d cooldown) 🔒`
-                : "Recalibrate Goals & Meal Plan"}
+              Recalibrate Goals & Meal Plan
             </button>
-            {!isPro && userSettings?.can_change_plan === false && (
-              <div className={styles.cooldownInlineHint}>
-                🔒 <strong>7-Day Plan Cycle Active:</strong> Your meal plan and daily macro targets work as a synchronized unit. You can recalibrate both together in <strong>{userSettings.days_until_next_plan_change || 1} day(s)</strong> (or upgrade to CoreControl Pro to recalibrate anytime). Daily weight can be logged anytime in the <Link href="/progress" style={{ color: "#fbbf24", textDecoration: "underline", fontWeight: "600" }}>Progress</Link> tab.
-              </div>
-            )}
-            {!isPro && (
-              <button
-                type="button"
-                className={styles.proPerksBtn}
-                onClick={() => setUpgradeModalOpen(true)}
-              >
-                👑 Unlock Unlimited Plan Rotations with Pro
-              </button>
-            )}
           </div>
         </section>
 
         {/* User Physical Metrics & Preferences */}
         <section>
           <div className={styles.sectionHeader}>
-            <h3 className={styles.sectionTitle}>📋 Personal Metrics & Preferences</h3>
+            <h3 className={styles.sectionTitle}>Personal Metrics & Preferences</h3>
           </div>
 
           <div className={styles.metricsGrid}>
@@ -423,7 +381,7 @@ export default function ProfilePage() {
         {/* Goal Quick Edit */}
         <section>
           <div className={styles.sectionHeader}>
-            <h3 className={styles.sectionTitle}>🎯 Quick Calorie Goal Target</h3>
+            <h3 className={styles.sectionTitle}>Quick Calorie Goal Target</h3>
           </div>
           <div style={{ background: "var(--color-surface)", padding: "1rem", borderRadius: "12px", border: "1px solid var(--color-border)" }}>
             <GoalEditor
@@ -462,22 +420,6 @@ export default function ProfilePage() {
           </span>
         </section>
       </div>
-
-      {/* CoreControl Pro Upgrade Modal */}
-      <ProUpgradeModal
-        isOpen={upgradeModalOpen}
-        onClose={() => setUpgradeModalOpen(false)}
-        currentTier={userSettings?.subscription_tier || "free"}
-        daysRemaining={userSettings?.days_until_next_plan_change || 0}
-        onSuccess={(updated) => {
-          setUserSettings(updated);
-          showToast(
-            updated.subscription_tier === "pro"
-              ? "Welcome to CoreControl Pro! 👑 Unlimited rotations unlocked."
-              : "Switched to Free tier."
-          );
-        }}
-      />
     </main>
   );
 }

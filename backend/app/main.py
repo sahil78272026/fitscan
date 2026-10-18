@@ -40,6 +40,7 @@ async def init_db_schema(conn):
         ("user_settings", "weight_kg", "FLOAT"),
         ("user_settings", "start_weight_kg", "FLOAT"),
         ("user_settings", "activity_level", "VARCHAR(50) DEFAULT 'moderate'"),
+        ("user_settings", "workout_time", "VARCHAR(50) DEFAULT 'evening'"),
         ("user_settings", "selected_meal_plan", "TEXT"),
         ("user_settings", "subscription_tier", "VARCHAR(20) DEFAULT 'free'"),
         ("user_settings", "last_plan_change_at", "TIMESTAMP WITH TIME ZONE"),

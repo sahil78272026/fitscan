@@ -3,9 +3,9 @@
     "name": "CoreControl",
     "slug": "fitscan-mobile",
     "scheme": "fitscan",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/corecontrol_logo.png",
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
@@ -17,12 +17,12 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/corecontrol_logo.png",
         "backgroundColor": "#181410"
       },
       "package": "com.fitscan.wellness",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 1,
+      "versionCode": 2,
       "permissions": [
         "ACTIVITY_RECOGNITION",
         "CAMERA",

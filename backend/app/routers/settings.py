@@ -78,12 +78,12 @@ async def suggest_meal_plans(
     """Generate 3 distinct candidate meal plans based on user's current settings."""
     settings = await get_or_create_settings(db, current_user.id)
 
-    # Check 1-change-per-week rate limit for free tier
-    can_change, days_left = get_plan_change_availability(settings)
+    # Check 1-change-per-24h rate limit to optimize Gemini AI calls
+    can_change, hours_left, days_left = get_plan_change_availability(settings)
     if not can_change:
         raise HTTPException(
-            status_code=403,
-            detail=f"Free tier allows 1 meal plan change per week. Next free rotation available in {days_left} day(s). Upgrade to Pro for unlimited changes.",
+            status_code=429,
+            detail=f"Meal plans can be updated once every 24 hours to optimize AI generation. Next update available in {hours_left} hour(s).",
         )
 
     try:
@@ -91,6 +91,7 @@ async def suggest_meal_plans(
             goal_type=settings.goal_type or "fat_loss",
             diet_type=settings.diet_type or "veg",
             budget_tier=settings.budget_tier or "moderate",
+            workout_time=getattr(settings, "workout_time", "evening") or "evening",
             calorie_goal=settings.calorie_goal or 2000,
             protein_goal=settings.protein_goal or 150,
             carbs_goal=settings.carbs_goal or 200,

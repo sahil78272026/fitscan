@@ -72,7 +72,12 @@ Criteria:
 Rules:
 1. Ensure meals fit the budget constraints using realistic ingredient pricing and readily available local market items.
 2. Ensure high protein alignment for muscle building/fat loss goals.
-3. Return ONLY a valid JSON object matching this structure:
+3. LOW-OIL & HEALTHY COOKING RULES (STRICT):
+   - ZERO DEEP-FRIED FOODS: Never suggest deep-fried items (puri, bhature, pakoras, samosas, vadas, fried snacks, fried cutlets/fish, bhajiyas).
+   - NO HEAVY/OILY GRAVIES: Strictly avoid rich, greasy restaurant/dhaba-style curries with floating oil/ghee, excess butter, or heavy cream (e.g. butter chicken, shahi paneer, malai kofta).
+   - PREFERRED PREPARATIONS: Prioritize boiled, steamed, dry-roasted, grilled, tandoori, or lightly sautéed dishes (e.g. idli, dhokla, dal with minimal oil tadka, boiled sprouts/chana, grilled paneer/chicken, dry egg bhurji).
+   - COOKING OIL CAP: Limit added cooking oil/ghee to at most 1 teaspoon (5g) per meal for light tempering (tadka) or pan brushing. Healthy fats should come from whole foods (curd, nuts, seeds, eggs, paneer), never from floating refined oil.
+4. Return ONLY a valid JSON object matching this structure:
 
 {{
   "budget_tier": "{budget_tier}",
@@ -229,17 +234,38 @@ USER PARAMETERS:
 - Fitness Goal: {goal_type}
 - Dietary Preference: {diet_type}
 - Budget Tier: {budget_tier}
+- Workout Routine & Timing: {workout_timing_desc}
 - Target Daily Calories: {calorie_goal} kcal
 - Target Daily Protein: {protein_goal} g
 - Target Daily Carbs: {carbs_goal} g
 - Target Daily Fat: {fat_goal} g
 
+CRITICAL WORKOUT NUTRIENT TIMING RULES (MUST BE STRICTLY FOLLOWED):
+1. IF MORNING WORKOUT (6 AM – 9 AM):
+   - Breakfast is the POST-WORKOUT RECOVERY meal: Highest protein (30–40g) + clean complex carbs (e.g. paneer bhurji toast, oats & milk, or egg omelette) to replenish muscle glycogen and maximize Muscle Protein Synthesis.
+   - Lunch and Dinner supply steady sustained energy.
+2. IF MIDDAY / AFTERNOON WORKOUT (12 PM – 3 PM):
+   - Breakfast supplies moderate energy.
+   - Lunch is the POST-WORKOUT RECOVERY meal: Highest protein (35–45g) + complex carbs (dal, rice, curd, soya/chicken).
+3. IF EVENING WORKOUT (5 PM – 8 PM):
+   - Snack is PRE-WORKOUT FUEL (e.g. easily digestible carbs + light protein like banana toast, roasted chana, sattu drink, boiled sprouts eaten 60–90 min before workout; keep fat low for rapid digestion).
+   - Dinner is the POST-WORKOUT RECOVERY meal: Highest protein meal of the day (35–45g protein) + wholesome carbs (rice/rotis) to repair muscle tissue overnight.
+4. IF NIGHT WORKOUT (8 PM – 10 PM):
+   - Dinner acts as pre-workout fuel (eaten light or earlier); provide a light post-workout protein replenishment (curd/milk/paneer/boiled eggs).
+5. IF NO STRUCTURED WORKOUT / REST DAYS:
+   - Distribute calories and protein evenly across all 4 meals according to standard circadian rhythm.
+
 CRITICAL DIET PREFERENCE & VARIETY RULES (MUST BE STRICTLY FOLLOWED):
 1. SOYA CAP & DIVERSITY RULE: Do NOT overuse Soya Bean / Soya Chunks! Soya chunks MUST NOT appear in more than 1 meal out of 4 per day (maximum once per daily plan). Ensure rich culinary variety across meals using diverse Indian staples.
-2. If diet_type is "non_veg": You MUST feature non-vegetarian protein sources (e.g. Chicken, Eggs, Fish, Mutton) in at least 2 out of the 4 meals per plan.
-3. If diet_type is "vegan": STRICTLY 100% plant-based! NO dairy (milk, paneer, curd, ghee), NO eggs, NO meat, NO fish, NO honey. Use Kala Chana, Rajma, Moong Sprouts, Sattu (Roasted Chana Flour), Besan (Chickpea Flour Chilla), Tofu, Lentils/Dals (Masoor, Toor, Chana Dal), Roasted Peanuts, Oats, and Soya Chunks (max once/day).
-4. If diet_type is "veg": STRICTLY Vegetarian! NO meat, NO chicken, NO fish, NO eggs. Use Paneer, Curd/Dahi, Chaach, Kala Chana, Rajma, Moong Sprouts, Sattu, Besan Chilla, Dals, Milk, Peanuts, and Soya Chunks (max once/day).
-5. If diet_type is "eggetarian": Vegetarian + Eggs. MUST include egg dishes (Egg Bhurji, Boiled Eggs, Omelettes, Egg Curry) alongside vegetarian staples. NO meat or fish.
+2. LOW-OIL & HEALTHY COOKING RULES (STRICT):
+   - ZERO DEEP-FRIED FOODS: Absolutely NO deep-fried items (puri, bhature, pakoras, samosas, vadas, fried snacks, fried cutlets/fish, kachori, bhajiyas).
+   - NO HEAVY/OILY GRAVIES: Strictly avoid rich, greasy restaurant/dhaba-style curries with floating oil/ghee, excess butter, or heavy cream (butter chicken, shahi paneer, malai kofta).
+   - PREFERRED PREPARATIONS: Prioritize boiled, steamed, dry-roasted, grilled, tandoori, or lightly sautéed foods (e.g. steamed idli/dhokla, boiled kala chana/rajma, roasted makhana/chana, tandoori chicken, grilled paneer, dal with light tadka, fresh salads).
+   - COOKING OIL CAP: Max 1 teaspoon (5g) of added oil/ghee per meal for light tempering or pan brushing. Dietary fats must come from natural whole ingredients (curd, seeds, nuts, paneer, eggs), not free cooking oil.
+3. If diet_type is "non_veg": You MUST feature non-vegetarian protein sources (e.g. Chicken, Eggs, Fish, Mutton) in at least 2 out of the 4 meals per plan.
+4. If diet_type is "vegan": STRICTLY 100% plant-based! NO dairy (milk, paneer, curd, ghee), NO eggs, NO meat, NO fish, NO honey. Use Kala Chana, Rajma, Moong Sprouts, Sattu (Roasted Chana Flour), Besan (Chickpea Flour Chilla), Tofu, Lentils/Dals (Masoor, Toor, Chana Dal), Roasted Peanuts, Oats, and Soya Chunks (max once/day).
+5. If diet_type is "veg": STRICTLY Vegetarian! NO meat, NO chicken, NO fish, NO eggs. Use Paneer, Curd/Dahi, Chaach, Kala Chana, Rajma, Moong Sprouts, Sattu, Besan Chilla, Dals, Milk, Peanuts, and Soya Chunks (max once/day).
+6. If diet_type is "eggetarian": Vegetarian + Eggs. MUST include egg dishes (Egg Bhurji, Boiled Eggs, Omelettes, Egg Curry) alongside vegetarian staples. NO meat or fish.
 
 FITNESS GOAL RULES:
 - "fat_loss": Prioritize high protein density (>2.0g/kg), low refined sugars, and high-fiber vegetables for satiety during deficit.
@@ -252,18 +278,12 @@ BUDGET TIER RULES:
 - "moderate": Use balanced everyday staples (Paneer, Eggs, Local Chicken, Oats, Milk, Curd, Tofu, Dals). Estimated cost: ~₹180-250/day.
 - "flexible": Premium options allowed (Whey Protein, Fish/Salmon, Avocados, Nuts, Greek Yogurt). Estimated cost: ~₹300+/day.
 
-MACRO SUMMATION REQUIREMENT:
-For each plan, the sum of the 4 meals (Breakfast, Lunch, Snack, Dinner):
-- sum(meal.calories) MUST equal approximately {calorie_goal} kcal (within ±5%).
-- sum(meal.protein) MUST equal approximately {protein_goal} g (within ±5%).
-- sum(meal.carbs) MUST equal approximately {carbs_goal} g (within ±5%).
-- sum(meal.fat) MUST equal approximately {fat_goal} g (within ±5%).
-
 LANGUAGE & BREVITY RULES (CRITICAL):
 - Use direct, human, crisp language. ZERO robotic fluff or filler words.
+- GOAL ALIGNMENT IN TAGLINES (CRITICAL): The tagline of EVERY plan MUST explicitly match and support the user's exact fitness goal ({goal_type}). For "muscle_building", the tagline MUST emphasize muscle building, lean mass, hypertrophy, or surplus recovery (e.g. "High-protein surplus plan tailored for muscle building & hypertrophy"). NEVER mention maintenance or maintenance journey. For "fat_loss"/"weight_loss", MUST emphasize fat loss, deficit, and retention.
 - dish_name: MUST be exactly 2 to 3 words only (e.g., "Paneer Bhurji Toast", "Dal Tadka Rice", "Egg Bhurji Roti", "Chicken Quinoa Bowl", "Sprouted Moong Salad"). NO long compound names.
-- Tagline: Max 8-10 words. Simple reason why it works (e.g. "High protein vegetarian plan using affordable daily staples.").
-- ingredients: Array of 3 to 5 bullet items with exact quantities (e.g. ["100g paneer", "2 whole wheat rotis", "1 tsp oil & cumin"]). NO long paragraphs.
+- Tagline: Max 8-10 words. Simple reason why it works matching the user's specific goal.
+- ingredients: Array of 3 to 5 bullet items. Each item MUST include its exact quantity, food item name, and individual calorie & macronutrient breakdown in brackets formatted exactly as: "<Quantity> <Item name> (<calories> kcal • P: <protein>g, C: <carbs>g, F: <fat>g)" (e.g. ["100g low-fat paneer (170 kcal • P: 18g, C: 3g, F: 4g)", "2 whole wheat rotis (160 kcal • P: 6g, C: 30g, F: 1g)", "1 tsp olive oil (45 kcal • F: 5g)"]).
 - description: Single short prep sentence under 12 words (e.g. "Sauté paneer with spices and serve warm with rotis.").
 
 Return ONLY a valid JSON object matching this exact structure (do NOT include markdown codeblocks or extra text):
@@ -287,9 +307,9 @@ Return ONLY a valid JSON object matching this exact structure (do NOT include ma
           "carbs": 45.0,
           "fat": 12.0,
           "ingredients": [
-            "100g paneer",
-            "2 brown bread slices",
-            "1 tsp oil & onion"
+            "100g low-fat paneer (170 kcal • P: 18g, C: 3g, F: 4g)",
+            "2 brown bread slices (150 kcal • P: 8g, C: 28g, F: 2g)",
+            "1 tsp olive oil (45 kcal • F: 5g)"
           ],
           "description": "Sauté paneer with spices and serve on toasted bread."
         }},
@@ -301,9 +321,9 @@ Return ONLY a valid JSON object matching this exact structure (do NOT include ma
           "carbs": 65.0,
           "fat": 18.0,
           "ingredients": [
-            "1 bowl toor dal",
-            "1 cup cooked rice",
-            "1 cucumber salad"
+            "1 bowl toor dal (180 kcal • P: 14g, C: 28g, F: 2g)",
+            "1 cup cooked rice (210 kcal • P: 4g, C: 45g, F: 1g)",
+            "1 cucumber salad (20 kcal • P: 1g, C: 4g, F: 0g)"
           ],
           "description": "Cook dal with turmeric and temper with cumin and ghee."
         }},
@@ -315,9 +335,9 @@ Return ONLY a valid JSON object matching this exact structure (do NOT include ma
           "carbs": 30.0,
           "fat": 8.0,
           "ingredients": [
-            "1 cup boiled sprouts",
-            "Chopped tomatoes & lemon",
-            "10g roasted peanuts"
+            "1 cup boiled sprouts (150 kcal • P: 14g, C: 24g, F: 1g)",
+            "15g roasted peanuts (85 kcal • P: 4g, C: 3g, F: 7g)",
+            "Chopped tomatoes & lemon (15 kcal • P: 1g, C: 4g, F: 0g)"
           ],
           "description": "Toss sprouts with lemon juice and roasted peanuts."
         }},
@@ -329,9 +349,9 @@ Return ONLY a valid JSON object matching this exact structure (do NOT include ma
           "carbs": 45.0,
           "fat": 15.0,
           "ingredients": [
-            "40g soya chunks",
-            "2 wheat rotis",
-            "Tomato onion gravy"
+            "40g soya chunks (140 kcal • P: 21g, C: 13g, F: 0.5g)",
+            "2 wheat rotis (160 kcal • P: 6g, C: 30g, F: 1g)",
+            "Tomato onion gravy (50 kcal • P: 2g, C: 6g, F: 3g)"
           ],
           "description": "Simmer boiled soya in light curry and serve with rotis."
         }}
@@ -404,6 +424,7 @@ async def generate_multiple_meal_plans(
     goal_type: str = "fat_loss",
     diet_type: str = "veg",
     budget_tier: str = "moderate",
+    workout_time: str = "evening",
     calorie_goal: int = 2000,
     protein_goal: int = 150,
     carbs_goal: int = 200,
@@ -435,10 +456,19 @@ async def generate_multiple_meal_plans(
         "flexible": "Flexible / Premium Budget (~₹300+/day using Whey Protein, Salmon/Fish, Avocados, Nuts)",
     }
 
+    workout_descriptions = {
+        "morning": "Morning Workout (6 AM – 9 AM): Breakfast is the primary Post-Workout Recovery meal",
+        "afternoon": "Midday Workout (12 PM – 3 PM): Lunch is the primary Post-Workout Recovery meal",
+        "evening": "Evening Workout (5 PM – 8 PM): Snack is Pre-Workout Fuel, Dinner is Post-Workout Recovery",
+        "night": "Night Workout (8 PM – 10 PM): Light pre-workout dinner, clean post-workout protein replenishment",
+        "none": "No Structured Workout / Rest Days: Evenly distributed circadian nutrition",
+    }
+
     prompt = MULTIPLE_MEAL_PLANS_PROMPT.format(
         goal_type=goal_descriptions.get(goal_type, goal_type),
         diet_type=diet_descriptions.get(diet_type, diet_type),
         budget_tier=budget_descriptions.get(budget_tier, budget_tier),
+        workout_timing_desc=workout_descriptions.get(workout_time, workout_descriptions["evening"]),
         calorie_goal=calorie_goal,
         protein_goal=protein_goal,
         carbs_goal=carbs_goal,
@@ -453,11 +483,43 @@ async def generate_multiple_meal_plans(
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
                 temperature=0.4,
+                thinking_config=types.ThinkingConfig(thinking_budget=0),
             ),
         )
         duration = time.perf_counter() - t_start
         logger.info(f"Gemini API call (generate_multiple_meal_plans) completed in {duration:.2f}s ({duration * 1000:.0f}ms)")
-        return _parse_json_from_text(response.text)
+        data = _parse_json_from_text(response.text)
+
+        # Standardize budget numbers everywhere to one consistent format
+        budget_cost_map = {
+            "low_budget": "₹100-140/day",
+            "moderate": "₹180-250/day",
+            "flexible": "₹300+/day",
+        }
+        standard_cost = budget_cost_map.get(budget_tier, "₹100-140/day")
+
+        # Guarantee goal vs plan description strictly matches
+        goal_fallback_taglines = {
+            "muscle_building": "High-protein surplus plan designed for muscle building and lean hypertrophy.",
+            "fat_loss": "Protein-dense deficit plan designed for fat loss and muscle retention.",
+            "weight_loss": "Calorie-controlled plan designed for steady and healthy weight loss.",
+            "muscle_maintain": "Balanced nutrition plan designed for muscle maintenance and steady energy.",
+        }
+
+        for plan in data.get("plans", []):
+            plan["estimated_cost"] = standard_cost
+            tagline = plan.get("tagline", "")
+            # Ensure goal matches tagline and never mentions maintenance for muscle building
+            if goal_type == "muscle_building":
+                if not tagline or any(bad in tagline.lower() for bad in ["maintain", "maintenance", "deficit", "fat loss", "weight loss"]):
+                    plan["tagline"] = goal_fallback_taglines["muscle_building"]
+            elif goal_type in ("fat_loss", "weight_loss"):
+                if not tagline or any(bad in tagline.lower() for bad in ["surplus", "bulk", "hypertrophy"]):
+                    plan["tagline"] = goal_fallback_taglines[goal_type]
+            elif not tagline:
+                plan["tagline"] = goal_fallback_taglines.get(goal_type, "Tailored specifically to hit your daily macro targets.")
+
+        return data
     except Exception as e:
         duration = time.perf_counter() - t_start
         logger.error(f"Failed to generate multiple meal plans after {duration:.2f}s: {e}")

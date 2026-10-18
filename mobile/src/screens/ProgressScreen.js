@@ -14,14 +14,17 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { getWeightHistory, logWeight, deleteWeightLog, getSettings } from '../services/api';
+import { getWeightHistory, logWeight, deleteWeightLog, getSettings, getAdherenceStats } from '../services/api';
 import WeightTrendChart from '../components/WeightTrendChart';
+import AdherenceCard from '../components/AdherenceCard';
 
 export default function ProgressScreen() {
   const [weightInput, setWeightInput] = useState('');
+  const [weightError, setWeightError] = useState('');
   const [timeframe, setTimeframe] = useState(30);
   const [history, setHistory] = useState(null);
   const [userSettings, setUserSettings] = useState(null);
+  const [adherenceStats, setAdherenceStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -29,12 +32,14 @@ export default function ProgressScreen() {
   const loadData = useCallback(async (days = timeframe) => {
     try {
       setLoading(true);
-      const [histData, settingsData] = await Promise.all([
-        getWeightHistory(days),
-        getSettings(),
+      const [histData, settingsData, statsData] = await Promise.all([
+        getWeightHistory(days).catch((e) => { console.warn('Weight history error:', e); return null; }),
+        getSettings().catch((e) => { console.warn('Settings error:', e); return null; }),
+        getAdherenceStats().catch((e) => { console.warn('Adherence stats error:', e); return null; }),
       ]);
-      setHistory(histData);
-      setUserSettings(settingsData);
+      if (histData) setHistory(histData);
+      if (settingsData) setUserSettings(settingsData);
+      if (statsData) setAdherenceStats(statsData);
     } catch (err) {
       console.warn('ProgressScreen load error:', err);
     } finally {
@@ -56,16 +61,17 @@ export default function ProgressScreen() {
 
   const handleSaveWeight = async () => {
     const w = parseFloat(weightInput);
-    if (!w || w < 20 || w > 300) {
-      Alert.alert('Invalid Weight', 'Please enter a valid weight in kg (e.g. 74.5)');
+    if (isNaN(w) || w < 25 || w > 300) {
+      setWeightError('Weight must be between 25 and 300 kg');
       return;
     }
+    setWeightError('');
 
     setSubmitting(true);
     try {
       await logWeight(w);
       setWeightInput('');
-      Alert.alert('Weight Saved ⚖️', `Logged ${w} kg`);
+      Alert.alert('Weight Saved', `Logged ${w} kg`);
       await loadData(timeframe);
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to log weight');
@@ -103,15 +109,29 @@ export default function ProgressScreen() {
     );
   }
 
-  const logs = history?.logs || [];
-  const startWeight = history?.start_weight;
-  const currentWeight = history?.current_weight || userSettings?.weight_kg || 75.0;
-  const netChange = history?.net_change_kg;
+  const rawLogs = history?.logs || [];
+  const logs = rawLogs.filter((item) => item.weight_kg >= 25 && item.weight_kg <= 300);
+  const startWeight =
+    history?.start_weight >= 25 && history?.start_weight <= 300
+      ? history.start_weight
+      : logs.length > 0
+      ? logs[0].weight_kg
+      : null;
+  const currentWeight =
+    history?.current_weight >= 25 && history?.current_weight <= 300
+      ? history.current_weight
+      : logs.length > 0
+      ? logs[logs.length - 1].weight_kg
+      : (userSettings?.weight_kg || 75.0);
+  const netChange =
+    startWeight !== null && currentWeight !== null
+      ? +(currentWeight - startWeight).toFixed(1)
+      : history?.net_change_kg;
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.topHeader}>
-        <Text style={styles.brandTitle}>📈 CoreControl Progress</Text>
+        <Text style={styles.brandTitle}>Progress & Adherence</Text>
       </View>
 
       <ScrollView
@@ -127,6 +147,12 @@ export default function ProgressScreen() {
           />
         }
       >
+        {/* Streak & Adherence Stats Card */}
+        <AdherenceCard stats={adherenceStats} />
+
+        {/* Weight Progress & Targets Section */}
+        <Text style={styles.sectionTitle}>Weight Trend & Targets</Text>
+
         {/* Weight Hero & Change Stats Box */}
         <View style={styles.heroCard}>
           <Text style={styles.heroLabel}>CURRENT WEIGHT</Text>
@@ -173,7 +199,7 @@ export default function ProgressScreen() {
         />
 
         {/* Quick Log Weight Form */}
-        <Text style={styles.sectionTitle}>⚖️ Log Weight Entry</Text>
+        <Text style={styles.sectionTitle}>Log Weight Entry</Text>
         <View style={styles.card}>
           <View style={styles.weightRow}>
             <TextInput
@@ -182,7 +208,10 @@ export default function ProgressScreen() {
               placeholderTextColor="#A79A85"
               keyboardType="decimal-pad"
               value={weightInput}
-              onChangeText={setWeightInput}
+              onChangeText={(t) => {
+                setWeightInput(t);
+                if (weightError) setWeightError('');
+              }}
             />
             <TouchableOpacity style={styles.saveBtn} onPress={handleSaveWeight} disabled={submitting}>
               {submitting ? (
@@ -192,10 +221,13 @@ export default function ProgressScreen() {
               )}
             </TouchableOpacity>
           </View>
+          {weightError ? (
+            <Text style={{ color: '#f85149', fontSize: 12, marginTop: 6 }}>{weightError}</Text>
+          ) : null}
         </View>
 
         {/* Weight Log History List */}
-        <Text style={styles.sectionTitle}>📅 History (Past {timeframe} Days)</Text>
+        <Text style={styles.sectionTitle}>History (Past {timeframe} Days)</Text>
         <View style={styles.card}>
           {logs.length === 0 ? (
             <Text style={styles.emptyText}>No weight entries logged for this timeframe.</Text>
@@ -215,7 +247,7 @@ export default function ProgressScreen() {
                       onPress={() => handleDeleteEntry(item.id)}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.deleteText}>🗑️</Text>
+                      <Text style={styles.deleteText}>Delete</Text>
                     </TouchableOpacity>
                   </View>
                 </View>

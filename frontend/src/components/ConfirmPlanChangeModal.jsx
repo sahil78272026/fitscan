@@ -8,7 +8,6 @@ export default function ConfirmPlanChangeModal({
   onClose,
   onConfirm,
   currentPlan,
-  isPro = false,
 }) {
   useEffect(() => {
     if (!isOpen) return;
@@ -61,31 +60,19 @@ export default function ConfirmPlanChangeModal({
           </div>
         )}
 
-        {/* Cooldown & AI Warning Box */}
-        {isPro ? (
-          <div className={styles.warningBoxPro}>
-            <div className={styles.warningTitle}>
-              <span>👑</span>
-              <span>CoreControl Pro Member</span>
-            </div>
-            <p className={styles.warningDetail}>
-              As a Pro member, you have unlimited meal plan rotations. Clicking confirm will invoke Gemini AI to generate 3 fresh, tailored daily meal plans for your current calorie & macro targets.
-            </p>
+        {/* Personalized AI Meal Plan Notice */}
+        <div className={styles.warningBox}>
+          <div className={styles.warningTitle}>
+            <span>✨</span>
+            <span>Personalized AI Nutrition</span>
           </div>
-        ) : (
-          <div className={styles.warningBox}>
-            <div className={styles.warningTitle}>
-              <span>⚠️</span>
-              <span>Free Tier Policy: 1 Rotation per 7 Days</span>
-            </div>
-            <p className={styles.warningDetail}>
-              Generating new plans uses an intensive AI model to calculate custom meal options. On the Free Tier, you receive <strong>1 free meal plan rotation every 7 days</strong>.
-            </p>
-            <p className={styles.warningDetail} style={{ marginTop: "0.25rem", color: "#fef9c3" }}>
-              Once you confirm and activate a new plan, your active plan will be replaced and your next rotation will enter a <strong>7-day cooldown</strong>.
-            </p>
-          </div>
-        )}
+          <p className={styles.warningDetail}>
+            Clicking confirm will invoke Google Gemini AI to generate 3 fresh, tailored daily meal plans matching your current physical metrics, cuisine preferences, and macro targets.
+          </p>
+          <p className={styles.warningDetail} style={{ marginTop: "0.4rem", color: "#fef08a" }}>
+            ⏱️ Note: To keep your nutrition consistent and optimize AI calls, meal plans can be updated once every 24 hours.
+          </p>
+        </div>
 
         {/* Modal Actions */}
         <div className={styles.actionRow}>

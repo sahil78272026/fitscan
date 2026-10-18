@@ -2,11 +2,13 @@ import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
 
 export default function WeightTrendChart({ logs = [], currentTimeframe = 30, onTimeframeChange }) {
-  if (!logs || logs.length === 0) {
+  const validLogs = (logs || []).filter((l) => l.weight_kg >= 25 && l.weight_kg <= 300);
+
+  if (!validLogs || validLogs.length === 0) {
     return (
       <View style={styles.card}>
         <View style={styles.headerRow}>
-          <Text style={styles.title}>📈 Weight Trend</Text>
+          <Text style={styles.title}>Weight Trend</Text>
           <View style={styles.timeframeRow}>
             {[7, 30, 90].map((days) => (
               <TouchableOpacity
@@ -24,7 +26,6 @@ export default function WeightTrendChart({ logs = [], currentTimeframe = 30, onT
         </View>
 
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>⚖️</Text>
           <Text style={styles.emptyTitle}>No weight entries logged yet</Text>
           <Text style={styles.emptySub}>Log your weight below to view your trend chart</Text>
         </View>
@@ -32,7 +33,7 @@ export default function WeightTrendChart({ logs = [], currentTimeframe = 30, onT
     );
   }
 
-  const weights = logs.map((l) => l.weight_kg);
+  const weights = validLogs.map((l) => l.weight_kg);
   const minWeight = Math.min(...weights);
   const maxWeight = Math.max(...weights);
   const weightRange = maxWeight === minWeight ? 1 : maxWeight - minWeight;
@@ -42,7 +43,7 @@ export default function WeightTrendChart({ logs = [], currentTimeframe = 30, onT
       {/* Header & Timeframe Filters */}
       <View style={styles.headerRow}>
         <View>
-          <Text style={styles.title}>📈 Weight Trend</Text>
+          <Text style={styles.title}>Weight Trend</Text>
           <Text style={styles.subtitle}>
             Min: {minWeight}kg • Max: {maxWeight}kg
           </Text>
@@ -66,12 +67,12 @@ export default function WeightTrendChart({ logs = [], currentTimeframe = 30, onT
 
       {/* Visual Bar Trend Chart */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chartScroll}>
-        {logs.map((item, idx) => {
+        {validLogs.map((item, idx) => {
           // Normalize height between 25% and 100%
           const pct = Math.max(25, Math.round(((item.weight_kg - minWeight) / weightRange) * 75 + 25));
-          const isMin = item.weight_kg === minWeight && logs.length > 1;
-          const isMax = item.weight_kg === maxWeight && logs.length > 1;
-          const isLatest = idx === logs.length - 1;
+          const isMin = item.weight_kg === minWeight && validLogs.length > 1;
+          const isMax = item.weight_kg === maxWeight && validLogs.length > 1;
+          const isLatest = idx === validLogs.length - 1;
 
           // Format date for bar label (e.g. "09/15")
           const dateParts = item.logged_date.split('-');

@@ -213,37 +213,37 @@ async def get_or_create_settings(db: AsyncSession, user_id: int) -> UserSettings
     return settings
 
 
-def get_plan_change_availability(settings: UserSettings) -> tuple[bool, int]:
+def get_plan_change_availability(settings: UserSettings) -> tuple[bool, int, int]:
     """
     Check if the user is allowed to change/rotate their meal plan.
-    - Pro users: Unlimited changes anytime.
-    - Free users: 1 change per rolling 7 days (first-time onboarding is always allowed).
-    Returns: (can_change: bool, days_until_next_change: int)
+    - Rate limit: 1 change per rolling 24 hours (first-time onboarding is always allowed).
+    Returns: (can_change: bool, hours_until_next_change: int, days_until_next_change: int)
     """
     tier = (getattr(settings, "subscription_tier", "free") or "free").lower()
     if tier == "pro":
-        return True, 0
+        return True, 0, 0
 
     last_change = getattr(settings, "last_plan_change_at", None)
     selected_plan = getattr(settings, "selected_meal_plan", None)
 
     # First time user or no active meal plan chosen yet -> allow change
     if not last_change or not selected_plan:
-        return True, 0
+        return True, 0, 0
 
     if last_change.tzinfo is None:
         last_change = last_change.replace(tzinfo=timezone.utc)
 
     now = datetime.now(timezone.utc)
     elapsed = now - last_change
-    cooldown = timedelta(days=7)
+    cooldown = timedelta(hours=24)
 
     if elapsed >= cooldown:
-        return True, 0
+        return True, 0, 0
 
     remaining_seconds = (cooldown - elapsed).total_seconds()
+    hours_left = max(1, math.ceil(remaining_seconds / 3600))
     days_left = max(1, math.ceil(remaining_seconds / 86400))
-    return False, days_left
+    return False, hours_left, days_left
 
 
 def parse_settings_response_dict(settings: UserSettings) -> dict:
@@ -258,7 +258,7 @@ def parse_settings_response_dict(settings: UserSettings) -> dict:
         elif isinstance(settings.selected_meal_plan, dict):
             selected_plan = settings.selected_meal_plan
 
-    can_change, days_left = get_plan_change_availability(settings)
+    can_change, hours_left, days_left = get_plan_change_availability(settings)
 
     return {
         "calorie_goal": settings.calorie_goal,
@@ -274,10 +274,12 @@ def parse_settings_response_dict(settings: UserSettings) -> dict:
         "weight_kg": settings.weight_kg,
         "start_weight_kg": settings.start_weight_kg,
         "activity_level": settings.activity_level,
+        "workout_time": getattr(settings, "workout_time", "evening") or "evening",
         "selected_meal_plan": selected_plan,
         "subscription_tier": getattr(settings, "subscription_tier", "free") or "free",
         "last_plan_change_at": getattr(settings, "last_plan_change_at", None),
         "can_change_plan": can_change,
+        "hours_until_next_plan_change": hours_left,
         "days_until_next_plan_change": days_left,
         "morning_briefing_enabled": bool(getattr(settings, "morning_briefing_enabled", 1) != 0),
         "morning_briefing_start_hour": getattr(settings, "morning_briefing_start_hour", 6) if getattr(settings, "morning_briefing_start_hour", None) is not None else 6,
@@ -381,7 +383,7 @@ async def update_user_goals(
     settings = await get_or_create_settings(db, user_id)
 
     # Update basic fields if provided
-    for field in ["goal_type", "diet_type", "budget_tier", "age", "gender", "height_cm", "weight_kg", "activity_level"]:
+    for field in ["goal_type", "diet_type", "budget_tier", "age", "gender", "height_cm", "weight_kg", "activity_level", "workout_time"]:
         if field in goal_data and goal_data[field] is not None:
             setattr(settings, field, goal_data[field])
 

@@ -31,7 +31,7 @@ export default function MacroProgressBar({ summary }) {
         {/* Protein */}
         <div className={styles.macroItem}>
           <div className={styles.macroHeader}>
-            <span className={styles.macroName} style={{ color: "var(--color-protein)" }}>🥩 Protein</span>
+            <span className={styles.macroName} style={{ color: "var(--color-protein)" }}>Protein</span>
             <span className={styles.macroValue}>{total_protein} / {protein_goal}g</span>
           </div>
           <div className={styles.track}>
@@ -46,7 +46,7 @@ export default function MacroProgressBar({ summary }) {
         {/* Carbs */}
         <div className={styles.macroItem}>
           <div className={styles.macroHeader}>
-            <span className={styles.macroName} style={{ color: "var(--color-carbs)" }}>🌾 Carbs</span>
+            <span className={styles.macroName} style={{ color: "var(--color-carbs)" }}>Carbs</span>
             <span className={styles.macroValue}>{total_carbs} / {carbs_goal}g</span>
           </div>
           <div className={styles.track}>
@@ -61,7 +61,7 @@ export default function MacroProgressBar({ summary }) {
         {/* Fat */}
         <div className={styles.macroItem}>
           <div className={styles.macroHeader}>
-            <span className={styles.macroName} style={{ color: "var(--color-fat)" }}>🥑 Fats</span>
+            <span className={styles.macroName} style={{ color: "var(--color-fat)" }}>Fats</span>
             <span className={styles.macroValue}>{total_fat} / {fat_goal}g</span>
           </div>
           <div className={styles.track}>

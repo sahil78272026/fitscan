@@ -10,19 +10,40 @@ export default function WeightChart({
   currentTimeframe = 30,
 }) {
   const [weightInput, setWeightInput] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const logs = historyData?.logs || [];
-  const startWeight = historyData?.start_weight;
-  const currentWeight = historyData?.current_weight;
-  const netChange = historyData?.net_change_kg;
+  // Ignore any existing out-of-range logs (< 25 or > 300)
+  const rawLogs = historyData?.logs || [];
+  const logs = rawLogs.filter((l) => l.weight_kg >= 25 && l.weight_kg <= 300);
+  const startWeight =
+    historyData?.start_weight >= 25 && historyData?.start_weight <= 300
+      ? historyData.start_weight
+      : logs.length > 0
+      ? logs[0].weight_kg
+      : null;
+  const currentWeight =
+    historyData?.current_weight >= 25 && historyData?.current_weight <= 300
+      ? historyData.current_weight
+      : logs.length > 0
+      ? logs[logs.length - 1].weight_kg
+      : null;
+  const netChange =
+    startWeight !== null && currentWeight !== null
+      ? +(currentWeight - startWeight).toFixed(1)
+      : historyData?.net_change_kg;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!weightInput || isNaN(weightInput)) return;
+    const val = parseFloat(weightInput);
+    if (isNaN(val) || val < 25 || val > 300) {
+      setErrorMsg("Weight must be between 25 and 300 kg");
+      return;
+    }
+    setErrorMsg("");
     setSubmitting(true);
     try {
-      await onLogWeight(parseFloat(weightInput));
+      await onLogWeight(val);
       setWeightInput("");
     } finally {
       setSubmitting(false);
@@ -78,7 +99,7 @@ export default function WeightChart({
       {/* Header Row */}
       <div className={styles.headerRow}>
         <div className={styles.titleGroup}>
-          <h3 className={styles.title}>📈 Weight & Body Trend</h3>
+          <h3 className={styles.title}>Weight & Body Trend</h3>
           <span className={styles.subtitle}>Track your body composition changes</span>
         </div>
 
@@ -126,7 +147,7 @@ export default function WeightChart({
       {/* SVG Line Chart */}
       {logs.length === 0 ? (
         <div className={styles.emptyChart}>
-          <span>⚖️ No weight logs recorded yet</span>
+          <span>No weight logs recorded yet</span>
           <span style={{ fontSize: "0.8rem", opacity: 0.7 }}>
             Log your current weight below to start plotting your trend line
           </span>
@@ -179,11 +200,14 @@ export default function WeightChart({
           <input
             type="number"
             step="0.1"
-            min="20"
+            min="25"
             max="300"
             placeholder="e.g. 68.5"
             value={weightInput}
-            onChange={(e) => setWeightInput(e.target.value)}
+            onChange={(e) => {
+              setWeightInput(e.target.value);
+              if (errorMsg) setErrorMsg("");
+            }}
             className={styles.input}
             required
           />
@@ -193,6 +217,11 @@ export default function WeightChart({
           {submitting ? "Saving..." : "Log Weight"}
         </button>
       </form>
+      {errorMsg ? (
+        <div style={{ color: "#ef4444", fontSize: "0.82rem", marginTop: "0.4rem", paddingLeft: "0.2rem" }}>
+          {errorMsg}
+        </div>
+      ) : null}
     </div>
   );
 }

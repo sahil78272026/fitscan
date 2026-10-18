@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/weight", tags=["Weight Tracking"])
 
 
 class WeightLogPayload(BaseModel):
-    weight_kg: float = Field(..., gt=20.0, lt=300.0, description="Weight in kilograms")
+    weight_kg: float = Field(..., ge=25.0, le=300.0, description="Weight in kilograms (25–300 kg)")
     logged_date: Optional[date] = Field(None, description="Date for weight entry (default: today)")
 
 
@@ -44,7 +44,13 @@ async def log_weight(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Log or update body weight for a given date."""
+    """Log or update body weight for a given date (validated to 25–300 kg)."""
+    if payload.weight_kg < 25.0 or payload.weight_kg > 300.0:
+        raise HTTPException(
+            status_code=422,
+            detail="Weight must be between 25 and 300 kg.",
+        )
+
     target_date = payload.logged_date or date.today()
 
     # Check if entry already exists for this date
@@ -69,7 +75,8 @@ async def log_weight(
     # Sync latest weight with user_settings
     settings = await get_or_create_settings(db, current_user.id)
     if settings.start_weight_kg is None and settings.weight_kg is not None:
-        settings.start_weight_kg = settings.weight_kg
+        if 25.0 <= settings.weight_kg <= 300.0:
+            settings.start_weight_kg = settings.weight_kg
     settings.weight_kg = round(payload.weight_kg, 2)
 
     await db.commit()
@@ -84,45 +91,55 @@ async def get_weight_history(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get weight history for chart rendering with preserved baseline start_weight statistics."""
+    """Get weight history for chart rendering, ignoring any out-of-range (<25 or >300 kg) values."""
     settings = await get_or_create_settings(db, current_user.id)
 
-    # 1. Fetch earliest weight log ever recorded for this user
+    # 1. Fetch earliest valid weight log ever recorded for this user (25–300 kg)
     earliest_res = await db.execute(
         select(WeightLog)
-        .where(WeightLog.user_id == current_user.id)
+        .where(
+            WeightLog.user_id == current_user.id,
+            WeightLog.weight_kg >= 25.0,
+            WeightLog.weight_kg <= 300.0,
+        )
         .order_by(WeightLog.logged_date.asc(), WeightLog.id.asc())
         .limit(1)
     )
     first_log = earliest_res.scalar_one_or_none()
 
-    # 2. Fetch latest weight log recorded for this user (current_weight)
+    # 2. Fetch latest valid weight log recorded for this user (current_weight, 25–300 kg)
     latest_res = await db.execute(
         select(WeightLog)
-        .where(WeightLog.user_id == current_user.id)
+        .where(
+            WeightLog.user_id == current_user.id,
+            WeightLog.weight_kg >= 25.0,
+            WeightLog.weight_kg <= 300.0,
+        )
         .order_by(WeightLog.logged_date.desc(), WeightLog.id.desc())
         .limit(1)
     )
     latest_log = latest_res.scalar_one_or_none()
 
-    # Prioritize onboarding starting weight baseline, falling back to earliest log or current settings
-    start_weight = settings.start_weight_kg
+    # Prioritize onboarding starting weight baseline (if valid), falling back to earliest log or current settings
+    start_weight = settings.start_weight_kg if (settings.start_weight_kg and 25.0 <= settings.start_weight_kg <= 300.0) else None
     if start_weight is None:
-        start_weight = first_log.weight_kg if first_log else settings.weight_kg
+        start_weight = first_log.weight_kg if first_log else (settings.weight_kg if (settings.weight_kg and 25.0 <= settings.weight_kg <= 300.0) else None)
 
-    current_weight = latest_log.weight_kg if latest_log else settings.weight_kg
+    current_weight = latest_log.weight_kg if latest_log else (settings.weight_kg if (settings.weight_kg and 25.0 <= settings.weight_kg <= 300.0) else None)
 
     net_change_kg = None
     if start_weight is not None and current_weight is not None:
         net_change_kg = round(current_weight - start_weight, 2)
 
-    # 3. Fetch timeframe logs for line chart
+    # 3. Fetch timeframe logs for line chart, filtering out-of-range weights (<25 or >300 kg)
     start_date = date.today() - timedelta(days=days)
     result = await db.execute(
         select(WeightLog)
         .where(
             WeightLog.user_id == current_user.id,
             WeightLog.logged_date >= start_date,
+            WeightLog.weight_kg >= 25.0,
+            WeightLog.weight_kg <= 300.0,
         )
         .order_by(WeightLog.logged_date.asc())
     )

@@ -451,3 +451,292 @@
   transform: translateY(-2px);
   box-shadow: 0 6px 24px rgba(168, 85, 247, 0.5);
 }
+
+/* Download Buttons */
+.downloadButtonGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.downloadBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(232, 160, 32, 0.15);
+  border: 1px solid rgba(232, 160, 32, 0.4);
+  color: #fbbf24;
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.downloadBtn:hover {
+  background: rgba(232, 160, 32, 0.28);
+  border-color: #fbbf24;
+  transform: translateY(-1px);
+}
+
+.downloadTextBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #a79a85;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.downloadTextBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+/* Print Styles for Multi-Page PDF Export */
+@page {
+  size: auto;
+  margin: 12mm 15mm;
+}
+
+@media print {
+  html,
+  body {
+    height: auto !important;
+    min-height: auto !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+  }
+
+  .backBtn,
+  .actionRow,
+  .downloadButtonGroup,
+  .rotationBadgeReady,
+  .rotationBadgeCooldown {
+    display: none !important;
+  }
+
+  .main {
+    min-height: auto !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    color: #000000 !important;
+    overflow: visible !important;
+  }
+
+  .container {
+    display: block !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  .header {
+    margin-bottom: 0.75rem !important;
+    padding-bottom: 0.35rem !important;
+    border-bottom: 2px solid #000000 !important;
+  }
+
+  .pageTitle {
+    color: #000000 !important;
+    font-size: 1.35rem !important;
+    font-weight: 800 !important;
+    margin: 0 !important;
+  }
+
+  .heroCard {
+    display: block !important;
+    background: #f9fafb !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 8px !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    overflow: visible !important;
+    margin-bottom: 1.25rem !important;
+    padding: 1rem !important;
+  }
+
+  .heroCard::before {
+    display: none !important;
+  }
+
+  .badgeRow {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 0.35rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .planBadge,
+  .costBadge,
+  .proPlanBadge {
+    display: inline-block !important;
+    background: #ffffff !important;
+    border: 1px solid #9ca3af !important;
+    color: #111827 !important;
+    padding: 0.2rem 0.5rem !important;
+    border-radius: 4px !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+  }
+
+  .planTitle {
+    color: #000000 !important;
+    font-size: 1.3rem !important;
+    font-weight: 800 !important;
+    margin-bottom: 0.25rem !important;
+  }
+
+  .planTagline {
+    color: #4b5563 !important;
+    font-size: 0.85rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .macroGrid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 0.5rem !important;
+  }
+
+  .macroCard {
+    background: #ffffff !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 6px !important;
+    padding: 0.5rem !important;
+    box-shadow: none !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .macroLabel {
+    color: #4b5563 !important;
+    font-size: 0.75rem !important;
+  }
+
+  .macroVal,
+  .caloriesVal,
+  .proteinVal,
+  .carbsVal,
+  .fatVal {
+    color: #111827 !important;
+    font-size: 1.05rem !important;
+    font-weight: 700 !important;
+  }
+
+  .scheduleHeader {
+    display: block !important;
+    margin-top: 1rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .scheduleTitle {
+    color: #000000 !important;
+    font-size: 1.15rem !important;
+    font-weight: 700 !important;
+    margin: 0 !important;
+  }
+
+  .mealsContainer {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .mealCard {
+    display: block !important;
+    background: #ffffff !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 8px !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    margin-bottom: 0.85rem !important;
+    padding: 0.85rem 1rem !important;
+    overflow: visible !important;
+  }
+
+  .mealHeader {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 0.4rem !important;
+  }
+
+  .mealTypeTag {
+    color: #111827 !important;
+    font-weight: 800 !important;
+    font-size: 0.85rem !important;
+    letter-spacing: 0.5px !important;
+  }
+
+  .mealCalsPill {
+    background: #f3f4f6 !important;
+    border: 1px solid #9ca3af !important;
+    color: #111827 !important;
+    font-weight: 700 !important;
+    font-size: 0.8rem !important;
+    padding: 0.15rem 0.5rem !important;
+    border-radius: 4px !important;
+  }
+
+  .dishName {
+    color: #000000 !important;
+    font-size: 1.05rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 0.35rem !important;
+  }
+
+  .ingredientsList {
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0.35rem 0 !important;
+    display: block !important;
+  }
+
+  .ingredientItem {
+    color: #374151 !important;
+    font-size: 0.85rem !important;
+    line-height: 1.4 !important;
+  }
+
+  .dishDescription {
+    color: #374151 !important;
+    font-size: 0.85rem !important;
+    line-height: 1.4 !important;
+  }
+
+  .mealMacroRow {
+    display: flex !important;
+    gap: 1.5rem !important;
+    border-top: 1px dashed #d1d5db !important;
+    padding-top: 0.4rem !important;
+    margin-top: 0.5rem !important;
+    font-size: 0.8rem !important;
+  }
+
+  .mealMacroItem {
+    color: #4b5563 !important;
+  }
+
+  .mealMacroItem strong {
+    color: #000000 !important;
+    font-weight: 700 !important;
+  }
+}
+

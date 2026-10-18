@@ -130,3 +130,24 @@ body::before {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-border-hover);
 }
+
+/* Global Print Mode Reset */
+@media print {
+  html,
+  body {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  body::before {
+    display: none !important;
+  }
+
+  nav,
+  .toast-container {
+    display: none !important;
+  }
+}

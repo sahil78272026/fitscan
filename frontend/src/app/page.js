@@ -88,6 +88,14 @@ export default function Home() {
     !planSelectorOpen
   );
 
+  const dynamicMeal = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 11) return { type: "breakfast", label: "Log Breakfast" };
+    if (hour < 16) return { type: "lunch", label: "Log Lunch" };
+    if (hour < 19) return { type: "snack", label: "Log Snack" };
+    return { type: "dinner", label: "Log Dinner" };
+  }, []);
+
   // Track window scroll for dynamic sticky header streak transition
   useEffect(() => {
     const handleScroll = () => {
@@ -173,19 +181,11 @@ export default function Home() {
       setUserSettings(updatedSettings);
       setWizardOpen(false);
 
-      const isProUser = (updatedSettings?.subscription_tier || "free").toLowerCase() === "pro";
-      const canChange = updatedSettings?.can_change_plan !== false || !updatedSettings?.selected_meal_plan;
-
-      if (isProUser || canChange) {
-        // Open Plan Selector & fetch AI suggestions
-        setPlanSelectorOpen(true);
-        showToast("Metrics updated! Generating meal plans... ✨");
-        const plansData = await getSuggestedMealPlans();
-        setSuggestedPlans(plansData);
-      } else {
-        showToast("Body stats & target calories updated! 🎯");
-        fetchSummary(selectedDate);
-      }
+      // Open Plan Selector & fetch AI suggestions
+      setPlanSelectorOpen(true);
+      showToast("Metrics updated! Generating meal plans... ✨");
+      const plansData = await getSuggestedMealPlans();
+      setSuggestedPlans(plansData);
     } catch (err) {
       showToast(err.message || "Failed to save goals", "error");
     }
@@ -579,9 +579,24 @@ export default function Home() {
                   <p className={styles.emptyText}>
                     {isToday ? "No meals logged yet today" : "No meals logged on this day"}
                   </p>
-                  {isToday && (
-                    <p className={styles.emptyHint}>Scan a photo or type a meal above to track macros</p>
-                  )}
+                  {isToday ? (
+                    <div className={styles.emptyActions}>
+                      <button
+                        type="button"
+                        className={styles.logFirstMealBtn}
+                        onClick={() => handleTriggerMealLog(dynamicMeal.type)}
+                      >
+                        + {dynamicMeal.label}
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.scanFirstMealBtn}
+                        onClick={handleFloatingScanClick}
+                      >
+                        📸 Scan Photo
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               ) : (
                 <div className={styles.mealsList}>

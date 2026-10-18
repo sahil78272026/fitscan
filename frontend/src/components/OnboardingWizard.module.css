@@ -111,6 +111,17 @@
   color: #c084fc;
 }
 
+.completedStepLabel {
+  color: #a855f7;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: opacity 0.2s ease;
+}
+
+.completedStepLabel:hover {
+  opacity: 0.85;
+}
+
 .wizardBody {
   padding: 1.5rem 1.75rem 1.75rem;
 }

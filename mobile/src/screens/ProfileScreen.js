@@ -18,12 +18,14 @@ import { auth } from '../services/firebase';
 import { deleteUser } from 'firebase/auth';
 import OnboardingModal from '../components/OnboardingModal';
 import MealPlanSelectorModal from '../components/MealPlanSelectorModal';
+import ConfirmPlanChangeModal from '../components/ConfirmPlanChangeModal';
 
 export default function ProfileScreen({ navigation, user, onLogout }) {
   const [userSettings, setUserSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [planSelectorOpen, setPlanSelectorOpen] = useState(false);
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const fetchSettings = async () => {
@@ -41,6 +43,28 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
   useEffect(() => {
     fetchSettings();
   }, []);
+
+  const handleOpenPlanSelector = () => {
+    if (userSettings && userSettings.can_change_plan === false) {
+      const hours = userSettings.hours_until_next_plan_change || 1;
+      Alert.alert(
+        'Daily Meal Plan Limit',
+        `Meal plans can be updated once every 24 hours to optimize AI generation.\n\nNext update available in ${hours} hour(s).`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    setConfirmModalOpen(true);
+  };
+
+  const handleConfirmPlanChange = () => {
+    setConfirmModalOpen(false);
+    setPlanSelectorOpen(true);
+  };
+
+  const handleOpenWizard = () => {
+    setWizardOpen(true);
+  };
 
   const handleWizardComplete = async (updatedSettings) => {
     setUserSettings(updatedSettings);
@@ -96,7 +120,7 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loader}>
-          <ActivityIndicator size="large" color="#58a6ff" />
+          <ActivityIndicator size="large" color="#E8A020" />
           <Text style={styles.loaderText}>Loading Profile...</Text>
         </View>
       </SafeAreaView>
@@ -115,11 +139,23 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
         onComplete={handleWizardComplete}
       />
 
+      {/* Confirm Plan Change Warning Modal */}
+      <ConfirmPlanChangeModal
+        visible={confirmModalOpen}
+        onClose={() => setConfirmModalOpen(false)}
+        onConfirm={handleConfirmPlanChange}
+        currentPlan={selectedPlan}
+      />
+
       {/* AI Meal Plan Generator Modal */}
       <MealPlanSelectorModal
         visible={planSelectorOpen}
         onClose={() => setPlanSelectorOpen(false)}
         onPlanSelected={handlePlanSelected}
+        onBackToWizard={() => {
+          setPlanSelectorOpen(false);
+          setWizardOpen(true);
+        }}
       />
 
       {/* Navigation Header */}
@@ -142,15 +178,26 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
             </Text>
           </View>
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>{user?.name || 'CoreControl User'}</Text>
+            <View style={styles.userHeaderRow}>
+              <Text style={styles.userName}>{user?.name || 'CoreControl User'}</Text>
+            </View>
             <Text style={styles.userPhone}>{user?.email || user?.phone || 'Account Active'}</Text>
           </View>
         </View>
 
         {/* Active Selected Meal Plan Section */}
         <View style={styles.activePlanCard}>
-          <View style={styles.planBadge}>
-            <Text style={styles.planBadgeText}>Active Meal Plan</Text>
+          <View style={styles.planBadgeRow}>
+            <View style={styles.planBadge}>
+              <Text style={styles.planBadgeText}>Active Meal Plan</Text>
+            </View>
+            {userSettings?.can_change_plan === false && (
+              <View style={[styles.planBadge, { backgroundColor: 'rgba(234, 88, 12, 0.15)', borderColor: 'rgba(234, 88, 12, 0.35)' }]}>
+                <Text style={[styles.planBadgeText, { color: '#fb923c' }]}>
+                  ⏳ Cooldown: {userSettings.hours_until_next_plan_change || 1}h left
+                </Text>
+              </View>
+            )}
           </View>
 
           <Text style={styles.planTitle}>{selectedPlan?.title || 'No Meal Plan Selected'}</Text>
@@ -179,24 +226,33 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
           <View style={styles.actionBtnStack}>
             {selectedPlan && (
               <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.navigate('Meals')}>
-                <Text style={styles.primaryBtnText}>📖 View Full Meal Plan Schedule →</Text>
+                <Text style={styles.primaryBtnText}>View Full Meal Plan Schedule →</Text>
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity style={styles.generatorBtn} onPress={() => setPlanSelectorOpen(true)}>
+            <TouchableOpacity
+              style={selectedPlan ? styles.generatorBtn : styles.primaryBtn}
+              onPress={handleOpenPlanSelector}
+            >
               <Text style={styles.generatorBtnText}>
-                ✨ {selectedPlan ? 'Change AI Meal Plan' : 'Generate AI Meal Plans'}
+                {selectedPlan
+                  ? userSettings?.can_change_plan === false
+                    ? `Change Plan (${userSettings.hours_until_next_plan_change || 1}h cooldown)`
+                    : 'Change AI Meal Plan'
+                  : 'Generate AI Meal Plans'}
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.secondaryBtn} onPress={() => setWizardOpen(true)}>
-              <Text style={styles.secondaryBtnText}>⚙️ Re-run Onboarding & Goals</Text>
+            <TouchableOpacity style={styles.secondaryBtn} onPress={handleOpenWizard}>
+              <Text style={styles.secondaryBtnText}>
+                Re-run Onboarding & Goals
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Personal Metrics Grid matching Web */}
-        <Text style={styles.sectionTitle}>📋 Personal Metrics & Preferences</Text>
+        <Text style={styles.sectionTitle}>Personal Metrics & Preferences</Text>
         <View style={styles.metricsGrid}>
           <View style={styles.metricCard}>
             <Text style={styles.metricLabel}>Goal Type</Text>
@@ -345,10 +401,43 @@ const styles = StyleSheet.create({
   userInfo: {
     flex: 1,
   },
+  userHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
   userName: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#F4ECDD',
+    flex: 1,
+  },
+  proBadgePill: {
+    backgroundColor: 'rgba(232, 160, 32, 0.15)',
+    borderWidth: 1,
+    borderColor: '#E8A020',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  proBadgeText: {
+    color: '#E8A020',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  freeBadgePill: {
+    backgroundColor: '#2C251D',
+    borderWidth: 1,
+    borderColor: '#3A3128',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  freeBadgeText: {
+    color: '#A79A85',
+    fontSize: 11,
+    fontWeight: '600',
   },
   userPhone: {
     fontSize: 13,
@@ -363,16 +452,59 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E8A020',
   },
+  planBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
   planBadge: {
     backgroundColor: '#2C251D',
-    alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 4,
-    marginBottom: 8,
   },
   planBadgeText: {
     color: '#E8A020',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  rotationBadgePro: {
+    backgroundColor: 'rgba(232, 160, 32, 0.15)',
+    borderWidth: 1,
+    borderColor: '#E8A020',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  rotationBadgeTextPro: {
+    color: '#E8A020',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  rotationBadgeReady: {
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.4)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  rotationBadgeTextReady: {
+    color: '#4ADE80',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  rotationBadgeCooldown: {
+    backgroundColor: 'rgba(234, 88, 12, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(234, 88, 12, 0.35)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  rotationBadgeTextCooldown: {
+    color: '#FB923C',
     fontSize: 11,
     fontWeight: 'bold',
   },
@@ -442,6 +574,37 @@ const styles = StyleSheet.create({
     color: '#F4ECDD',
     fontSize: 13,
     fontWeight: '600',
+  },
+  cooldownHintBox: {
+    backgroundColor: 'rgba(234, 88, 12, 0.08)',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(234, 88, 12, 0.25)',
+    marginTop: 4,
+  },
+  cooldownHintText: {
+    color: '#D4C8B5',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  boldText: {
+    fontWeight: 'bold',
+    color: '#F4ECDD',
+  },
+  proPerksBtn: {
+    backgroundColor: 'rgba(232, 160, 32, 0.12)',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E8A020',
+    marginTop: 4,
+  },
+  proPerksBtnText: {
+    color: '#E8A020',
+    fontSize: 13,
+    fontWeight: 'bold',
   },
   sectionTitle: {
     fontSize: 15,

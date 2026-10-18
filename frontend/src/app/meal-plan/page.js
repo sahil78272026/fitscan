@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { getSettings } from "@/lib/api";
-import ProUpgradeModal from "@/components/ProUpgradeModal";
 import styles from "./page.module.css";
 
 const MEAL_TYPE_ICONS = {
@@ -21,7 +20,8 @@ export default function MealPlanPage() {
 
   const [userSettings, setUserSettings] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+
+  const selectedPlan = userSettings?.selected_meal_plan;
 
   // Auth Protection
   useEffect(() => {
@@ -48,6 +48,61 @@ export default function MealPlanPage() {
     }
   }, [isAuthenticated, fetchSettings]);
 
+  const handleDownloadMealPlan = () => {
+    if (!selectedPlan) return;
+    window.print();
+  };
+
+  const handleDownloadTextPlan = () => {
+    if (!selectedPlan) return;
+    const goal = (userSettings?.goal_type || "fat_loss").replace("_", " ").toUpperCase();
+    const diet = (userSettings?.diet_type || "veg").toUpperCase();
+    const calories = selectedPlan.daily_calories || userSettings?.calorie_goal || 2000;
+    const protein = selectedPlan.protein_g || userSettings?.protein_goal || 150;
+    const carbs = selectedPlan.carbs_g || userSettings?.carbs_goal || 200;
+    const fat = selectedPlan.fat_g || userSettings?.fat_goal || 65;
+
+    let content = `========================================\n`;
+    content += ` CORECONTROL - DAILY MEAL PLAN\n`;
+    content += `========================================\n\n`;
+    content += `Plan Title: ${selectedPlan.title || "Custom AI Plan"}\n`;
+    content += `Goal: ${goal} | Diet: ${diet}\n`;
+    content += `Daily Targets: ${calories} kcal | ${protein}g Protein | ${carbs}g Carbs | ${fat}g Fat\n`;
+    if (selectedPlan.estimated_cost) {
+      content += `Estimated Cost: ${selectedPlan.estimated_cost}\n`;
+    }
+    content += `\n----------------------------------------\n`;
+    content += ` MEAL SCHEDULE & INGREDIENTS\n`;
+    content += `----------------------------------------\n\n`;
+
+    (selectedPlan.meals || []).forEach((m, idx) => {
+      content += `${idx + 1}. [${m.meal_type.toUpperCase()}] ${m.dish_name} (${m.calories} kcal)\n`;
+      content += `   Macros: ${m.protein}g P | ${m.carbs}g C | ${m.fat}g F\n`;
+      if (m.ingredients && m.ingredients.length > 0) {
+        content += `   Ingredients:\n`;
+        m.ingredients.forEach((ing) => {
+          content += `    • ${ing}\n`;
+        });
+      } else if (m.description) {
+        content += `   Notes: ${m.description}\n`;
+      }
+      content += `\n`;
+    });
+
+    content += `========================================\n`;
+    content += `Generated with CoreControl • www.corecontrol.fit\n`;
+
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `CoreControl-MealPlan-${selectedPlan.title ? selectedPlan.title.replace(/\s+/g, "_") : "Daily"}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   if (authLoading || loading) {
     return (
       <main className={styles.main}>
@@ -59,15 +114,12 @@ export default function MealPlanPage() {
     );
   }
 
-  const selectedPlan = userSettings?.selected_meal_plan;
-  const isPro = (userSettings?.subscription_tier || "free").toLowerCase() === "pro";
-
   return (
     <main className={styles.main}>
       <div className={styles.container}>
         {/* Header */}
         <header className={styles.header}>
-          <h1 className={styles.pageTitle}>📋 AI Meal Plan</h1>
+          <h1 className={styles.pageTitle}>AI Meal Plan</h1>
         </header>
 
         {!selectedPlan ? (
@@ -79,7 +131,7 @@ export default function MealPlanPage() {
               Complete your onboarding metrics and select an AI-generated meal plan to view your full daily nutrition schedule.
             </p>
             <Link href="/profile" className={styles.primaryBtn}>
-              🎯 Go to Profile & Select Meal Plan
+              Go to Profile & Select Meal Plan
             </Link>
           </div>
         ) : (
@@ -90,17 +142,16 @@ export default function MealPlanPage() {
                 <span className={styles.planBadge}>
                   ✨ Active Plan
                 </span>
-                {isPro ? (
-                  <span className={styles.proPlanBadge}>👑 CoreControl Pro</span>
-                ) : userSettings?.can_change_plan ? (
-                  <span className={styles.rotationBadgeReady}>🟢 1 Free Weekly Rotation</span>
-                ) : (
+                {userSettings?.can_change_plan === false && (
                   <span
-                    className={styles.rotationBadgeCooldown}
-                    onClick={() => setUpgradeModalOpen(true)}
-                    title="Click to upgrade to Pro"
+                    className={styles.planBadge}
+                    style={{
+                      background: "rgba(234, 88, 12, 0.15)",
+                      color: "#fb923c",
+                      borderColor: "rgba(234, 88, 12, 0.35)",
+                    }}
                   >
-                    ⏳ Next Free Rotation in {userSettings?.days_until_next_plan_change || 1}d
+                    ⏳ Next change in {userSettings.hours_until_next_plan_change || 1}h
                   </span>
                 )}
                 <span className={styles.planBadge}>
@@ -157,8 +208,26 @@ export default function MealPlanPage() {
             <section>
               <div className={styles.scheduleHeader}>
                 <h3 className={styles.scheduleTitle}>
-                  🍽️ Daily Meal Schedule & Recipes
+                  Daily Meal Schedule & Recipes
                 </h3>
+                <div className={styles.downloadButtonGroup}>
+                  <button
+                    type="button"
+                    className={styles.downloadBtn}
+                    onClick={handleDownloadMealPlan}
+                    title="Print or Save as PDF"
+                  >
+                    📥 Save / Print PDF
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.downloadTextBtn}
+                    onClick={handleDownloadTextPlan}
+                    title="Download as clean text file"
+                  >
+                    📄 Text
+                  </button>
+                </div>
               </div>
 
               <div className={styles.mealsContainer}>
@@ -213,33 +282,20 @@ export default function MealPlanPage() {
 
             {/* Action Bar */}
             <section className={styles.actionRow}>
+              <button
+                type="button"
+                className={styles.secondaryBtn}
+                onClick={handleDownloadMealPlan}
+              >
+                📥 Download Meal Plan
+              </button>
               <Link href="/profile" className={styles.primaryBtn}>
-                🔄 {isPro ? "Rotate Meal Plan (Unlimited Pro ✨)" : "Change Meal Plan"}
+                Change Meal Plan
               </Link>
-              {!isPro && (
-                <button
-                  type="button"
-                  className={styles.proActionBtn}
-                  onClick={() => setUpgradeModalOpen(true)}
-                >
-                  👑 Unlock Unlimited Plan Rotations with Pro
-                </button>
-              )}
             </section>
           </>
         )}
       </div>
-
-      {/* Pro Upgrade Modal */}
-      <ProUpgradeModal
-        isOpen={upgradeModalOpen}
-        onClose={() => setUpgradeModalOpen(false)}
-        currentTier={userSettings?.subscription_tier || "free"}
-        daysRemaining={userSettings?.days_until_next_plan_change || 0}
-        onSuccess={(updated) => {
-          setUserSettings(updated);
-        }}
-      />
     </main>
   );
 }

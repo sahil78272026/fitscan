@@ -42,61 +42,78 @@ async def get_adherence_stats(
         .order_by(Meal.meal_date.desc())
     )
 
-    daily_map = {
-        row.meal_date: {
+    def to_date(val):
+        if isinstance(val, str):
+            return date.fromisoformat(val)
+        if hasattr(val, "date") and callable(val.date):
+            return val.date()
+        return val
+
+    daily_map = {}
+    for row in result.all():
+        d = to_date(row.meal_date)
+        daily_map[d] = {
             "calories": row.total_calories or 0,
             "meal_count": row.meal_count or 0,
             "image_count": row.image_count or 0,
         }
-        for row in result.all()
-    }
 
-    # 1. Calculate Streak (consecutive days with at least 1 meal logged)
+    # 1. Calculate Streak: consecutive days user logged at least one meal
     current_streak = 0
-    check_date = today
-
-    # If nothing logged today yet, check starting yesterday so streak doesn't reset early in the day
-    if today not in daily_map:
+    if today in daily_map and daily_map[today]["meal_count"] > 0:
+        check_date = today
+    elif (today - timedelta(days=1)) in daily_map and daily_map[today - timedelta(days=1)]["meal_count"] > 0:
+        # Not logged today yet, but logged yesterday -> streak active
         check_date = today - timedelta(days=1)
+    else:
+        check_date = None
 
-    while check_date in daily_map:
+    while check_date and check_date in daily_map and daily_map[check_date]["meal_count"] > 0:
         current_streak += 1
         check_date -= timedelta(days=1)
 
     # 2. 7-Day Adherence Score & Daily Status Grid
-    weekly_scores = []
+    # Definition: "Adherence %" = share of days in the window where the user met their goal
+    days_met_goal = 0
     seven_day_grid = []
 
     for i in range(6, -1, -1):
         day_date = today - timedelta(days=i)
         day_data = daily_map.get(day_date)
 
-        if not day_data:
+        has_logged = bool(day_data and day_data["meal_count"] > 0)
+        if not has_logged:
             status = "no_log"
             score = 0.0
             logged_cals = 0
+            met_goal = False
         else:
             logged_cals = day_data["calories"]
             diff_pct = abs(logged_cals - calorie_goal) / calorie_goal
-            score = max(0.0, (1.0 - diff_pct) * 100.0)
+            met_goal = diff_pct <= 0.15
 
-            if diff_pct <= 0.15:
+            if met_goal:
                 status = "on_target"
+                score = 100.0
+                days_met_goal += 1
             elif diff_pct <= 0.30:
                 status = "close"
+                score = 50.0
             else:
                 status = "off_target"
+                score = 0.0
 
-        weekly_scores.append(score)
         seven_day_grid.append({
             "date": day_date.strftime("%Y-%m-%d"),
             "day_name": day_date.strftime("%a"),
             "calories": logged_cals,
             "status": status,
             "score": round(score, 1),
+            "met_goal": met_goal,
         })
 
-    weekly_adherence_score = round(sum(weekly_scores) / 7.0, 1)
+    # Share of days in the 7-day window where the user met their goal
+    weekly_adherence_score = round((days_met_goal / 7.0) * 100.0, 1)
 
     # 3. Badges System (Continuous app engagement ladder)
     badges = [

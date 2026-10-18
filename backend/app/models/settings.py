@@ -22,6 +22,7 @@ class UserSettings(Base):
     weight_kg = Column(Float, nullable=True)
     start_weight_kg = Column(Float, nullable=True)
     activity_level = Column(String(50), nullable=True, default="moderate")
+    workout_time = Column(String(50), nullable=True, default="evening")
     selected_meal_plan = Column(Text, nullable=True)
     subscription_tier = Column(String(20), nullable=True, default="free")
     last_plan_change_at = Column(DateTime(timezone=True), nullable=True)

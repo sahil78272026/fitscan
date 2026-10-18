@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { verifyFirebaseToken, loginWithEmail } from '../services/api';
 import {
   auth,
@@ -26,12 +25,19 @@ import {
   signInWithCredential,
 } from '../services/firebase';
 
+let GoogleSignin = null;
+let statusCodes = {};
 try {
-  GoogleSignin.configure({
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-  });
+  const gModule = require('@react-native-google-signin/google-signin');
+  GoogleSignin = gModule.GoogleSignin;
+  statusCodes = gModule.statusCodes || {};
+  if (GoogleSignin && typeof GoogleSignin.configure === 'function') {
+    GoogleSignin.configure({
+      webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+    });
+  }
 } catch (e) {
-  // Fallback if native module not available (e.g. web)
+  // Gracefully fallback when running inside Expo Go (lacks native RNGoogleSignin binary)
 }
 
 export default function LoginScreen({ onLoginSuccess }) {
@@ -153,6 +159,15 @@ export default function LoginScreen({ onLoginSuccess }) {
         await AsyncStorage.setItem('fitscan_user', JSON.stringify(res.user));
         onLoginSuccess(res.user);
       } else {
+        if (!GoogleSignin) {
+          Alert.alert(
+            'Expo Go Notice',
+            'Native Google Sign-In requires an Android Development Build because standard Expo Go lacks Google Play native binaries.\n\nPlease sign in or sign up using Email & Password below.'
+          );
+          setLoading(false);
+          setGoogleLoading(false);
+          return;
+        }
         await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
         const response = await GoogleSignin.signIn();
         const idToken = response.data?.idToken || response.idToken;

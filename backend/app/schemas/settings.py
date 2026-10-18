@@ -8,8 +8,8 @@ class UserGoalUpdate(BaseModel):
     age: Optional[int] = Field(None, ge=10, le=100)
     gender: Optional[str] = Field(None, pattern="^(male|female|other)$")
     height_cm: Optional[float] = Field(None, ge=50, le=250)
-    weight_kg: Optional[float] = Field(None, ge=20, le=300)
     activity_level: Optional[str] = Field("moderate", pattern="^(sedentary|light|moderate|very_active)$")
+    workout_time: Optional[str] = Field("evening", pattern="^(morning|afternoon|evening|night|none)$")
     # Optional manual macro overrides:
     calorie_goal: Optional[int] = Field(None, gt=0, le=10000)
     protein_goal: Optional[int] = Field(None, gt=0, le=1000)
@@ -57,11 +57,13 @@ class SettingsResponse(BaseModel):
     weight_kg: Optional[float] = None
     start_weight_kg: Optional[float] = None
     activity_level: Optional[str] = "moderate"
+    workout_time: Optional[str] = "evening"
     selected_meal_plan: Optional[Any] = None
     subscription_tier: Optional[str] = "free"
     last_plan_change_at: Optional[datetime] = None
     can_change_plan: bool = True
     days_until_next_plan_change: int = 0
+    hours_until_next_plan_change: int = 0
     morning_briefing_enabled: bool = True
     morning_briefing_start_hour: int = 6
     morning_briefing_end_hour: int = 11

@@ -18,9 +18,9 @@ const DIETS = [
 ];
 
 const BUDGETS = [
-  { id: "low_budget", label: "🪙 Pocket Friendly", desc: "Budget staples: Chana, Rajma, Eggs, Rice & Seasonal Veggies", cost: "~₹100-140/day" },
-  { id: "moderate", label: "💳 Moderate", desc: "Balanced variety: Paneer, Oats, Milk, Tofu, Local Chicken", cost: "~₹180-250/day" },
-  { id: "flexible", label: "🌟 Flexible", desc: "High protein & gourmet items: Whey, Fish, Nuts, Avocados", cost: "~₹300+/day" },
+  { id: "low_budget", label: "🪙 Pocket Friendly", desc: "Budget staples: Chana, Rajma, Eggs, Rice & Seasonal Veggies", cost: "₹100-140/day" },
+  { id: "moderate", label: "💳 Moderate", desc: "Balanced variety: Paneer, Oats, Milk, Tofu, Local Chicken", cost: "₹180-250/day" },
+  { id: "flexible", label: "🌟 Flexible", desc: "High protein & gourmet items: Whey, Fish, Nuts, Avocados", cost: "₹300+/day" },
 ];
 
 const ACTIVITIES = [
@@ -29,6 +29,24 @@ const ACTIVITIES = [
   { id: "moderate", icon: "🏃", title: "Moderate", desc: "3–5 regular workout days/week" },
   { id: "very_active", icon: "⚡", title: "Very Active", desc: "6–7 intense workouts/heavy training" },
 ];
+
+const getGoalName = (id) => {
+  const g = GOALS.find((item) => item.id === id);
+  if (!g) return "Goal";
+  return g.label.replace(/^[^\w]+/, "").trim();
+};
+
+const getDietName = (id) => {
+  const d = DIETS.find((item) => item.id === id);
+  if (!d) return "Diet";
+  return d.label.replace(/^[^\w]+/, "").trim();
+};
+
+const getBudgetName = (id) => {
+  const b = BUDGETS.find((item) => item.id === id);
+  if (!b) return "Budget";
+  return b.label.replace(/^[^\w]+/, "").trim();
+};
 
 export default function OnboardingWizard({ initialSettings, onComplete, onCancel }) {
   const [step, setStep] = useState(1);
@@ -43,13 +61,6 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
   const [weightUnit, setWeightUnit] = useState("kg");
   const [heightUnit, setHeightUnit] = useState("cm");
   const [submitting, setSubmitting] = useState(false);
-
-  const isPro = (initialSettings?.subscription_tier || "free").toLowerCase() === "pro";
-  const isOnPlanCooldown =
-    !isPro &&
-    Boolean(initialSettings?.selected_meal_plan) &&
-    initialSettings?.can_change_plan === false;
-  const daysLeft = initialSettings?.days_until_next_plan_change || 1;
 
   useEffect(() => {
     if (initialSettings) {
@@ -244,10 +255,30 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
             <div className={styles.stepFill} style={{ width: `${(step / 4) * 100}%` }} />
           </div>
           <div className={styles.stepLabels}>
-            <span className={step >= 1 ? styles.activeStepLabel : ""}>1. Goal</span>
-            <span className={step >= 2 ? styles.activeStepLabel : ""}>2. Diet</span>
-            <span className={step >= 3 ? styles.activeStepLabel : ""}>3. Budget</span>
-            <span className={step >= 4 ? styles.activeStepLabel : ""}>4. Body Metrics</span>
+            <span
+              className={`${step >= 1 ? styles.activeStepLabel : ""} ${step > 1 ? styles.completedStepLabel : ""}`}
+              onClick={() => step > 1 && setStep(1)}
+              style={step > 1 ? { cursor: "pointer" } : undefined}
+            >
+              {step > 1 ? `Goal (${getGoalName(goalType)})` : "1. Goal"}
+            </span>
+            <span
+              className={`${step >= 2 ? styles.activeStepLabel : ""} ${step > 2 ? styles.completedStepLabel : ""}`}
+              onClick={() => step > 2 && setStep(2)}
+              style={step > 2 ? { cursor: "pointer" } : undefined}
+            >
+              {step > 2 ? `Diet (${getDietName(dietType)})` : "2. Diet"}
+            </span>
+            <span
+              className={`${step >= 3 ? styles.activeStepLabel : ""} ${step > 3 ? styles.completedStepLabel : ""}`}
+              onClick={() => step > 3 && setStep(3)}
+              style={step > 3 ? { cursor: "pointer" } : undefined}
+            >
+              {step > 3 ? `Budget (${getBudgetName(budgetTier)})` : "3. Budget"}
+            </span>
+            <span className={step >= 4 ? styles.activeStepLabel : ""}>
+              4. Body Metrics
+            </span>
           </div>
         </div>
 
@@ -556,21 +587,6 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
                 ⚖️ <strong>Health & Medical Disclaimer:</strong> CoreControl generates AI meal suggestions and macro estimates for general wellness and educational purposes only. CoreControl is not a licensed medical provider and does not provide medical nutrition therapy. Consult a physician before beginning any diet program.
               </div>
 
-              {isOnPlanCooldown && (
-                <div style={{
-                  background: "rgba(245, 158, 11, 0.12)",
-                  border: "1px solid rgba(245, 158, 11, 0.3)",
-                  borderRadius: "12px",
-                  padding: "0.85rem 1rem",
-                  fontSize: "0.82rem",
-                  color: "#fbbf24",
-                  lineHeight: "1.45",
-                  marginTop: "1rem"
-                }}>
-                  🔒 <strong>7-Day Meal Plan Cycle Active:</strong> Goals and meal plans operate on a 7-day synchronized cycle (<strong>{daysLeft} day(s)</strong> remaining on Free tier). Upgrade to CoreControl Pro to recalibrate anytime!
-                </div>
-              )}
-
               <div className={styles.wizardFooter}>
                 <button type="button" className={styles.backBtn} onClick={handleBack}>
                   ← Back
@@ -578,8 +594,6 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
                 <button type="submit" className={styles.primaryBtn} disabled={submitting}>
                   {submitting
                     ? "Calculating & Saving..."
-                    : isOnPlanCooldown
-                    ? "Save Updated Metrics & Goals 🎯"
                     : "Generate Custom Meal Plans ✨"}
                 </button>
               </div>

@@ -32,6 +32,7 @@ import AdherenceCard from '../components/AdherenceCard';
 import MorningBriefingCard from '../components/MorningBriefingCard';
 import OnboardingModal from '../components/OnboardingModal';
 import MealPlanSelectorModal from '../components/MealPlanSelectorModal';
+import MissedMealBanner from '../components/MissedMealBanner';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useFocusEffect } from '@react-navigation/native';
@@ -64,7 +65,16 @@ export default function HomeScreen({ navigation, user, onLogout }) {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [planSelectorOpen, setPlanSelectorOpen] = useState(false);
   const [userSettings, setUserSettings] = useState(null);
+  const [isScrolled, setIsScrolled] = useState(false);
   const hasCheckedOnboarding = React.useRef(false);
+
+  const handleScroll = (event) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const scrolled = offsetY > 60;
+    if (scrolled !== isScrolled) {
+      setIsScrolled(scrolled);
+    }
+  };
 
   const formatDateStr = (d) => {
     const y = d.getFullYear();
@@ -102,12 +112,12 @@ export default function HomeScreen({ navigation, user, onLogout }) {
         getAdherenceStats().then(setAdherenceStats).catch(() => null),
         getSettings().then((settings) => {
           setUserSettings(settings);
-          if (!hasCheckedOnboarding.current) {
+          // Until a user fixes their metrics, it reappears:
+          if (!settings?.height_cm || !settings?.weight_kg) {
+            setWizardOpen(true);
+          } else if (!settings?.selected_meal_plan && !hasCheckedOnboarding.current) {
             hasCheckedOnboarding.current = true;
-            // If new user with unconfigured metrics, prompt onboarding wizard
-            if (!settings?.height_cm || !settings?.weight_kg || !settings?.selected_meal_plan) {
-              setWizardOpen(true);
-            }
+            setPlanSelectorOpen(true);
           }
         }).catch(() => null),
       ];
@@ -152,6 +162,15 @@ export default function HomeScreen({ navigation, user, onLogout }) {
     setUserSettings(updatedSettings);
     setPlanSelectorOpen(false);
     loadData();
+  };
+
+  const handleTriggerMealLog = (targetType, defaultDish) => {
+    if (targetType) {
+      setMealType(targetType.toLowerCase());
+    }
+    if (defaultDish) {
+      setRawInput(defaultDish);
+    }
   };
 
   useFocusEffect(
@@ -199,14 +218,14 @@ export default function HomeScreen({ navigation, user, onLogout }) {
 
   const handleQuickLogWeight = async () => {
     const w = parseFloat(newWeight);
-    if (!w || w < 20 || w > 300) {
-      Alert.alert('Invalid Weight', 'Please enter a valid weight in kg (e.g. 72.5)');
+    if (!w || w < 25 || w > 300) {
+      Alert.alert('Invalid Weight', 'Please enter a valid weight between 25 and 300 kg');
       return;
     }
     try {
       await logWeight(w);
       setNewWeight('');
-      Alert.alert('Weight Saved ⚖️', `Logged ${w} kg`);
+      Alert.alert('Weight Saved', `Logged ${w} kg`);
       await loadData();
     } catch (err) {
       Alert.alert('Error', 'Failed to log weight');
@@ -233,14 +252,14 @@ export default function HomeScreen({ navigation, user, onLogout }) {
         </View>
 
         <View style={styles.headerRight}>
-          {adherenceStats?.current_streak > 0 && (
+          {isScrolled && (
             <TouchableOpacity
               style={styles.streakHeaderPill}
-              onPress={() => navigation.navigate('Streak')}
+              onPress={() => navigation.navigate('Progress')}
               activeOpacity={0.7}
             >
               <Text style={styles.streakHeaderIcon}>🔥</Text>
-              <Text style={styles.streakHeaderText}>{adherenceStats.current_streak}d</Text>
+              <Text style={styles.streakHeaderText}>{adherenceStats?.current_streak ?? 0}d</Text>
             </TouchableOpacity>
           )}
           <Text style={styles.dateLabel}>{dateLabel}</Text>
@@ -249,7 +268,9 @@ export default function HomeScreen({ navigation, user, onLogout }) {
 
       <ScrollView
         contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor="#58a6ff" />}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor="#E8A020" />}
       >
         {/* Weekly Date Strip */}
         <DateStrip
@@ -266,6 +287,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
             year={calendarYear}
             month={calendarMonth}
             calendarData={calendarData}
+            calendarGoal={goalCals}
             selectedDateStr={formatDateStr(selectedDate)}
             onSelectDate={(newDate) => {
               setSelectedDate(newDate);
@@ -278,9 +300,28 @@ export default function HomeScreen({ navigation, user, onLogout }) {
             }}
           />
         )}
+
+        {/* Compact Streak Banner matching Web (shown when top of feed) */}
+        {!isScrolled && (
+          <TouchableOpacity
+            style={styles.streakBanner}
+            onPress={() => navigation.navigate('Progress')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.streakBannerText}>
+              🔥 <Text style={styles.boldText}>{adherenceStats?.current_streak ?? 0}</Text> day streak
+            </Text>
+            <Text style={styles.streakDot}>•</Text>
+            <Text style={styles.streakBannerSub}>
+              {Math.round(adherenceStats?.weekly_adherence_score ?? 0)}% weekly
+            </Text>
+            <Text style={styles.streakArrow}>→</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Calorie Progress Circle Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>🔥 Calorie Summary</Text>
+          <Text style={styles.cardTitle}>Calorie Summary</Text>
           <View style={styles.calsRow}>
             <View style={styles.calCircle}>
               <Text style={styles.calCircleVal}>{consumedCals}</Text>
@@ -309,12 +350,12 @@ export default function HomeScreen({ navigation, user, onLogout }) {
 
         {/* Macro Progress Bars */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>🥗 Macronutrients</Text>
+          <Text style={styles.cardTitle}>Macronutrients</Text>
           
           {/* Protein */}
           <View style={styles.macroBlock}>
             <View style={styles.macroHeader}>
-              <Text style={styles.macroName}>🥩 Protein</Text>
+              <Text style={styles.macroName}>Protein</Text>
               <Text style={styles.macroValue}>
                 {summary?.total_protein || 0}g / {summary?.protein_goal || 150}g
               </Text>
@@ -327,7 +368,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
           {/* Carbs */}
           <View style={styles.macroBlock}>
             <View style={styles.macroHeader}>
-              <Text style={styles.macroName}>🌾 Carbs</Text>
+              <Text style={styles.macroName}>Carbs</Text>
               <Text style={styles.macroValue}>
                 {summary?.total_carbs || 0}g / {summary?.carbs_goal || 200}g
               </Text>
@@ -340,7 +381,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
           {/* Fat */}
           <View style={styles.macroBlock}>
             <View style={styles.macroHeader}>
-              <Text style={styles.macroName}>🥑 Fat</Text>
+              <Text style={styles.macroName}>Fat</Text>
               <Text style={styles.macroValue}>
                 {summary?.total_fat || 0}g / {summary?.fat_goal || 65}g
               </Text>
@@ -366,10 +407,21 @@ export default function HomeScreen({ navigation, user, onLogout }) {
           />
         )}
 
+        {/* Missed Meal Alert Banner */}
+        {isToday && (
+          <MissedMealBanner
+            user={user}
+            userSettings={userSettings}
+            summary={summary}
+            isToday={isToday}
+            onLogMeal={handleTriggerMealLog}
+          />
+        )}
+
         {/* Quick Log Meal Section */}
         {isToday && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>✍️ Quick Log Meal</Text>
+            <Text style={styles.cardTitle}>Quick Log Meal</Text>
             <TextInput
               style={styles.input}
               placeholder="e.g. 2 eggs, 1 toast with butter"
@@ -407,7 +459,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
         {/* Logged Meals List */}
         <View style={styles.card}>
           <View style={styles.mealsHeader}>
-            <Text style={styles.cardTitle}>🍽️ Logged Meals</Text>
+            <Text style={styles.cardTitle}>Logged Meals</Text>
             <Text style={styles.mealCountBadge}>{summary?.meal_count || 0} meals</Text>
           </View>
 
@@ -489,6 +541,10 @@ export default function HomeScreen({ navigation, user, onLogout }) {
         visible={planSelectorOpen}
         onClose={() => setPlanSelectorOpen(false)}
         onPlanSelected={handlePlanSelected}
+        onBackToWizard={() => {
+          setPlanSelectorOpen(false);
+          setWizardOpen(true);
+        }}
       />
     </SafeAreaView>
   );
@@ -545,6 +601,39 @@ const styles = StyleSheet.create({
   streakHeaderText: {
     color: '#E8A020',
     fontSize: 12,
+    fontWeight: 'bold',
+  },
+  streakBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#221D17',
+    borderWidth: 1,
+    borderColor: '#3A3128',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 14,
+    gap: 8,
+  },
+  streakBannerText: {
+    color: '#F4ECDD',
+    fontSize: 13,
+  },
+  boldText: {
+    fontWeight: 'bold',
+    color: '#E8A020',
+  },
+  streakDot: {
+    color: '#A79A85',
+  },
+  streakBannerSub: {
+    color: '#A79A85',
+    fontSize: 12,
+    flex: 1,
+  },
+  streakArrow: {
+    color: '#E8A020',
+    fontSize: 14,
     fontWeight: 'bold',
   },
   dateLabel: {

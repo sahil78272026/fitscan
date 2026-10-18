@@ -245,6 +245,13 @@ export async function selectMealPlan(mealPlan) {
   });
 }
 
+export async function updateSubscriptionTier(tier) {
+  return request('/settings/subscription', {
+    method: 'PUT',
+    body: JSON.stringify({ tier }),
+  });
+}
+
 // --- Weight Tracking ---
 export async function logWeight(weightKg, loggedDate = null) {
   const body = { weight_kg: parseFloat(weightKg) };
