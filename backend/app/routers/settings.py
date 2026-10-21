@@ -1,4 +1,5 @@
 import logging
+from datetime import date
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +21,7 @@ from app.services.meal_service import (
     get_plan_change_availability,
 )
 from app.services.gemini_service import generate_multiple_meal_plans
+from app.services.redis_service import cache_delete
 from app.middleware.auth import get_current_user
 
 logger = logging.getLogger("corecontrol.routers.settings")
@@ -45,6 +47,10 @@ async def set_user_goals(
 ):
     """Save user onboarding goals, budget, diet preferences, and auto-calculate daily macros."""
     settings = await update_user_goals(db, current_user.id, payload.model_dump())
+    try:
+        await cache_delete(f"user:{current_user.id}:daily_summary:{date.today().isoformat()}")
+    except Exception:
+        pass
     return parse_settings_response_dict(settings)
 
 
@@ -56,6 +62,10 @@ async def set_calorie_goal(
 ):
     """Update the daily calorie goal."""
     settings = await update_calorie_goal(db, current_user.id, payload.calorie_goal)
+    try:
+        await cache_delete(f"user:{current_user.id}:daily_summary:{date.today().isoformat()}")
+    except Exception:
+        pass
     return parse_settings_response_dict(settings)
 
 

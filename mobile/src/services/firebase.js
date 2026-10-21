@@ -8,6 +8,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithCredential,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -84,6 +85,7 @@ export {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithCredential,
+  sendPasswordResetEmail,
   signInWithPhoneNumber,
   PhoneAuthProvider,
   ref,

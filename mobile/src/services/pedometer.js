@@ -1,64 +1,19 @@
-import { Pedometer } from 'expo-sensors';
 import { logSteps } from './api';
+import {
+  checkHealthConnectAvailable,
+  requestHealthConnectPermissions,
+  checkHealthConnectPermissionsGranted,
+  getHealthConnectDailyMetrics,
+  getHealthConnectHourlySteps,
+} from './healthConnect';
 
-let subscription = null;
-
-export async function checkPedometerAvailability() {
-  try {
-    const isAvailable = await Pedometer.isAvailableAsync();
-    return isAvailable;
-  } catch (error) {
-    console.warn('Pedometer check error:', error);
-    return false;
-  }
-}
-
-export async function requestPedometerPermission() {
-  try {
-    const { status } = await Pedometer.requestPermissionsAsync();
-    return status === 'granted';
-  } catch (error) {
-    console.warn('Pedometer permission request error:', error);
-    return false;
-  }
-}
-
-export async function getTodayStepCount() {
-  try {
-    const isAvailable = await checkPedometerAvailability();
-    if (!isAvailable) return 0;
-
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const end = new Date();
-
-    const result = await Pedometer.getStepCountAsync(start, end);
-    return result ? result.steps : 0;
-  } catch (error) {
-    console.warn('Error fetching step count from device:', error);
-    return 0;
-  }
-}
-
-export function subscribeToLiveSteps(onStepChange) {
-  if (subscription) {
-    subscription.remove();
-    subscription = null;
-  }
-
-  subscription = Pedometer.watchStepCount((result) => {
-    if (result && typeof result.steps === 'number') {
-      onStepChange(result.steps);
-    }
-  });
-
-  return () => {
-    if (subscription) {
-      subscription.remove();
-      subscription = null;
-    }
-  };
-}
+export {
+  checkHealthConnectAvailable,
+  requestHealthConnectPermissions,
+  checkHealthConnectPermissionsGranted,
+  getHealthConnectDailyMetrics,
+  getHealthConnectHourlySteps,
+};
 
 export async function syncStepsToBackend(steps) {
   if (steps <= 0) return;
@@ -67,4 +22,28 @@ export async function syncStepsToBackend(steps) {
   } catch (error) {
     console.warn('Failed to sync steps to backend:', error);
   }
+}
+
+/**
+ * Health Connect Step Fetcher:
+ * Reads daily step counts and active metrics from Google Health Connect
+ */
+export async function getUnifiedDailySteps(date = new Date()) {
+  try {
+    const hcGranted = await checkHealthConnectPermissionsGranted();
+    if (hcGranted) {
+      const hcData = await getHealthConnectDailyMetrics(date);
+      if (hcData && typeof hcData.steps === 'number') {
+        return {
+          steps: hcData.steps,
+          calories: hcData.calories,
+          source: 'health_connect',
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('Health Connect step fetch failed:', err);
+  }
+
+  return null;
 }

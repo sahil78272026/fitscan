@@ -23,6 +23,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signInWithCredential,
+  sendPasswordResetEmail,
 } from '../services/firebase';
 
 let GoogleSignin = null;
@@ -84,6 +85,60 @@ export default function LoginScreen({ onLoginSuccess }) {
     }
   };
 
+  const handleForgotPassword = async () => {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      Alert.alert(
+        'Email Required',
+        'Please enter your email address in the field above first, then tap Forgot Password.'
+      );
+      return;
+    }
+
+    if (!isFirebaseConfigured() || !auth) {
+      Alert.alert(
+        'Dev Mode',
+        'Password reset is simulated in dev mode. You can sign in directly.'
+      );
+      return;
+    }
+
+    Alert.alert(
+      'Reset / Set Password',
+      `Send a password setup link to ${cleanEmail}?\n\nIf you originally signed up with Google, this link lets you set a password so you can also log in with email & password.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Send Link',
+          onPress: async () => {
+            setLoading(true);
+            try {
+              await sendPasswordResetEmail(auth, cleanEmail);
+              Alert.alert(
+                'Link Sent! ✉️',
+                `A password setup link has been sent to ${cleanEmail}.\n\nCheck your email (including spam/promotions) to set or reset your password. Once set, you can sign in with your email and password!`
+              );
+            } catch (err) {
+              console.warn('Password reset error:', err);
+              if (err.code === 'auth/user-not-found') {
+                Alert.alert(
+                  'No Account Found',
+                  'No account was found with this email. Please sign up or continue with Google.'
+                );
+              } else if (err.code === 'auth/invalid-email') {
+                Alert.alert('Invalid Email', 'Please enter a valid email address.');
+              } else {
+                Alert.alert('Reset Failed', err.message || 'Failed to send password reset email.');
+              }
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleEmailAuth = async () => {
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes('@')) {
@@ -126,15 +181,55 @@ export default function LoginScreen({ onLoginSuccess }) {
       }
     } catch (err) {
       console.warn('Email auth error:', err);
-      let msg = err.message || 'Authentication failed';
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
-        msg = 'Invalid email or password.';
+        Alert.alert(
+          'Sign In Failed',
+          'Invalid email or password.\n\nIf you previously logged in with Google SSO, you might not have set a password yet. Tap "Set Password via Email" to create one.',
+          [
+            { text: 'Try Again' },
+            {
+              text: 'Set Password via Email',
+              onPress: () => handleForgotPassword(),
+            },
+          ]
+        );
+        return;
       } else if (err.code === 'auth/email-already-in-use') {
-        msg = 'An account with this email already exists. Please sign in.';
+        Alert.alert(
+          'Account Already Exists',
+          `An account with ${cleanEmail} already exists (e.g. from Google Sign-In).\n\nWould you like us to send an email link to set a password so you can also log in with email?`,
+          [
+            {
+              text: 'Sign In Instead',
+              onPress: () => setIsSignUp(false),
+            },
+            {
+              text: 'Set Password via Email',
+              onPress: async () => {
+                try {
+                  setLoading(true);
+                  await sendPasswordResetEmail(auth, cleanEmail);
+                  Alert.alert(
+                    'Link Sent! ✉️',
+                    `A link has been sent to ${cleanEmail}.\n\nFollow the instructions in the email to set your password, then return here to sign in with email & password!`
+                  );
+                  setIsSignUp(false);
+                } catch (resetErr) {
+                  Alert.alert('Error', resetErr.message || 'Failed to send email link.');
+                } finally {
+                  setLoading(false);
+                }
+              },
+            },
+            { text: 'Cancel', style: 'cancel' },
+          ]
+        );
+        return;
       } else if (err.code === 'auth/user-not-found') {
-        msg = 'No account found with this email. Please sign up.';
+        Alert.alert('Sign In Failed', 'No account found with this email. Please sign up or continue with Google.');
+        return;
       }
-      Alert.alert('Sign In Failed', msg);
+      Alert.alert('Authentication Failed', err.message || 'Authentication failed');
     } finally {
       setLoading(false);
     }
@@ -285,7 +380,18 @@ export default function LoginScreen({ onLoginSuccess }) {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>Password</Text>
+                {!isSignUp && (
+                  <TouchableOpacity
+                    onPress={handleForgotPassword}
+                    disabled={loading}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
               <TextInput
                 style={styles.input}
                 placeholder="••••••••"
@@ -442,11 +548,21 @@ const styles = StyleSheet.create({
   inputGroup: {
     marginBottom: 14,
   },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
   label: {
     fontSize: 13,
     fontWeight: '600',
     color: '#F4ECDD',
-    marginBottom: 6,
+  },
+  forgotPasswordText: {
+    fontSize: 12,
+    color: '#E8A020',
+    fontWeight: '600',
   },
   input: {
     backgroundColor: '#181410',

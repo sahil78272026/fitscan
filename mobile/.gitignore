@@ -30,9 +30,12 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# local env and secret files
 .env
 .env_prod
+play-store-key.json
+*-key.json
+*.json.secret
 # typescript
 *.tsbuildinfo
 

@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     DEV_OTP: str = ""  # Set to "123456" in local .env only — empty in production
     OTP_EXPIRY_SECONDS: int = 300  # 5 minutes
 
+    # Upstash Redis
+    UPSTASH_REDIS_REST_URL: str = ""
+    UPSTASH_REDIS_REST_TOKEN: str = ""
+
     # Misc
     LOG_LEVEL: str = "INFO"
 

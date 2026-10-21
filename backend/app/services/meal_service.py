@@ -10,6 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.models.meal import Meal, FoodItem
 from app.models.settings import UserSettings
 from app.services.gemini_service import analyze_food
+from app.services.redis_service import cache_get, cache_set, cache_delete
 
 logger = logging.getLogger("corecontrol.meal_service")
 
@@ -62,6 +63,19 @@ async def create_meal(
     await db.refresh(meal, attribute_names=["food_items"])
 
     logger.info(f"Created meal #{meal.id} for user #{user_id}: {meal_type} — {meal.total_calories} kcal (P:{meal.total_protein}g, C:{meal.total_carbs}g, F:{meal.total_fat}g)")
+
+    # Invalidate Redis cache for user daily summary, calendar, and adherence
+    try:
+        date_str = meal.meal_date.isoformat()
+        await cache_delete(
+            f"user:{user_id}:daily_summary:{date_str}",
+            f"user:{user_id}:recent_items",
+            f"user:{user_id}:calendar:{meal.meal_date.year}:{meal.meal_date.month}",
+            f"user:{user_id}:stats:adherence",
+        )
+    except Exception as exc:
+        logger.warning(f"Cache invalidation on create_meal failed: {exc}")
+
     return meal
 
 
@@ -85,9 +99,23 @@ async def delete_meal(db: AsyncSession, user_id: int, meal_id: int) -> bool:
     if not meal:
         return False
 
+    meal_date = meal.meal_date
     await db.delete(meal)
     await db.commit()
     logger.info(f"Deleted meal #{meal_id} for user #{user_id}")
+
+    # Invalidate Redis cache for user daily summary, calendar, and adherence
+    try:
+        date_str = meal_date.isoformat()
+        await cache_delete(
+            f"user:{user_id}:daily_summary:{date_str}",
+            f"user:{user_id}:recent_items",
+            f"user:{user_id}:calendar:{meal_date.year}:{meal_date.month}",
+            f"user:{user_id}:stats:adherence",
+        )
+    except Exception as exc:
+        logger.warning(f"Cache invalidation on delete_meal failed: {exc}")
+
     return True
 
 
@@ -147,7 +175,21 @@ async def get_daily_summary(db: AsyncSession, user_id: int, target_date: date | 
     if target_date is None:
         target_date = date.today()
 
-    # Get meals and recent food items in parallel-style (sequential but both lightweight DB queries)
+    date_str = target_date.isoformat()
+    cache_key = f"user:{user_id}:daily_summary:{date_str}"
+
+    # 1. Try reading from Upstash Redis (Cache-aside)
+    try:
+        cached = await cache_get(cache_key)
+        if cached and isinstance(cached, dict):
+            logger.info(f"Upstash cache HIT for {cache_key}")
+            return cached
+    except Exception as exc:
+        logger.warning(f"Failed to read daily_summary cache for {cache_key}: {exc}")
+
+    logger.info(f"Upstash cache MISS for {cache_key} — querying DB")
+
+    # 2. Cache Miss: Execute DB queries
     meals = await get_meals_by_date(db, user_id, target_date)
     recent_items = await get_recent_food_items(db, user_id)
 
@@ -160,8 +202,37 @@ async def get_daily_summary(db: AsyncSession, user_id: int, target_date: date | 
     # Get settings
     settings = await get_or_create_settings(db, user_id)
 
-    return {
-        "date": target_date,
+    # Serialize meals and food items so the dict is directly cacheable and JSON-serializable
+    serialized_meals = []
+    for m in meals:
+        serialized_meals.append({
+            "id": m.id,
+            "meal_type": m.meal_type,
+            "raw_input": m.raw_input,
+            "total_calories": m.total_calories,
+            "total_protein": m.total_protein,
+            "total_carbs": m.total_carbs,
+            "total_fat": m.total_fat,
+            "image_url": m.image_url,
+            "meal_date": m.meal_date.isoformat() if hasattr(m.meal_date, "isoformat") else str(m.meal_date),
+            "logged_at": m.logged_at.isoformat() if m.logged_at else datetime.now(timezone.utc).isoformat(),
+            "food_items": [
+                {
+                    "id": item.id,
+                    "name": item.name,
+                    "quantity": item.quantity,
+                    "unit": item.unit,
+                    "calories": item.calories,
+                    "protein": item.protein,
+                    "carbs": item.carbs,
+                    "fat": item.fat,
+                }
+                for item in (m.food_items or [])
+            ],
+        })
+
+    summary_data = {
+        "date": date_str,
         "total_calories": total_calories,
         "total_protein": total_protein,
         "total_carbs": total_carbs,
@@ -175,9 +246,19 @@ async def get_daily_summary(db: AsyncSession, user_id: int, target_date: date | 
         "remaining_carbs": max(0.0, round(settings.carbs_goal - total_carbs, 1)),
         "remaining_fat": max(0.0, round(settings.fat_goal - total_fat, 1)),
         "meal_count": len(meals),
-        "meals": meals,
+        "meals": serialized_meals,
         "recent_items": recent_items,
     }
+
+    # 3. Store in Upstash Redis
+    # Past dates are immutable -> 7 days TTL (604800s); Today is dynamic -> 15 min TTL (900s)
+    try:
+        ttl = 604800 if target_date < date.today() else 900
+        await cache_set(cache_key, summary_data, ex=ttl)
+    except Exception as exc:
+        logger.warning(f"Failed to set daily_summary cache for {cache_key}: {exc}")
+
+    return summary_data
 
 
 async def get_or_create_settings(db: AsyncSession, user_id: int) -> UserSettings:

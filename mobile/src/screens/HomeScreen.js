@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   ScrollView,
+  Animated,
   TouchableOpacity,
   RefreshControl,
   TextInput,
@@ -25,9 +26,16 @@ import {
   getSettings,
   logWeight,
   getStepHistory,
+  getDailySteps,
+  logSteps,
 } from '../services/api';
-import CalendarGrid from '../components/CalendarGrid';
-import DateStrip from '../components/DateStrip';
+import {
+  syncStepsToBackend,
+  checkHealthConnectAvailable,
+  requestHealthConnectPermissions,
+  checkHealthConnectPermissionsGranted,
+  getHealthConnectDailyMetrics,
+} from '../services/pedometer';
 import AdherenceCard from '../components/AdherenceCard';
 import MorningBriefingCard from '../components/MorningBriefingCard';
 import OnboardingModal from '../components/OnboardingModal';
@@ -48,8 +56,13 @@ export default function HomeScreen({ navigation, user, onLogout }) {
   const [newWeight, setNewWeight] = useState('');
   const [previewImage, setPreviewImage] = useState(null);
 
+  // Summary Tab & Health Connect State
+  const [summaryTab, setSummaryTab] = useState('calories');
+  const [stepData, setStepData] = useState({ step_count: 0, calories_burned: 0 });
+  const [healthConnectAvailable, setHealthConnectAvailable] = useState(false);
+  const [healthConnectConnected, setHealthConnectConnected] = useState(false);
+
   // Calendar State
-  const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarData, setCalendarData] = useState(null);
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth() + 1);
@@ -68,9 +81,30 @@ export default function HomeScreen({ navigation, user, onLogout }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const hasCheckedOnboarding = React.useRef(false);
 
+  // Animated scroll tracking for buttery-smooth header streak transition
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  const headerStreakOpacity = scrollY.interpolate({
+    inputRange: [25, 60],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+  const headerStreakTranslateY = scrollY.interpolate({
+    inputRange: [25, 60],
+    outputRange: [6, 0],
+    extrapolate: 'clamp',
+  });
+
+  const headerStreakScale = scrollY.interpolate({
+    inputRange: [25, 60],
+    outputRange: [0.85, 1],
+    extrapolate: 'clamp',
+  });
+
   const handleScroll = (event) => {
     const offsetY = event.nativeEvent.contentOffset.y;
-    const scrolled = offsetY > 60;
+    const scrolled = offsetY > 25;
     if (scrolled !== isScrolled) {
       setIsScrolled(scrolled);
     }
@@ -106,10 +140,48 @@ export default function HomeScreen({ navigation, user, onLogout }) {
       setCalendarYear(selYear);
       setCalendarMonth(selMonth);
 
-      // Fetch calendar, adherence streak stats, and check onboarding status
+      // Fetch calendar, adherence streak stats, daily steps, and check onboarding status
       const promises = [
         fetchCalendar(selYear, selMonth),
         getAdherenceStats().then(setAdherenceStats).catch(() => null),
+        (async () => {
+          try {
+            const hcAvail = await checkHealthConnectAvailable();
+            setHealthConnectAvailable(hcAvail);
+            if (hcAvail) {
+              const hcGranted = await checkHealthConnectPermissionsGranted();
+              setHealthConnectConnected(hcGranted);
+              if (hcGranted) {
+                const hcData = await getHealthConnectDailyMetrics(selectedDate);
+                if (hcData && typeof hcData.steps === 'number') {
+                  setStepData({
+                    step_count: hcData.steps,
+                    calories_burned: hcData.calories,
+                  });
+                  if (isToday && hcData.steps > 0) {
+                    syncStepsToBackend(hcData.steps);
+                  }
+                  return;
+                }
+              }
+            }
+          } catch (hcErr) {
+            console.warn('Health Connect load error:', hcErr);
+          }
+
+          // Fallback to backend recorded steps
+          try {
+            const res = await getDailySteps(dateStr);
+            if (res) {
+              setStepData({
+                step_count: res.step_count || 0,
+                calories_burned: res.calories_burned || 0,
+              });
+            }
+          } catch (e) {
+            // ignore
+          }
+        })(),
         getSettings().then((settings) => {
           setUserSettings(settings);
           // Until a user fixes their metrics, it reappears:
@@ -173,6 +245,11 @@ export default function HomeScreen({ navigation, user, onLogout }) {
     }
   };
 
+  // Automatically reload data whenever selectedDate changes
+  useEffect(() => {
+    loadData();
+  }, [selectedDate]);
+
   useFocusEffect(
     useCallback(() => {
       loadData();
@@ -232,9 +309,38 @@ export default function HomeScreen({ navigation, user, onLogout }) {
     }
   };
 
+  const handleConnectHealthConnect = async () => {
+    try {
+      const granted = await requestHealthConnectPermissions();
+      if (granted) {
+        setHealthConnectConnected(true);
+        const hcData = await getHealthConnectDailyMetrics(selectedDate);
+        if (hcData && typeof hcData.steps === 'number') {
+          setStepData({
+            step_count: hcData.steps,
+            calories_burned: hcData.calories,
+          });
+          if (isToday && hcData.steps > 0) {
+            syncStepsToBackend(hcData.steps);
+          }
+        }
+        Alert.alert('Health Connect Connected! 🎉', 'CoreControl is now syncing 24/7 steps from Google Health Connect.');
+      } else {
+        Alert.alert('Permission Needed', 'Health Connect permissions were not granted. You can manage access in Android Settings > Security & Privacy > Health Connect.');
+      }
+    } catch (err) {
+      Alert.alert('Health Connect', err.message || 'Could not connect to Health Connect.');
+    }
+  };
+
   const consumedCals = summary?.total_calories || 0;
   const goalCals = summary?.calorie_goal || 2000;
   const calPercent = Math.min((consumedCals / goalCals) * 100, 100).toFixed(0);
+
+  const stepGoal = 10000;
+  const currentSteps = stepData?.step_count || 0;
+  const stepPercent = Math.min((currentSteps / stepGoal) * 100, 100).toFixed(0);
+  const distanceKm = (((stepData?.step_count || 0) * 0.762) / 1000).toFixed(2);
 
   const dateLabel = selectedDate.toLocaleDateString('en-US', {
     weekday: 'short',
@@ -245,107 +351,206 @@ export default function HomeScreen({ navigation, user, onLogout }) {
   return (
     <SafeAreaView style={styles.container}>
       {/* Top Header */}
-      <View style={styles.topHeader}>
+      <View style={[styles.topHeader, isScrolled && styles.topHeaderShadow]}>
         <View style={styles.logoRow}>
           <Text style={styles.logoIcon}>🏋️</Text>
           <Text style={styles.logoText}>CoreControl</Text>
         </View>
 
+        {/* Smooth Animated Streak Pill moving to header when scrolling past banner */}
+        <Animated.View
+          pointerEvents="box-none"
+          style={[
+            styles.headerCenter,
+            {
+              opacity: headerStreakOpacity,
+              transform: [
+                { translateY: headerStreakTranslateY },
+                { scale: headerStreakScale },
+              ],
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.streakHeaderPill}
+            onPress={() => navigation.navigate('Progress')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.streakHeaderIcon}>🔥</Text>
+            <Text style={styles.streakHeaderText}>
+              {adherenceStats?.current_streak ?? 0}d
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
+
         <View style={styles.headerRight}>
-          {isScrolled && (
-            <TouchableOpacity
-              style={styles.streakHeaderPill}
-              onPress={() => navigation.navigate('Progress')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.streakHeaderIcon}>🔥</Text>
-              <Text style={styles.streakHeaderText}>{adherenceStats?.current_streak ?? 0}d</Text>
-            </TouchableOpacity>
-          )}
           <Text style={styles.dateLabel}>{dateLabel}</Text>
         </View>
       </View>
 
-      <ScrollView
+      <Animated.ScrollView
         contentContainerStyle={styles.scroll}
-        onScroll={handleScroll}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true, listener: handleScroll }
+        )}
         scrollEventThrottle={16}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor="#E8A020" />}
       >
-        {/* Weekly Date Strip */}
-        <DateStrip
-          selectedDate={selectedDate}
-          onDateSelect={(d) => setSelectedDate(d)}
-          calendarData={calendarData}
-          calendarOpen={calendarOpen}
-          onToggleCalendar={() => setCalendarOpen(!calendarOpen)}
-        />
 
-        {/* Expandable Monthly Calendar Grid */}
-        {calendarOpen && (
-          <CalendarGrid
-            year={calendarYear}
-            month={calendarMonth}
-            calendarData={calendarData}
-            calendarGoal={goalCals}
-            selectedDateStr={formatDateStr(selectedDate)}
-            onSelectDate={(newDate) => {
-              setSelectedDate(newDate);
-              setCalendarOpen(false);
-            }}
-            onChangeMonth={(y, m) => {
-              setCalendarYear(y);
-              setCalendarMonth(m);
-              fetchCalendar(y, m);
-            }}
-          />
-        )}
+        {/* Compact Streak Banner matching Web (stable, non-jerking) */}
+        <TouchableOpacity
+          style={styles.streakBanner}
+          onPress={() => navigation.navigate('Progress')}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.streakBannerText}>
+            🔥 <Text style={styles.boldText}>{adherenceStats?.current_streak ?? 0}</Text> day streak
+          </Text>
+          <Text style={styles.streakDot}>•</Text>
+          <Text style={styles.streakBannerSub}>
+            {Math.round(adherenceStats?.weekly_adherence_score ?? 0)}% weekly
+          </Text>
+          <Text style={styles.streakArrow}>→</Text>
+        </TouchableOpacity>
 
-        {/* Compact Streak Banner matching Web (shown when top of feed) */}
-        {!isScrolled && (
-          <TouchableOpacity
-            style={styles.streakBanner}
-            onPress={() => navigation.navigate('Progress')}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.streakBannerText}>
-              🔥 <Text style={styles.boldText}>{adherenceStats?.current_streak ?? 0}</Text> day streak
-            </Text>
-            <Text style={styles.streakDot}>•</Text>
-            <Text style={styles.streakBannerSub}>
-              {Math.round(adherenceStats?.weekly_adherence_score ?? 0)}% weekly
-            </Text>
-            <Text style={styles.streakArrow}>→</Text>
-          </TouchableOpacity>
-        )}
-
-        {/* Calorie Progress Circle Card */}
+        {/* Calorie & Pedometer Summary Card (Google Fit Style) */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Calorie Summary</Text>
-          <View style={styles.calsRow}>
-            <View style={styles.calCircle}>
-              <Text style={styles.calCircleVal}>{consumedCals}</Text>
-              <Text style={styles.calCircleSub}>of {goalCals} kcal</Text>
-            </View>
+          {/* Segmented Tab Switcher */}
+          <View style={styles.summaryTabContainer}>
+            <TouchableOpacity
+              style={[
+                styles.summaryTabBtn,
+                summaryTab === 'calories' && styles.summaryTabBtnActiveCal,
+              ]}
+              onPress={() => setSummaryTab('calories')}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.summaryTabText,
+                  summaryTab === 'calories' && styles.summaryTabTextActive,
+                ]}
+              >
+                🔥 Calories
+              </Text>
+            </TouchableOpacity>
 
-            <View style={styles.calsDetails}>
-              <View style={styles.calStatBox}>
-                <Text style={styles.calStatVal}>{consumedCals}</Text>
-                <Text style={styles.calStatLbl}>Consumed</Text>
+            <TouchableOpacity
+              style={[
+                styles.summaryTabBtn,
+                summaryTab === 'steps' && styles.summaryTabBtnActiveStep,
+              ]}
+              onPress={() => setSummaryTab('steps')}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.summaryTabText,
+                  summaryTab === 'steps' && styles.summaryTabTextActive,
+                ]}
+              >
+                👟 Steps
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Centered Circular Progress Ring (Tappable -> Opens ActivityDetailScreen) */}
+          <TouchableOpacity
+            style={styles.fitRingContainer}
+            onPress={() =>
+              navigation.navigate('ActivityDetail', {
+                selectedDate: formatDateStr(selectedDate),
+                stepData,
+                summary,
+                calendarData,
+                initialTab: summaryTab,
+              })
+            }
+            activeOpacity={0.85}
+          >
+            {/* 3D Gauge Outer Casing & Shadow Well */}
+            <View
+              style={[
+                styles.fitRingCasing3D,
+                summaryTab === 'steps' ? styles.fitRingCasingSteps : styles.fitRingCasingCals,
+              ]}
+            >
+              <View
+                style={[
+                  styles.fitRingOuter,
+                  summaryTab === 'steps' ? styles.fitRingOuterSteps : styles.fitRingOuterCals,
+                ]}
+              >
+                <View style={styles.fitRingInner}>
+                  <Text style={styles.fitRingValue}>
+                    {summaryTab === 'calories'
+                      ? consumedCals.toLocaleString()
+                      : (stepData?.step_count || 0).toLocaleString()}
+                  </Text>
+                  <Text style={styles.fitRingSub}>
+                    {summaryTab === 'calories'
+                      ? `of ${goalCals.toLocaleString()} kcal eaten`
+                      : `of ${stepGoal.toLocaleString()} steps`}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.calStatBox}>
-                <Text style={[styles.calStatVal, { color: summary?.remaining_calories < 0 ? '#f85149' : '#3fb950' }]}>
-                  {summary?.remaining_calories ?? goalCals}
-                </Text>
-                <Text style={styles.calStatLbl}>Remaining</Text>
-              </View>
+            </View>
+          </TouchableOpacity>
+
+          {/* 3 Metric Stats Row (Google Fit Style: Cal Eaten • km • Move Min) */}
+          <View style={styles.fitStatsRow}>
+            <View style={styles.fitStatItem}>
+              <Text style={styles.fitStatVal}>
+                {consumedCals.toLocaleString()}
+              </Text>
+              <Text style={styles.fitStatLbl}>Cal Eaten</Text>
+            </View>
+            <View style={styles.fitStatDivider} />
+            <View style={styles.fitStatItem}>
+              <Text style={styles.fitStatVal}>{distanceKm}</Text>
+              <Text style={styles.fitStatLbl}>km</Text>
+            </View>
+            <View style={styles.fitStatDivider} />
+            <View style={styles.fitStatItem}>
+              <Text style={styles.fitStatVal}>
+                {Math.round((stepData?.step_count || 0) / 78) || 0}
+              </Text>
+              <Text style={styles.fitStatLbl}>Move Min</Text>
             </View>
           </View>
 
-          {/* Calorie Bar */}
-          <View style={styles.barBg}>
-            <View style={[styles.barFill, { width: `${calPercent}%` }]} />
-          </View>
+          {/* Tap-to-inspect Guidance & Sync Indicator */}
+          <TouchableOpacity
+            style={styles.fitCardFooter}
+            onPress={() =>
+              navigation.navigate('ActivityDetail', {
+                selectedDate: formatDateStr(selectedDate),
+                stepData,
+                summary,
+                calendarData,
+                initialTab: summaryTab,
+              })
+            }
+            activeOpacity={0.7}
+          >
+            <View style={styles.fitFooterLeft}>
+              <View
+                style={[
+                  styles.fitStatusDot,
+                  {
+                    backgroundColor: healthConnectConnected ? '#4285F4' : '#A79A85',
+                  },
+                ]}
+              />
+              <Text style={styles.fitFooterHint}>
+                {healthConnectConnected
+                  ? 'Health Connect Synced'
+                  : 'Tap ring for hourly breakdown & graphs'}
+              </Text>
+            </View>
+            <Text style={styles.fitFooterArrow}>→</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Macro Progress Bars */}
@@ -469,39 +674,53 @@ export default function HomeScreen({ navigation, user, onLogout }) {
               <Text style={styles.emptyText}>No meals logged for this date</Text>
             </View>
           ) : (
-            summary?.meals?.map((m) => (
-              <View key={m.id} style={styles.mealItem}>
-                <View style={styles.mealContentRow}>
-                  {m.image_url ? (
-                    <TouchableOpacity
-                      onPress={() => setPreviewImage(m.image_url)}
-                      activeOpacity={0.8}
-                      style={styles.mealThumbContainer}
-                    >
-                      <Image source={{ uri: m.image_url }} style={styles.mealThumb} resizeMode="cover" />
-                    </TouchableOpacity>
-                  ) : null}
-                  <View style={styles.mealTextCol}>
-                    <View style={styles.mealItemHeader}>
-                      <Text style={styles.mealTypeBadge}>{m.meal_type.toUpperCase()}</Text>
-                      <Text style={styles.mealCals}>{m.total_calories} kcal</Text>
+            summary?.meals?.map((m) => {
+              const dateVal = m.logged_at || m.created_at;
+              let mealTimeStr = '';
+              if (dateVal) {
+                const d = new Date(dateVal);
+                if (!isNaN(d.getTime())) {
+                  mealTimeStr = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+                }
+              }
+
+              return (
+                <View key={m.id} style={styles.mealItem}>
+                  <View style={styles.mealContentRow}>
+                    {m.image_url ? (
+                      <TouchableOpacity
+                        onPress={() => setPreviewImage(m.image_url)}
+                        activeOpacity={0.8}
+                        style={styles.mealThumbContainer}
+                      >
+                        <Image source={{ uri: m.image_url }} style={styles.mealThumb} resizeMode="cover" />
+                      </TouchableOpacity>
+                    ) : null}
+                    <View style={styles.mealTextCol}>
+                      <View style={styles.mealItemHeader}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={styles.mealTypeBadge}>{m.meal_type.toUpperCase()}</Text>
+                          {mealTimeStr ? <Text style={styles.mealTimeText}>• {mealTimeStr}</Text> : null}
+                        </View>
+                        <Text style={styles.mealCals}>{m.total_calories} kcal</Text>
+                      </View>
+                      <Text style={styles.mealInputText}>{m.raw_input}</Text>
+                      <Text style={styles.mealMacroSub}>
+                        P: {m.total_protein}g | C: {m.total_carbs}g | F: {m.total_fat}g
+                      </Text>
                     </View>
-                    <Text style={styles.mealInputText}>{m.raw_input}</Text>
-                    <Text style={styles.mealMacroSub}>
-                      P: {m.total_protein}g | C: {m.total_carbs}g | F: {m.total_fat}g
-                    </Text>
                   </View>
+                  {isToday && (
+                    <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteMeal(m.id)}>
+                      <Text style={styles.deleteText}>🗑️ Delete</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
-                {isToday && (
-                  <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteMeal(m.id)}>
-                    <Text style={styles.deleteText}>🗑️ Delete</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            ))
+              );
+            })
           )}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Meal Image Full Preview Modal */}
       <Modal
@@ -546,6 +765,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
           setWizardOpen(true);
         }}
       />
+
     </SafeAreaView>
   );
 }
@@ -560,11 +780,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#221D17',
+    backgroundColor: '#1C1712',
     borderBottomWidth: 1,
-    borderBottomColor: '#3A3128',
+    borderBottomColor: '#251E17',
+    zIndex: 20,
+  },
+  topHeaderShadow: {
+    borderBottomColor: '#3A2E1F',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
   logoRow: {
     flexDirection: 'row',
@@ -579,21 +808,31 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#E8A020',
   },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
   headerRight: {
     alignItems: 'flex-end',
-    flexDirection: 'row',
-    gap: 8,
+    justifyContent: 'center',
   },
   streakHeaderPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2C2112',
+    backgroundColor: '#271D12',
     borderWidth: 1,
     borderColor: '#E8A020',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    gap: 2,
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    gap: 4,
+    shadowColor: '#E8A020',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.35,
+    shadowRadius: 3,
+    elevation: 3,
   },
   streakHeaderIcon: {
     fontSize: 12,
@@ -601,7 +840,8 @@ const styles = StyleSheet.create({
   streakHeaderText: {
     color: '#E8A020',
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   streakBanner: {
     flexDirection: 'row',
@@ -700,6 +940,152 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 14,
+  },
+  fitRingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 12,
+  },
+  fitRingCasing3D: {
+    width: 156,
+    height: 156,
+    borderRadius: 78,
+    backgroundColor: '#130F0C',
+    padding: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderTopColor: '#362A1D',
+    borderLeftColor: '#281F15',
+    borderRightColor: '#281F15',
+    borderBottomColor: '#0E0A07',
+    elevation: 7,
+  },
+  fitRingCasingCals: {
+    shadowColor: '#E8A020',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+  },
+  fitRingCasingSteps: {
+    shadowColor: '#4285F4',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+  },
+  fitRingOuter: {
+    width: 142,
+    height: 142,
+    borderRadius: 71,
+    borderWidth: 7,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#17130E',
+  },
+  fitRingOuterCals: {
+    borderTopColor: '#FFAE2E',
+    borderLeftColor: '#E8A020',
+    borderRightColor: '#D4860D',
+    borderBottomColor: '#6B3E03',
+  },
+  fitRingOuterSteps: {
+    borderTopColor: '#7AAEFF',
+    borderLeftColor: '#4285F4',
+    borderRightColor: '#2B6BD6',
+    borderBottomColor: '#123072',
+  },
+  fitRingInner: {
+    width: 114,
+    height: 114,
+    borderRadius: 57,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#14100C',
+    borderWidth: 1.5,
+    borderTopColor: '#090705',
+    borderLeftColor: '#100D0A',
+    borderRightColor: '#100D0A',
+    borderBottomColor: '#2C2217',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.45,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  fitRingValue: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#F4ECDD',
+    letterSpacing: -0.5,
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  fitRingSub: {
+    fontSize: 11,
+    color: '#A79A85',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  fitStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingVertical: 10,
+    marginTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#2B2319',
+  },
+  fitStatItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  fitStatVal: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#F4ECDD',
+    marginBottom: 2,
+  },
+  fitStatLbl: {
+    fontSize: 11,
+    color: '#A79A85',
+  },
+  fitStatDivider: {
+    width: 1,
+    height: 22,
+    backgroundColor: '#2E251B',
+  },
+  fitCardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1A1510',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#2B2218',
+  },
+  fitFooterLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  fitStatusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  fitFooterHint: {
+    fontSize: 11,
+    color: '#A79A85',
+    fontWeight: '500',
+  },
+  fitFooterArrow: {
+    fontSize: 13,
+    color: '#E8A020',
+    fontWeight: 'bold',
   },
   calCircle: {
     width: 100,
@@ -893,6 +1279,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: 'bold',
   },
+  mealTimeText: {
+    color: '#A79A85',
+    fontSize: 11,
+    fontWeight: '500',
+  },
   mealCals: {
     color: '#7BA05B',
     fontSize: 13,
@@ -961,5 +1352,78 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '80%',
     borderRadius: 12,
+  },
+  summaryTabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#1E1914',
+    borderRadius: 10,
+    padding: 3,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#2C251D',
+  },
+  summaryTabBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  summaryTabBtnActiveCal: {
+    backgroundColor: '#2C251D',
+    borderWidth: 1,
+    borderColor: '#E8A020',
+  },
+  summaryTabBtnActiveStep: {
+    backgroundColor: '#2C251D',
+    borderWidth: 1,
+    borderColor: '#4285F4',
+  },
+  summaryTabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#A79A85',
+  },
+  summaryTabTextActive: {
+    color: '#F4ECDD',
+    fontWeight: 'bold',
+  },
+  stepCircle: {
+    borderColor: '#4285F4',
+  },
+  stepFooterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#2C251D',
+  },
+  stepStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  stepStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  stepStatusText: {
+    fontSize: 11,
+    color: '#A79A85',
+  },
+  connectHcBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+  },
+  connectHcBtnText: {
+    fontSize: 11,
+    color: '#60A5FA',
+    fontWeight: '600',
   },
 });

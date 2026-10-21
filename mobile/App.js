@@ -22,6 +22,7 @@ import MealPlanScreen from './src/screens/MealPlanScreen';
 import ProgressScreen from './src/screens/ProgressScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import ScanMealScreen from './src/screens/ScanMealScreen';
+import ActivityDetailScreen from './src/screens/ActivityDetailScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -141,6 +142,7 @@ export default function App() {
                 {(props) => <MainTabs {...props} user={user} onLogout={handleLogout} />}
               </Stack.Screen>
               <Stack.Screen name="Scan" component={ScanMealScreen} />
+              <Stack.Screen name="ActivityDetail" component={ActivityDetailScreen} />
             </>
           )}
         </Stack.Navigator>
