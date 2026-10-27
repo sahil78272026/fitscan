@@ -1,5 +1,5 @@
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -18,6 +18,7 @@ router = APIRouter(prefix="/api/steps", tags=["Step Tracking"])
 
 class StepLogPayload(BaseModel):
     step_count: int = Field(..., ge=0, description="Steps taken")
+    calories_burned: Optional[float] = Field(None, ge=0, description="Calories burned (e.g. from Health Connect)")
     logged_date: Optional[date] = Field(None, description="Date for step log (default: today)")
 
 
@@ -51,7 +52,16 @@ async def log_steps(
 ):
     """Log or update step count for a given date."""
     target_date = payload.logged_date or date.today()
-    calories = calculate_step_calories(payload.step_count)
+    if payload.calories_burned is not None and payload.calories_burned > 0:
+        calories = round(float(payload.calories_burned), 1)
+    else:
+        # Option 2: Fallback Total Calories matching Health Connect (Elapsed BMR + Active Burn)
+        now = datetime.now()
+        is_today = target_date == date.today()
+        elapsed_hours = (now.hour + now.minute / 60.0) if is_today else 24.0
+        resting_burn = 1680.0 * (elapsed_hours / 24.0)
+        active_burn = calculate_step_calories(payload.step_count)
+        calories = round(resting_burn + active_burn, 1)
 
     result = await db.execute(
         select(StepLog).where(

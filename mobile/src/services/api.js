@@ -121,9 +121,12 @@ export async function getCalendarMonth(year, month) {
 }
 
 // --- Step Tracking ---
-export async function logSteps(stepCount, loggedDate = null) {
+export async function logSteps(stepCount, loggedDate = null, caloriesBurned = null) {
   const body = { step_count: parseInt(stepCount, 10) };
   if (loggedDate) body.logged_date = loggedDate;
+  if (typeof caloriesBurned === 'number' && caloriesBurned > 0) {
+    body.calories_burned = caloriesBurned;
+  }
   return request('/steps', {
     method: 'POST',
     body: JSON.stringify(body),

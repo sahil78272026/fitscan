@@ -5,6 +5,7 @@ import {
   checkHealthConnectPermissionsGranted,
   getHealthConnectDailyMetrics,
   getHealthConnectHourlySteps,
+  getHealthConnectRangeMetrics,
 } from './healthConnect';
 
 export {
@@ -13,14 +14,20 @@ export {
   checkHealthConnectPermissionsGranted,
   getHealthConnectDailyMetrics,
   getHealthConnectHourlySteps,
+  getHealthConnectRangeMetrics,
 };
 
-export async function syncStepsToBackend(steps) {
-  if (steps <= 0) return;
+export async function syncStepsToBackend(steps, calories = null, loggedDate = null) {
+  if (!steps || steps <= 0) return;
   try {
-    await logSteps(steps);
+    const validCalories = typeof calories === 'number' && !isNaN(calories) && calories > 0 ? calories : null;
+    if (__DEV__) {
+      console.log(`☁️ [HealthConnect -> Backend Sync] Uploading ${steps.toLocaleString()} steps (${validCalories ?? 0} kcal) for ${loggedDate || 'today'}`);
+    }
+    await logSteps(steps, loggedDate, validCalories);
   } catch (error) {
-    console.warn('Failed to sync steps to backend:', error);
+    // Gracefully handle backend errors / auth state without breaking the UI
+    console.warn('Steps sync notice:', error?.message || error);
   }
 }
 

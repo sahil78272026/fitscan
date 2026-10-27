@@ -119,7 +119,7 @@ export default function CalendarGrid({
         </TouchableOpacity>
       </View>
 
-      {/* Weekday Headers */}
+      {/* Weekday Headers (Mon - Sun) */}
       <View style={styles.weekRow}>
         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((w) => (
           <Text key={w} style={styles.weekHead}>{w}</Text>

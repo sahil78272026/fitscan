@@ -4,13 +4,13 @@ import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 function getWeekDates(referenceDate) {
   const d = new Date(referenceDate);
   const day = d.getDay();
-  const monday = new Date(d);
-  monday.setDate(d.getDate() - ((day + 6) % 7)); // Get Monday
+  const sunday = new Date(d);
+  sunday.setDate(d.getDate() - day); // Get Sunday (US week)
 
   const dates = [];
   for (let i = 0; i < 7; i++) {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + i);
+    const date = new Date(sunday);
+    date.setDate(sunday.getDate() + i);
     dates.push(date);
   }
   return dates;
@@ -23,7 +23,7 @@ function formatDateStr(d) {
   return `${y}-${m}-${day}`;
 }
 
-const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function DateStrip({ selectedDate, onDateSelect, calendarData }) {
   const today = useMemo(() => new Date(), []);

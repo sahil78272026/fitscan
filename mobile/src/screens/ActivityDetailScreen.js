@@ -12,7 +12,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CalendarGrid from '../components/CalendarGrid';
-import { syncStepsToBackend, getHealthConnectHourlySteps } from '../services/pedometer';
+import {
+  syncStepsToBackend,
+  getHealthConnectHourlySteps,
+  getHealthConnectDailyMetrics,
+  getHealthConnectRangeMetrics,
+  checkHealthConnectPermissionsGranted,
+} from '../services/pedometer';
 import { getDailySummary, getDailySteps, getCalendarMonth, getStepHistory } from '../services/api';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -51,6 +57,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
   const [summary, setSummary] = useState(initialSummary || null);
   const [calendarData, setCalendarData] = useState(initialCalendarData || null);
   const [stepHistory, setStepHistory] = useState({});
+  const [stepCaloriesHistory, setStepCaloriesHistory] = useState({});
   const [realHourlySteps, setRealHourlySteps] = useState(null);
   const [gridExpanded, setGridExpanded] = useState(false);
 
@@ -70,17 +77,20 @@ export default function ActivityDetailScreen({ navigation, route }) {
   };
 
   const onMomentumScrollEnd = (e) => {
+    if (!windowWidth || windowWidth <= 0) return;
     const page = Math.round(e.nativeEvent.contentOffset.x / windowWidth);
-    currentPageRef.current = page;
-    const newPeriod = periodOrder[page];
-    if (newPeriod && newPeriod !== period) {
-      setPeriod(newPeriod);
+    if (page >= 0 && page < periodOrder.length) {
+      currentPageRef.current = page;
+      const newPeriod = periodOrder[page];
+      if (newPeriod && newPeriod !== period) {
+        setPeriod(newPeriod);
+      }
     }
   };
 
   useEffect(() => {
     const idx = periodOrder.indexOf(period);
-    if (idx >= 0 && idx !== currentPageRef.current && horizontalScrollRef.current) {
+    if (idx >= 0 && idx !== currentPageRef.current && horizontalScrollRef.current && windowWidth > 0) {
       currentPageRef.current = idx;
       horizontalScrollRef.current.scrollTo({
         x: idx * windowWidth,
@@ -100,31 +110,63 @@ export default function ActivityDetailScreen({ navigation, route }) {
     return `${y}-${m}-${d}`;
   }, [currentDate]);
 
+  // Synchronize meal summary and step metrics for active date (Health Connect FIRST)
   useEffect(() => {
     let isMounted = true;
+
+    // 1. Fetch daily meal intake summary
     getDailySummary(dateStr)
       .then((data) => {
         if (isMounted) setSummary(data);
       })
       .catch(() => {});
 
-    getDailySteps(dateStr)
-      .then((res) => {
-        if (isMounted) {
+    // 2. Fetch step count prioritizing Google Health Connect
+    (async () => {
+      try {
+        const hc = await getHealthConnectDailyMetrics(currentDate);
+        if (isMounted && hc && typeof hc.steps === 'number') {
+          setStepData({
+            step_count: hc.steps,
+            calories_burned: hc.calories,
+          });
+          const isToday = new Date().toDateString() === currentDate.toDateString();
+          if (isToday && hc.steps > 0) {
+            syncStepsToBackend(hc.steps, hc.calories);
+          }
+          return; // Success from Health Connect; do not overwrite with backend
+        }
+      } catch (hcErr) {
+        // Health Connect unavailable or failed, fallback to backend below
+      }
+
+      // Fallback: fetch from backend only if Health Connect had no data
+      try {
+        const res = await getDailySteps(dateStr);
+        if (isMounted && res) {
           setStepData({
             step_count: res?.step_count || 0,
             calories_burned: res?.calories_burned || 0,
           });
         }
+      } catch (err) {
+        if (isMounted) setStepData({ step_count: 0, calories_burned: 0 });
+      }
+    })();
+
+    // 3. Fetch hourly steps from Health Connect for the active date
+    getHealthConnectHourlySteps(currentDate)
+      .then((hourly) => {
+        if (isMounted) setRealHourlySteps(hourly);
       })
       .catch(() => {
-        if (isMounted) setStepData({ step_count: 0, calories_burned: 0 });
+        if (isMounted) setRealHourlySteps(null);
       });
 
     return () => {
       isMounted = false;
     };
-  }, [dateStr]);
+  }, [currentDate, dateStr]);
 
   // Dynamically fetch calendar month whenever month changes
   useEffect(() => {
@@ -146,11 +188,14 @@ export default function ActivityDetailScreen({ navigation, route }) {
       .then((res) => {
         if (isMounted && res?.logs) {
           const map = {};
+          const calsMap = {};
           res.logs.forEach((l) => {
             const dateKey = typeof l.logged_date === 'string' ? l.logged_date.split('T')[0] : l.logged_date;
             map[dateKey] = l.step_count || 0;
+            calsMap[dateKey] = l.calories_burned || 0;
           });
-          setStepHistory(map);
+          setStepHistory((prev) => ({ ...map, ...prev }));
+          setStepCaloriesHistory((prev) => ({ ...calsMap, ...prev }));
         }
       })
       .catch(() => {});
@@ -159,20 +204,55 @@ export default function ActivityDetailScreen({ navigation, route }) {
     };
   }, []);
 
-  // Fetch real hourly step data for the active date (via Health Connect if on Android)
+  // Fetch Health Connect metrics for every day in the current week/month in ONE single shot
   useEffect(() => {
+    // Only run for week or month view (day view is already fetched individually above)
+    if (period !== 'week' && period !== 'month') return;
+
     let isMounted = true;
-    getHealthConnectHourlySteps(currentDate)
-      .then((hourly) => {
-        if (isMounted) setRealHourlySteps(hourly);
-      })
-      .catch(() => {
-        if (isMounted) setRealHourlySteps(null);
-      });
+    (async () => {
+      try {
+        const hcGranted = await checkHealthConnectPermissionsGranted();
+        if (!hcGranted) return;
+
+        let rangeStart, rangeEnd;
+        if (period === 'month') {
+          rangeStart = new Date(curYear, curMonth - 1, 1, 0, 0, 0, 0);
+          const daysInMonth = new Date(curYear, curMonth, 0).getDate();
+          rangeEnd = new Date(curYear, curMonth - 1, daysInMonth, 23, 59, 59, 999);
+        } else {
+          const ref = new Date(currentDate);
+          const day = ref.getDay();
+          const diffToMon = (day + 6) % 7;
+          rangeStart = new Date(ref);
+          rangeStart.setDate(ref.getDate() - diffToMon);
+          rangeStart.setHours(0, 0, 0, 0);
+
+          rangeEnd = new Date(rangeStart);
+          rangeEnd.setDate(rangeStart.getDate() + 6);
+          rangeEnd.setHours(23, 59, 59, 999);
+        }
+
+        const metricsMap = await getHealthConnectRangeMetrics(rangeStart, rangeEnd);
+        if (isMounted && metricsMap && Object.keys(metricsMap).length > 0) {
+          const weekUpdates = {};
+          const calUpdates = {};
+          Object.entries(metricsMap).forEach(([dStr, m]) => {
+            weekUpdates[dStr] = m.steps;
+            calUpdates[dStr] = m.calories;
+          });
+          setStepHistory((prev) => ({ ...prev, ...weekUpdates }));
+          setStepCaloriesHistory((prev) => ({ ...prev, ...calUpdates }));
+        }
+      } catch (err) {
+        // ignore
+      }
+    })();
+
     return () => {
       isMounted = false;
     };
-  }, [currentDate]);
+  }, [currentDate, period, curYear, curMonth]);
 
   // Period navigation
   const prevPeriod = () => {
@@ -202,10 +282,14 @@ export default function ActivityDetailScreen({ navigation, route }) {
     } else if (period === 'week') {
       const start = new Date(currentDate);
       const day = start.getDay();
-      start.setDate(start.getDate() - ((day + 6) % 7));
+      const diffToMon = (day + 6) % 7;
+      start.setDate(start.getDate() - diffToMon);
       const end = new Date(start);
       end.setDate(end.getDate() + 6);
-      return `${start.getDate()} - ${end.getDate()} ${end.toLocaleDateString('en-US', { month: 'long' })}`;
+      if (start.getMonth() === end.getMonth()) {
+        return `${start.getDate()} - ${end.getDate()} ${end.toLocaleDateString('en-US', { month: 'long' })}`;
+      }
+      return `${start.toLocaleDateString('en-US', { month: 'short' })} ${start.getDate()} - ${end.toLocaleDateString('en-US', { month: 'short' })} ${end.getDate()}`;
     } else {
       return currentDate.toLocaleDateString('en-US', {
         month: 'long',
@@ -215,9 +299,59 @@ export default function ActivityDetailScreen({ navigation, route }) {
   }, [currentDate, period]);
 
   // Derived metrics for calories eaten and steps
-  const totalSteps = stepData?.step_count || 0;
+  const calDayForDate = useMemo(() => {
+    return calendarData?.days?.find((d) => d.date === dateStr);
+  }, [calendarData, dateStr]);
+
+  const totalHourlySteps = useMemo(() => {
+    if (!realHourlySteps || !Array.isArray(realHourlySteps)) return 0;
+    return realHourlySteps.reduce((acc, count) => acc + (count || 0), 0);
+  }, [realHourlySteps]);
+
+  const totalSteps = useMemo(() => {
+    // 1. Current active stepData from Health Connect
+    if (stepData?.step_count && stepData.step_count > 0) {
+      return stepData.step_count;
+    }
+    // 2. Sum of hourly steps from Health Connect (matches the graph directly!)
+    if (totalHourlySteps > 0) {
+      return totalHourlySteps;
+    }
+    // 3. Authoritative date-keyed history from backend
+    if (stepHistory[dateStr] !== undefined && stepHistory[dateStr] > 0) {
+      return stepHistory[dateStr];
+    }
+    // 4. Authoritative calendar entry for this date
+    if (calDayForDate?.step_count && calDayForDate.step_count > 0) {
+      return calDayForDate.step_count;
+    }
+    return 0;
+  }, [stepData, totalHourlySteps, stepHistory, dateStr, calDayForDate]);
+
   const distanceKm = (((totalSteps) * 0.762) / 1000).toFixed(2);
   const moveMinutes = Math.round(totalSteps / 78);
+  const burnedCalories = useMemo(() => {
+    // 1. Current active stepData from Health Connect
+    if (stepData?.calories_burned && stepData.calories_burned > 0) {
+      return Math.round(stepData.calories_burned);
+    }
+    // 2. Authoritative date-keyed burned calories from backend
+    if (stepCaloriesHistory[dateStr] !== undefined && stepCaloriesHistory[dateStr] > 0) {
+      return Math.round(stepCaloriesHistory[dateStr]);
+    }
+    // 3. Option 2: Fallback Total Calories matching Google Health Connect (Elapsed BMR + Active Burn)
+    const now = new Date();
+    const d = new Date(dateStr);
+    const isToday =
+      d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate();
+    const isPast = d < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const elapsedHours = isToday ? (now.getHours() + now.getMinutes() / 60) : (isPast ? 24 : 0);
+    const restingBurn = Math.round(1680 * (elapsedHours / 24));
+    const activeBurn = Math.round((totalSteps || 0) * 0.04);
+    return restingBurn + activeBurn;
+  }, [stepData, stepCaloriesHistory, dateStr, totalSteps]);
 
   const eatenCals = summary?.total_calories || 0;
   const goalCals = summary?.calorie_goal || 2000;
@@ -275,13 +409,14 @@ export default function ActivityDetailScreen({ navigation, route }) {
     }
   }, [hourlyData, metric]);
 
-  // 7-day distribution for week view
+  // 7-day distribution for week view (Monday - Sunday)
   const weeklyData = useMemo(() => {
     const days = [];
     const ref = new Date(currentDate);
     const day = ref.getDay();
+    const diffToMon = (day + 6) % 7;
     const monday = new Date(ref);
-    monday.setDate(ref.getDate() - ((day + 6) % 7));
+    monday.setDate(ref.getDate() - diffToMon);
 
     const dayMap = {};
     if (calendarData?.days) {
@@ -304,6 +439,9 @@ export default function ActivityDetailScreen({ navigation, route }) {
       const dailySteps = isCurrentDay
         ? totalSteps
         : (stepHistory[dStr] ?? calDay?.step_count ?? 0);
+      const dailyBurned = isCurrentDay
+        ? burnedCalories
+        : (stepCaloriesHistory[dStr] ?? 0);
       const dailyCalsEaten = isCurrentDay ? eatenCals : (calDay?.total_calories || 0);
       const dayGoal = calDay?.calorie_goal || goalCals;
 
@@ -312,32 +450,48 @@ export default function ActivityDetailScreen({ navigation, route }) {
         dayName: DAY_LABELS[d.getDay()],
         dayNum: d.getDate(),
         steps: dailySteps,
+        burned: dailyBurned,
         cals: dailyCalsEaten,
         goal: dayGoal,
         achieved: metric === 'steps' ? dailySteps >= 4000 : (dailyCalsEaten > 0 && dailyCalsEaten <= dayGoal),
       });
     }
     return days;
-  }, [currentDate, totalSteps, calendarData, dateStr, eatenCals, goalCals, metric, stepHistory]);
+  }, [currentDate, totalSteps, burnedCalories, calendarData, dateStr, eatenCals, goalCals, metric, stepHistory, stepCaloriesHistory]);
 
-  // Dynamic 4-week distribution for month view from real database records
+  // Dynamic calendar weeks distribution for month view (Monday - Sunday, zero overlap)
   const monthlyData = useMemo(() => {
     const days = calendarData?.days || [];
     const dayMap = {};
     days.forEach((d) => { dayMap[d.date] = d; });
 
     const daysInMonth = new Date(curYear, curMonth, 0).getDate();
-    const weeks = [
-      { label: 'Week 1', start: 1, end: 7 },
-      { label: 'Week 2', start: 8, end: 14 },
-      { label: 'Week 3', start: 15, end: 21 },
-      { label: 'Week 4', start: 22, end: daysInMonth },
-    ];
+    const weeks = [];
+    let currentStart = 1;
+    let wIdx = 1;
+
+    while (currentStart <= daysInMonth) {
+      const d = new Date(curYear, curMonth - 1, currentStart);
+      const jsDay = d.getDay(); // 0 = Sun, ..., 6 = Sat
+      const daysUntilSun = jsDay === 0 ? 0 : 7 - jsDay;
+      const currentEnd = Math.min(daysInMonth, currentStart + daysUntilSun);
+
+      weeks.push({
+        label: `Week ${wIdx}`,
+        dateRange: `${curMonth}/${currentStart} - ${curMonth}/${currentEnd}`,
+        start: currentStart,
+        end: currentEnd,
+        numDays: currentEnd - currentStart + 1,
+      });
+
+      currentStart = currentEnd + 1;
+      wIdx++;
+    }
 
     return weeks.map((w) => {
       let weekSteps = 0;
       let weekCals = 0;
-      const numDays = w.end - w.start + 1;
+      const numDays = w.numDays;
 
       for (let day = w.start; day <= w.end; day++) {
         const dStr = `${curYear}-${String(curMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -355,6 +509,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
         const maxSteps = numDays * 10000;
         return {
           label: w.label,
+          dateRange: w.dateRange,
           val: weekSteps,
           achieved: weekSteps >= (numDays * 6000),
           max: maxSteps,
@@ -363,6 +518,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
         const weekGoal = numDays * goalCals;
         return {
           label: w.label,
+          dateRange: w.dateRange,
           val: weekCals,
           achieved: weekCals > 0 && weekCals <= weekGoal,
           max: weekGoal,
@@ -376,7 +532,8 @@ export default function ActivityDetailScreen({ navigation, route }) {
     const eaten = summary?.total_calories || 0;
     const goal = summary?.calorie_goal || goalCals;
     const remaining = summary?.remaining_calories ?? (goal - eaten);
-    const steps = stepData?.step_count || 0;
+    const steps = totalSteps;
+    const burnedCals = burnedCalories;
     return {
       eaten,
       goal,
@@ -391,14 +548,14 @@ export default function ActivityDetailScreen({ navigation, route }) {
       val3: goal.toLocaleString(),
       subMetricVal: `${eaten.toLocaleString()} kcal eaten of ${goal.toLocaleString()} kcal`,
       stepsSubMetricVal: `${steps.toLocaleString()} steps of 10,000`,
-      stepsLabel1: 'Steps',
-      stepsVal1: steps.toLocaleString(),
+      stepsLabel1: 'Cal Burned',
+      stepsVal1: burnedCals.toLocaleString(),
       stepsLabel2: 'km',
       stepsVal2: distanceKm,
       stepsLabel3: 'Move Min',
       stepsVal3: moveMinutes,
     };
-  }, [summary, goalCals, stepData, distanceKm, moveMinutes]);
+  }, [summary, goalCals, totalSteps, burnedCalories, distanceKm, moveMinutes]);
 
   const weekStats = useMemo(() => {
     const weekTotalEaten = weeklyData.reduce((sum, d) => sum + (d.cals || 0), 0);
@@ -407,6 +564,8 @@ export default function ActivityDetailScreen({ navigation, route }) {
     const weekTotalSteps = weeklyData.reduce((sum, d) => sum + (d.steps || 0), 0);
     const weekAvgSteps = Math.round(weekTotalSteps / 7);
     const weekKm = ((weekTotalSteps * 0.762) / 1000).toFixed(1);
+    const weekBurnedCals = weeklyData.reduce((sum, d) => sum + (d.burned || 0), 0);
+    const weekMoveMinutes = Math.round(weekTotalSteps / 78);
     return {
       eaten: weekTotalEaten,
       goal: weekTotalGoal,
@@ -421,12 +580,12 @@ export default function ActivityDetailScreen({ navigation, route }) {
       val3: weekTotalGoal.toLocaleString(),
       subMetricVal: `${weekTotalEaten.toLocaleString()} kcal eaten (avg ${weekAvgEaten.toLocaleString()} kcal/day)`,
       stepsSubMetricVal: `${weekTotalSteps.toLocaleString()} steps (avg ${weekAvgSteps.toLocaleString()}/day)`,
-      stepsLabel1: 'Week Steps',
-      stepsVal1: weekTotalSteps.toLocaleString(),
-      stepsLabel2: 'Total km',
+      stepsLabel1: 'Cal Burned',
+      stepsVal1: weekBurnedCals.toLocaleString(),
+      stepsLabel2: 'km',
       stepsVal2: weekKm,
-      stepsLabel3: 'Daily Avg',
-      stepsVal3: weekAvgSteps.toLocaleString(),
+      stepsLabel3: 'Move Min',
+      stepsVal3: weekMoveMinutes,
     };
   }, [weeklyData, goalCals]);
 
@@ -438,15 +597,19 @@ export default function ActivityDetailScreen({ navigation, route }) {
 
     let monthTotalEaten = 0;
     let monthTotalSteps = 0;
+    let monthBurnedCals = 0;
     for (let day = 1; day <= daysInMonth; day++) {
       const dStr = `${curYear}-${String(curMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const dayRecord = dayMap[dStr];
       if (dStr === dateStr && summary) {
         monthTotalEaten += (summary.total_calories || 0);
         monthTotalSteps += totalSteps;
+        monthBurnedCals += burnedCalories;
       } else {
+        const dSteps = (stepHistory[dStr] ?? dayRecord?.step_count ?? 0);
         monthTotalEaten += (dayRecord?.total_calories || 0);
-        monthTotalSteps += (stepHistory[dStr] ?? dayRecord?.step_count ?? 0);
+        monthTotalSteps += dSteps;
+        monthBurnedCals += (stepCaloriesHistory[dStr] ?? 0);
       }
     }
 
@@ -454,6 +617,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
     const monthAvgEaten = daysInMonth > 0 ? Math.round(monthTotalEaten / daysInMonth) : 0;
     const monthAvgSteps = daysInMonth > 0 ? Math.round(monthTotalSteps / daysInMonth) : 0;
     const monthKm = ((monthTotalSteps * 0.762) / 1000).toFixed(1);
+    const monthMoveMinutes = Math.round(monthTotalSteps / 78);
     return {
       eaten: monthTotalEaten,
       goal: monthTotalGoal,
@@ -468,14 +632,14 @@ export default function ActivityDetailScreen({ navigation, route }) {
       val3: monthTotalGoal.toLocaleString(),
       subMetricVal: `${monthTotalEaten.toLocaleString()} kcal eaten (avg ${monthAvgEaten.toLocaleString()} kcal/day)`,
       stepsSubMetricVal: `${monthTotalSteps.toLocaleString()} steps (avg ${monthAvgSteps.toLocaleString()}/day)`,
-      stepsLabel1: 'Month Steps',
-      stepsVal1: monthTotalSteps.toLocaleString(),
-      stepsLabel2: 'Total km',
+      stepsLabel1: 'Cal Burned',
+      stepsVal1: monthBurnedCals.toLocaleString(),
+      stepsLabel2: 'km',
       stepsVal2: monthKm,
-      stepsLabel3: 'Daily Avg',
-      stepsVal3: monthAvgSteps.toLocaleString(),
+      stepsLabel3: 'Move Min',
+      stepsVal3: monthMoveMinutes,
     };
-  }, [calendarData, curYear, curMonth, dateStr, summary, totalSteps, goalCals, stepHistory]);
+  }, [calendarData, curYear, curMonth, dateStr, summary, totalSteps, burnedCalories, goalCals, stepHistory, stepCaloriesHistory]);
 
   const periodStats = period === 'day' ? dayStats : period === 'week' ? weekStats : monthStats;
 
@@ -504,7 +668,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
       ) : (
         <>
           <View style={styles.statBox}>
-            <Text style={styles.statVal}>{stats.stepsVal1}</Text>
+            <Text style={[styles.statVal, { color: '#E8A020' }]}>{stats.stepsVal1}</Text>
             <Text style={styles.statLbl}>{stats.stepsLabel1}</Text>
           </View>
           <View style={styles.statDivider} />
@@ -909,7 +1073,29 @@ export default function ActivityDetailScreen({ navigation, route }) {
         </>
       );
     } else {
-      return renderStepsActivities();
+      return (
+        <>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Daily Steps Breakdown</Text>
+          </View>
+          {weeklyData.map((w, idx) => (
+            <View key={idx} style={styles.activityCard}>
+              <View style={styles.activityIconBox}>
+                <Text style={styles.activityIcon}>{w.steps > 0 ? '👟' : '⚪'}</Text>
+              </View>
+              <View style={styles.activityDetails}>
+                <Text style={styles.activityTime}>{w.dayName}, {w.dayNum}</Text>
+                <Text style={styles.activityName}>
+                  {w.steps > 0 ? `${w.steps.toLocaleString()} steps` : 'No steps recorded'}
+                </Text>
+                <Text style={styles.activityMeta}>
+                  {w.burned.toLocaleString()} kcal burned • {(((w.steps) * 0.762) / 1000).toFixed(1)} km
+                </Text>
+              </View>
+            </View>
+          ))}
+        </>
+      );
     }
   };
 
@@ -945,7 +1131,29 @@ export default function ActivityDetailScreen({ navigation, route }) {
         </>
       );
     } else {
-      return renderStepsActivities();
+      return (
+        <>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Weekly Step Totals</Text>
+          </View>
+          {monthlyData.map((m, idx) => (
+            <View key={idx} style={styles.activityCard}>
+              <View style={styles.activityIconBox}>
+                <Text style={styles.activityIcon}>{m.val > 0 ? '👟' : '⚪'}</Text>
+              </View>
+              <View style={styles.activityDetails}>
+                <Text style={styles.activityTime}>{m.label} ({m.dateRange})</Text>
+                <Text style={styles.activityName}>
+                  {m.val > 0 ? `${m.val.toLocaleString()} steps` : 'No steps recorded'}
+                </Text>
+                <Text style={styles.activityMeta}>
+                  Goal: {m.max?.toLocaleString()} steps {m.val > 0 ? `• ${Math.round((m.val / m.max) * 100)}%` : ''}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </>
+      );
     }
   };
 

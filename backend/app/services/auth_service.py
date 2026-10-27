@@ -1,8 +1,12 @@
+import os
 import logging
 import jwt
+from jwt import PyJWKClient
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+import firebase_admin
+from firebase_admin import credentials as fb_credentials, auth as fb_admin_auth
 
 from app.config import get_settings
 from app.models.user import User
@@ -10,6 +14,26 @@ from app.models.settings import UserSettings
 
 logger = logging.getLogger("corecontrol.auth_service")
 settings = get_settings()
+
+# Google Public JWKS Client for signature verification
+_GOOGLE_JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"
+_jwks_client = PyJWKClient(_GOOGLE_JWKS_URL, cache_keys=True)
+
+
+def _init_firebase_admin_if_possible() -> bool:
+    """Initialize firebase-admin SDK if service account file is present."""
+    if firebase_admin._apps:
+        return True
+    sa_path = getattr(settings, "FIREBASE_SERVICE_ACCOUNT_PATH", "serviceAccountKey.json")
+    if os.path.exists(sa_path):
+        try:
+            cred = fb_credentials.Certificate(sa_path)
+            firebase_admin.initialize_app(cred, options={"projectId": settings.FIREBASE_PROJECT_ID})
+            logger.info(f"Firebase Admin initialized with service account from {sa_path}")
+            return True
+        except Exception as e:
+            logger.warning(f"Could not initialize Firebase Admin with service account: {e}")
+    return False
 
 
 # In-memory OTP store for dev mode: {phone: {"otp": str, "expires_at": datetime}}
@@ -130,16 +154,60 @@ async def get_or_create_user(
 
 
 async def verify_firebase_id_token(firebase_token: str) -> dict:
-    """Decode and extract user information from Firebase Auth ID token."""
+    """
+    Cryptographically verify Firebase ID token (Google SSO, Email/Pass, or Phone).
+    Uses firebase-admin SDK if service account is available, or Google's official public
+    JWKS keys with PyJWT to verify RS256 signature, expiry, audience, and issuer.
+    """
+    project_id = settings.FIREBASE_PROJECT_ID
+    if not project_id:
+        raise ValueError("FIREBASE_PROJECT_ID is not configured in backend settings")
+
+    # 1. If Firebase Admin SDK is configured with service account, use it
+    if _init_firebase_admin_if_possible():
+        try:
+            decoded = fb_admin_auth.verify_id_token(firebase_token)
+            return {
+                "email": decoded.get("email"),
+                "phone_number": decoded.get("phone_number"),
+                "name": decoded.get("name"),
+                "picture": decoded.get("picture"),
+                "uid": decoded.get("uid") or decoded.get("sub"),
+                "claims": decoded,
+            }
+        except Exception as e:
+            logger.error(f"Firebase Admin token verification failed: {e}")
+            raise ValueError(f"Invalid or expired Firebase ID token: {e}")
+
+    # 2. Standard verification using Google's public JWKS endpoint (Zero service account JSON needed)
     try:
-        decoded = jwt.decode(firebase_token, options={"verify_signature": False})
+        signing_key = _jwks_client.get_signing_key_from_jwt(firebase_token)
+        expected_issuer = f"https://securetoken.google.com/{project_id}"
+
+        decoded = jwt.decode(
+            firebase_token,
+            signing_key.key,
+            algorithms=["RS256"],
+            audience=project_id,
+            issuer=expected_issuer,
+            options={
+                "verify_signature": True,
+                "verify_exp": True,
+                "verify_iat": True,
+                "verify_aud": True,
+                "verify_iss": True,
+            },
+        )
+
         email = decoded.get("email")
         phone_number = decoded.get("phone_number")
         name = decoded.get("name")
         picture = decoded.get("picture")
-        uid = decoded.get("sub")
+        uid = decoded.get("user_id") or decoded.get("sub")
+
         if not email and not phone_number and not uid:
             raise ValueError("Firebase token missing user identity claims")
+
         return {
             "email": email,
             "phone_number": phone_number,
@@ -148,6 +216,12 @@ async def verify_firebase_id_token(firebase_token: str) -> dict:
             "uid": uid,
             "claims": decoded,
         }
+    except jwt.ExpiredSignatureError:
+        logger.warning("Firebase ID token has expired")
+        raise ValueError("Firebase token has expired. Please sign in again.")
+    except jwt.InvalidTokenError as e:
+        logger.warning(f"Invalid Firebase token cryptographic signature or claims: {e}")
+        raise ValueError(f"Invalid Firebase ID token: {e}")
     except Exception as e:
-        logger.error(f"Failed to decode Firebase token: {e}")
-        raise ValueError(f"Invalid Firebase token: {e}")
+        logger.error(f"Unexpected error verifying Firebase token: {e}")
+        raise ValueError(f"Failed to verify Firebase token: {e}")

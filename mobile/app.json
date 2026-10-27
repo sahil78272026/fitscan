@@ -22,7 +22,7 @@
       },
       "package": "com.fitscan.wellness",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 2,
+      "versionCode": 4,
       "permissions": [
         "ACTIVITY_RECOGNITION",
         "android.permission.health.READ_STEPS",

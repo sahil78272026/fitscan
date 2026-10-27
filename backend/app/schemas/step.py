@@ -5,6 +5,7 @@ from typing import Optional, List
 
 class StepLogCreate(BaseModel):
     step_count: int = Field(..., ge=0, description="Step count taken for the day")
+    calories_burned: Optional[float] = Field(default=None, ge=0, description="Calories burned (e.g. from Health Connect)")
     logged_date: Optional[date] = Field(default=None, description="Date for step log (defaults to today)")
 
 

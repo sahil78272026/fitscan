@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     # OTP & Auth
     DEV_OTP: str = ""  # Set to "123456" in local .env only — empty in production
     OTP_EXPIRY_SECONDS: int = 300  # 5 minutes
+    FIREBASE_PROJECT_ID: str = "fitscan-54e95"
+    FIREBASE_SERVICE_ACCOUNT_PATH: str = "serviceAccountKey.json"
 
     # Upstash Redis
     UPSTASH_REDIS_REST_URL: str = ""

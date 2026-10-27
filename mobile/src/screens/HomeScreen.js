@@ -159,7 +159,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
                     calories_burned: hcData.calories,
                   });
                   if (isToday && hcData.steps > 0) {
-                    syncStepsToBackend(hcData.steps);
+                    syncStepsToBackend(hcData.steps, hcData.calories);
                   }
                   return;
                 }
@@ -311,6 +311,14 @@ export default function HomeScreen({ navigation, user, onLogout }) {
 
   const handleConnectHealthConnect = async () => {
     try {
+      const isAvail = await checkHealthConnectAvailable();
+      if (!isAvail) {
+        Alert.alert(
+          'Health Connect Not Available',
+          'Google Health Connect is not available in this environment.\n\n• If testing locally in Expo Go: Health Connect is a native module that requires an Android development build (npx expo run:android).\n• If testing on an Android device (Android 9-13): Install the "Health Connect" app from Google Play Store.'
+        );
+        return;
+      }
       const granted = await requestHealthConnectPermissions();
       if (granted) {
         setHealthConnectConnected(true);
@@ -321,15 +329,15 @@ export default function HomeScreen({ navigation, user, onLogout }) {
             calories_burned: hcData.calories,
           });
           if (isToday && hcData.steps > 0) {
-            syncStepsToBackend(hcData.steps);
+            syncStepsToBackend(hcData.steps, hcData.calories);
           }
         }
-        Alert.alert('Health Connect Connected! 🎉', 'CoreControl is now syncing 24/7 steps from Google Health Connect.');
+        Alert.alert('Health Connect Connected! 🎉', 'FitScan is now syncing live steps and calories from Google Health Connect.');
       } else {
         Alert.alert('Permission Needed', 'Health Connect permissions were not granted. You can manage access in Android Settings > Security & Privacy > Health Connect.');
       }
     } catch (err) {
-      Alert.alert('Health Connect', err.message || 'Could not connect to Health Connect.');
+      Alert.alert('Health Connect', err?.message || 'Could not connect to Health Connect.');
     }
   };
 
@@ -498,13 +506,17 @@ export default function HomeScreen({ navigation, user, onLogout }) {
             </View>
           </TouchableOpacity>
 
-          {/* 3 Metric Stats Row (Google Fit Style: Cal Eaten • km • Move Min) */}
+          {/* 3 Metric Stats Row (Google Fit Style: Cal Eaten / Burned • km • Move Min) */}
           <View style={styles.fitStatsRow}>
             <View style={styles.fitStatItem}>
               <Text style={styles.fitStatVal}>
-                {consumedCals.toLocaleString()}
+                {summaryTab === 'steps'
+                  ? (stepData?.calories_burned || 0).toLocaleString()
+                  : consumedCals.toLocaleString()}
               </Text>
-              <Text style={styles.fitStatLbl}>Cal Eaten</Text>
+              <Text style={styles.fitStatLbl}>
+                {summaryTab === 'steps' ? 'Cal Burned' : 'Cal Eaten'}
+              </Text>
             </View>
             <View style={styles.fitStatDivider} />
             <View style={styles.fitStatItem}>
@@ -520,18 +532,25 @@ export default function HomeScreen({ navigation, user, onLogout }) {
             </View>
           </View>
 
-          {/* Tap-to-inspect Guidance & Sync Indicator */}
+          {/* Health Connect Connection Action or Synced Indicator */}
           <TouchableOpacity
-            style={styles.fitCardFooter}
-            onPress={() =>
-              navigation.navigate('ActivityDetail', {
-                selectedDate: formatDateStr(selectedDate),
-                stepData,
-                summary,
-                calendarData,
-                initialTab: summaryTab,
-              })
-            }
+            style={[
+              styles.fitCardFooter,
+              !healthConnectConnected && Platform.OS === 'android' && styles.fitCardFooterConnectable,
+            ]}
+            onPress={() => {
+              if (!healthConnectConnected && Platform.OS === 'android') {
+                handleConnectHealthConnect();
+              } else {
+                navigation.navigate('ActivityDetail', {
+                  selectedDate: formatDateStr(selectedDate),
+                  stepData,
+                  summary,
+                  calendarData,
+                  initialTab: summaryTab,
+                });
+              }
+            }}
             activeOpacity={0.7}
           >
             <View style={styles.fitFooterLeft}>
@@ -539,17 +558,26 @@ export default function HomeScreen({ navigation, user, onLogout }) {
                 style={[
                   styles.fitStatusDot,
                   {
-                    backgroundColor: healthConnectConnected ? '#4285F4' : '#A79A85',
+                    backgroundColor: healthConnectConnected ? '#00D287' : '#E8A020',
                   },
                 ]}
               />
               <Text style={styles.fitFooterHint}>
                 {healthConnectConnected
                   ? 'Health Connect Synced'
+                  : Platform.OS === 'android'
+                  ? 'Connect Google Health Connect ⚡'
                   : 'Tap ring for hourly breakdown & graphs'}
               </Text>
             </View>
-            <Text style={styles.fitFooterArrow}>→</Text>
+            <Text
+              style={[
+                styles.fitFooterArrow,
+                !healthConnectConnected && Platform.OS === 'android' && { color: '#E8A020', fontWeight: '700' },
+              ]}
+            >
+              {!healthConnectConnected && Platform.OS === 'android' ? 'Connect →' : '→'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -1066,6 +1094,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
     borderWidth: 1,
     borderColor: '#2B2218',
+  },
+  fitCardFooterConnectable: {
+    backgroundColor: '#2A1F13',
+    borderColor: '#E8A020',
   },
   fitFooterLeft: {
     flexDirection: 'row',

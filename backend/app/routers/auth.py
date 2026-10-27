@@ -55,10 +55,12 @@ async def firebase_verify_endpoint(payload: FirebaseVerifyRequest, db: AsyncSess
     """Verify Firebase ID Token (Google SSO or Email) and return CoreControl JWT token. Creates user if new."""
     try:
         token_info = await verify_firebase_id_token(payload.firebase_token)
-        email = token_info.get("email") or payload.email
-        phone = token_info.get("phone_number") or payload.phone
-        name = payload.name or token_info.get("name")
-        avatar_url = payload.avatar_url or token_info.get("picture")
+        # Identity claims MUST strictly come from the verified token
+        email = token_info.get("email")
+        phone = token_info.get("phone_number")
+        # Non-security metadata can fallback to client payload if absent in token
+        name = token_info.get("name") or payload.name
+        avatar_url = token_info.get("picture") or payload.avatar_url
 
         if not email and not phone:
             raise HTTPException(status_code=400, detail="Could not resolve email or phone from Firebase token")
@@ -88,11 +90,13 @@ async def firebase_verify_endpoint(payload: FirebaseVerifyRequest, db: AsyncSess
             user=UserResponse.model_validate(user),
             is_new_user=is_new,
         )
+    except HTTPException:
+        raise
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=401, detail=str(e))
     except Exception as e:
         logger.error(f"Firebase verification error: {e}")
-        raise HTTPException(status_code=500, detail="Authentication failed")
+        raise HTTPException(status_code=401, detail="Authentication failed: Invalid or expired Firebase token")
 
 
 @router.post("/email-login", response_model=AuthResponse)
