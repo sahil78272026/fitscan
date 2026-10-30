@@ -36,6 +36,10 @@ yarn-error.*
 play-store-key.json
 *-key.json
 *.json.secret
+
+# Firebase secrets — use EAS Secrets instead (eas secret:create)
+google-services.json
+GoogleService-Info.plist
 # typescript
 *.tsbuildinfo
 
