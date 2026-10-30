@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.database import engine, Base
-from app.routers import auth, meals, daily_summary, settings, calendar, stats, weight, steps
+from app.routers import auth, meals, daily_summary, settings, calendar, stats, weight, steps, health
 
 # Import models so they're registered with Base.metadata
 from app.models import User, Meal, FoodItem, UserSettings, WeightLog, StepLog  # noqa: F401
@@ -136,8 +136,5 @@ app.include_router(calendar.router)
 app.include_router(stats.router)
 app.include_router(weight.router)
 app.include_router(steps.router)
+app.include_router(health.router)
 
-
-@app.api_route("/api/health", methods=["GET", "HEAD"])
-async def health_check():
-    return {"status": "healthy", "app": "CoreControl"}

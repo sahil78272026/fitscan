@@ -5,17 +5,21 @@ import {
   View,
   TouchableOpacity,
   TextInput,
-  ActivityIndicator,
   Image,
   Alert,
   Platform,
+  ScrollView,
+  KeyboardAvoidingView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { logMeal, scanMealImage, scanMealImageBase64 } from '../services/api';
 import { uploadMealImageToFirebase, auth } from '../services/firebase';
+import { ScreenHeader, Button } from '../components/ui';
+import { colors, spacing, typography, radius } from '../theme';
 
 export default function ScanMealScreen({ navigation, route }) {
+  const insets = useSafeAreaInsets();
   const [imageUri, setImageUri] = useState(null);
   const [photoBase64, setPhotoBase64] = useState(null);
   const [rawInput, setRawInput] = useState('');
@@ -118,87 +122,113 @@ export default function ScanMealScreen({ navigation, route }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.inner}>
-        <Text style={styles.title}>📸 Log & Scan Meal</Text>
+    <View style={styles.container}>
+      {/* Top Header: ScreenHeader handles insets.top cleanly with seamless surface color */}
+      <ScreenHeader
+        title="Log & Scan Meal"
+        subtitle="AI Calorie & Macro Scanner"
+        onBack={() => navigation.goBack()}
+        safeArea={true}
+        backgroundColor={colors.surface || '#221D17'}
+      />
 
-        {/* Image Preview Box */}
-        <TouchableOpacity style={styles.imageBox} onPress={pickImage}>
-          {imageUri ? (
-            <Image source={{ uri: imageUri }} style={styles.previewImage} />
-          ) : (
-            <View style={styles.placeholder}>
-              <Text style={styles.placeholderIcon}>📷</Text>
-              <Text style={styles.placeholderText}>Tap to select or take photo</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-
-        {/* Action Buttons for Camera / Gallery */}
-        <View style={styles.mediaRow}>
-          <TouchableOpacity style={styles.mediaBtn} onPress={takePhoto}>
-            <Text style={styles.mediaBtnText}>📷 Take Photo</Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardAvoid}
+      >
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: Math.max(insets.bottom, 24) + 16 },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Image Preview Box */}
+          <TouchableOpacity style={styles.imageBox} onPress={pickImage} activeOpacity={0.8}>
+            {imageUri ? (
+              <Image source={{ uri: imageUri }} style={styles.previewImage} />
+            ) : (
+              <View style={styles.placeholder}>
+                <Text style={styles.placeholderIcon}>📷</Text>
+                <Text style={styles.placeholderText}>Tap to select or take photo</Text>
+              </View>
+            )}
           </TouchableOpacity>
-          <TouchableOpacity style={styles.mediaBtn} onPress={pickImage}>
-            <Text style={styles.mediaBtnText}>🖼️ Choose Gallery</Text>
-          </TouchableOpacity>
-        </View>
 
-        {/* Text Input for meal description */}
-        <Text style={styles.label}>Meal Description (Optional)</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="e.g. 2 eggs, 1 slice toast with butter"
-          placeholderTextColor="#6e7681"
-          value={rawInput}
-          onChangeText={setRawInput}
-        />
-
-        {/* Meal Type selector */}
-        <Text style={styles.label}>Meal Type</Text>
-        <View style={styles.typeRow}>
-          {['breakfast', 'lunch', 'snack', 'dinner'].map((type) => (
-            <TouchableOpacity
-              key={type}
-              style={[styles.typeBtn, mealType === type && styles.typeBtnActive]}
-              onPress={() => setMealType(type)}
-            >
-              <Text style={[styles.typeText, mealType === type && styles.typeTextActive]}>
-                {type.charAt(0).toUpperCase() + type.slice(1)}
-              </Text>
+          {/* Action Buttons for Camera / Gallery */}
+          <View style={styles.mediaRow}>
+            <TouchableOpacity style={styles.mediaBtn} onPress={takePhoto} activeOpacity={0.75}>
+              <Text style={styles.mediaBtnText}>📷 Take Photo</Text>
             </TouchableOpacity>
-          ))}
-        </View>
+            <TouchableOpacity style={styles.mediaBtn} onPress={pickImage} activeOpacity={0.75}>
+              <Text style={styles.mediaBtnText}>🖼️ Choose Gallery</Text>
+            </TouchableOpacity>
+          </View>
 
-        <TouchableOpacity style={styles.submitBtn} onPress={handleLogMeal} disabled={loading}>
-          {loading ? <ActivityIndicator color="#221803" /> : <Text style={styles.submitText}>Analyze & Log Meal</Text>}
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+          {/* Text Input for meal description */}
+          <Text style={styles.label}>Meal Description (Optional)</Text>
+          <TextInput
+            style={styles.textInput}
+            placeholder="e.g. 2 eggs, 1 slice toast with butter"
+            placeholderTextColor={colors.textSecondary || '#A79A85'}
+            value={rawInput}
+            onChangeText={setRawInput}
+          />
+
+          {/* Meal Type selector */}
+          <Text style={styles.label}>Meal Type</Text>
+          <View style={styles.typeRow}>
+            {['breakfast', 'lunch', 'snack', 'dinner'].map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={[styles.typeBtn, mealType === type && styles.typeBtnActive]}
+                onPress={() => setMealType(type)}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.typeText, mealType === type && styles.typeTextActive]}>
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Submit Action */}
+          <Button
+            title="Analyze & Log Meal"
+            onPress={handleLogMeal}
+            loading={loading}
+            fullWidth
+            size="lg"
+            style={styles.submitBtn}
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#181410',
+    backgroundColor: colors.background || '#181410',
   },
-  inner: {
+  keyboardAvoid: {
     flex: 1,
-    padding: 20,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#F4ECDD',
-    marginBottom: 20,
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: spacing.screenPadding || 16,
   },
   imageBox: {
-    height: 200,
-    backgroundColor: '#221D17',
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#3A3128',
+    height: 190,
+    backgroundColor: colors.surface || '#221D17',
+    borderRadius: radius.lg || 16,
+    borderWidth: 1.5,
+    borderColor: colors.border || '#3A3128',
     borderStyle: 'dashed',
     overflow: 'hidden',
     marginBottom: 16,
@@ -213,47 +243,50 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   placeholderIcon: {
-    fontSize: 40,
+    fontSize: 36,
     marginBottom: 8,
   },
   placeholderText: {
-    color: '#A79A85',
-    fontSize: 14,
+    color: colors.textSecondary || '#A79A85',
+    fontSize: typography?.sizes?.sm || 13,
   },
   mediaRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 20,
+    marginBottom: 18,
   },
   mediaBtn: {
     flex: 1,
-    backgroundColor: '#2C251D',
-    borderRadius: 8,
-    paddingVertical: 10,
+    minHeight: 48, // Guaranteed >= 48dp touch target
+    backgroundColor: colors.surfaceElevated || '#2C251D',
+    borderRadius: radius.md || 10,
+    justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#3A3128',
+    borderColor: colors.border || '#3A3128',
   },
   mediaBtnText: {
-    color: '#E8A020',
-    fontSize: 13,
+    color: colors.primary || '#E8A020',
+    fontSize: typography?.sizes?.sm || 13,
     fontWeight: '600',
   },
   label: {
-    fontSize: 14,
+    fontSize: typography?.sizes?.sm || 13,
     fontWeight: '600',
-    color: '#F4ECDD',
+    color: colors.textPrimary || '#F4ECDD',
     marginBottom: 8,
   },
   textInput: {
-    backgroundColor: '#2C251D',
-    borderRadius: 8,
+    backgroundColor: colors.surfaceElevated || '#2C251D',
+    borderRadius: radius.md || 10,
     borderWidth: 1,
-    borderColor: '#3A3128',
-    color: '#F4ECDD',
-    fontSize: 15,
-    padding: 12,
-    marginBottom: 20,
+    borderColor: colors.border || '#3A3128',
+    color: colors.textPrimary || '#F4ECDD',
+    fontSize: typography?.sizes?.base || 15,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    minHeight: 48, // Guaranteed >= 48dp touch target
+    marginBottom: 18,
   },
   typeRow: {
     flexDirection: 'row',
@@ -262,35 +295,27 @@ const styles = StyleSheet.create({
   },
   typeBtn: {
     flex: 1,
-    backgroundColor: '#2C251D',
-    borderRadius: 8,
+    minHeight: 48, // Upgraded to >= 48dp touch target
+    backgroundColor: colors.surfaceElevated || '#2C251D',
+    borderRadius: radius.md || 10,
     borderWidth: 1,
-    borderColor: '#3A3128',
-    paddingVertical: 10,
+    borderColor: colors.border || '#3A3128',
+    justifyContent: 'center',
     alignItems: 'center',
   },
   typeBtnActive: {
-    backgroundColor: '#E8A020',
-    borderColor: '#E8A020',
+    backgroundColor: colors.primary || '#E8A020',
+    borderColor: colors.primary || '#E8A020',
   },
   typeText: {
-    color: '#A79A85',
-    fontSize: 12,
+    color: colors.textSecondary || '#A79A85',
+    fontSize: typography?.sizes?.xs || 12,
     fontWeight: '600',
   },
   typeTextActive: {
-    color: '#221803',
+    color: colors.textOnPrimary || '#221803',
   },
   submitBtn: {
-    backgroundColor: '#E8A020',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 'auto',
-  },
-  submitText: {
-    color: '#221803',
-    fontSize: 16,
-    fontWeight: 'bold',
+    marginTop: 8,
   },
 });

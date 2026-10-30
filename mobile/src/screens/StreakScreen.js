@@ -6,15 +6,15 @@ import {
   ScrollView,
   RefreshControl,
   ActivityIndicator,
-  Platform,
-  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import { colors, typography } from '../theme';
+import { ScreenHeader } from '../components/ui';
 import { getAdherenceStats } from '../services/api';
 import AdherenceCard from '../components/AdherenceCard';
 
-export default function StreakScreen() {
+export default function StreakScreen({ navigation }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -40,9 +40,15 @@ export default function StreakScreen() {
 
   if (loading && !refreshing) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+        <ScreenHeader
+          title="🔥 Streak & Achievements"
+          onBack={() => (navigation?.canGoBack?.() ? navigation.goBack() : navigation.navigate('MainApp'))}
+          backTitle="Back"
+          backIcon="←"
+        />
         <View style={styles.loader}>
-          <ActivityIndicator size="large" color="#E8A020" />
+          <ActivityIndicator size="large" color={colors.primary || '#E8A020'} />
           <Text style={styles.loaderText}>Loading Streak Stats...</Text>
         </View>
       </SafeAreaView>
@@ -50,10 +56,13 @@ export default function StreakScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.topHeader}>
-        <Text style={styles.brandTitle}>🔥 Streak & Achievements</Text>
-      </View>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+      <ScreenHeader
+        title="🔥 Streak & Achievements"
+        onBack={() => (navigation?.canGoBack?.() ? navigation.goBack() : navigation.navigate('MainApp'))}
+        backTitle="Back"
+        backIcon="←"
+      />
 
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -64,7 +73,7 @@ export default function StreakScreen() {
               setRefreshing(true);
               loadStats();
             }}
-            tintColor="#E8A020"
+            tintColor={colors.primary || '#E8A020'}
           />
         }
       >
@@ -78,8 +87,7 @@ export default function StreakScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#181410',
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 8 : 0,
+    backgroundColor: colors.background || '#181410',
   },
   loader: {
     flex: 1,
@@ -87,21 +95,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loaderText: {
-    color: '#A79A85',
-    fontSize: 14,
+    color: colors.textSecondary || '#A79A85',
+    fontSize: typography?.sizes?.sm || 14,
     marginTop: 10,
-  },
-  topHeader: {
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    backgroundColor: '#221D17',
-    borderBottomWidth: 1,
-    borderBottomColor: '#3A3128',
-  },
-  brandTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#E8A020',
   },
   scroll: {
     padding: 16,

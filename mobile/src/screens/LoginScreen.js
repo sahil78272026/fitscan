@@ -51,7 +51,7 @@ export default function LoginScreen({ onLoginSuccess }) {
   const [googleIconFailed, setGoogleIconFailed] = useState(false);
   const isAuthInProgress = useRef(false);
 
-  const handleGoogleSuccess = async (idToken) => {
+  const handleGoogleSuccess = async (idToken, googleUser = null) => {
     if (isAuthInProgress.current) return;
     isAuthInProgress.current = true;
     setLoading(true);
@@ -62,15 +62,20 @@ export default function LoginScreen({ onLoginSuccess }) {
         const firebaseIdToken = await userCred.user.getIdToken();
         const res = await verifyFirebaseToken(
           firebaseIdToken,
-          userCred.user.email,
-          userCred.user.displayName,
-          userCred.user.photoURL
+          userCred.user.email || googleUser?.email,
+          userCred.user.displayName || googleUser?.name,
+          userCred.user.photoURL || googleUser?.photo
         );
         await AsyncStorage.setItem('fitscan_token', res.token);
         await AsyncStorage.setItem('fitscan_user', JSON.stringify(res.user));
         onLoginSuccess(res.user);
       } else {
-        const res = await verifyFirebaseToken(idToken);
+        const res = await verifyFirebaseToken(
+          idToken,
+          googleUser?.email,
+          googleUser?.name,
+          googleUser?.photo
+        );
         await AsyncStorage.setItem('fitscan_token', res.token);
         await AsyncStorage.setItem('fitscan_user', JSON.stringify(res.user));
         onLoginSuccess(res.user);
@@ -266,10 +271,11 @@ export default function LoginScreen({ onLoginSuccess }) {
         await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
         const response = await GoogleSignin.signIn();
         const idToken = response.data?.idToken || response.idToken;
+        const googleUser = response.data?.user || response.user;
         if (!idToken) {
           throw new Error('No ID token received from Google');
         }
-        await handleGoogleSuccess(idToken);
+        await handleGoogleSuccess(idToken, googleUser);
       }
     } catch (err) {
       console.warn('Google auth error:', err);

@@ -12,7 +12,8 @@
       "bundleIdentifier": "com.fitscan.wellness",
       "infoPlist": {
         "NSMotionUsageDescription": "CoreControl needs access to your motion data to count your daily steps.",
-        "NSCameraUsageDescription": "CoreControl needs camera access to scan your meals and track calories."
+        "NSCameraUsageDescription": "CoreControl needs camera access to scan your meals and track calories.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {

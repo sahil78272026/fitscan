@@ -24,7 +24,7 @@ export default function MorningBriefingCard({ briefingData, onDismiss, onLogBrea
           <div className={styles.sunIcon}>☀️</div>
           <div>
             <h2 className={styles.greetingText}>{greeting || "Good morning! ☀️"}</h2>
-            <p className={styles.subGreeting}>Yesterday's Recap & Today's Tips</p>
+            <p className={styles.subGreeting}>Yesterday&apos;s Recap &amp; Today&apos;s Tips</p>
           </div>
         </div>
 
@@ -58,7 +58,7 @@ export default function MorningBriefingCard({ briefingData, onDismiss, onLogBrea
         <div className={styles.improvementsSection}>
           <div className={styles.improvementsHeader}>
             <span className={styles.sparkle}>💡</span>
-            <span>Today's Improvements:</span>
+            <span>Today&apos;s Improvements:</span>
           </div>
           <ul className={styles.improvementsList}>
             {improvements.map((tip, idx) => (

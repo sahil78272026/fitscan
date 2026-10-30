@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,12 +10,15 @@ import {
   TextInput,
   ActivityIndicator,
   Platform,
-  StatusBar,
   Alert,
   Image,
   Modal,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, typography, spacing, radius, shadows } from '../theme';
+import { Card, Button, Badge } from '../components/ui';
+import MealDetailModal from '../components/MealDetailModal';
+import { estimateMealCost } from '../utils/mealCostEstimator';
 import {
   getDailySummary,
   getCalendarMonth,
@@ -45,7 +48,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useFocusEffect } from '@react-navigation/native';
 
+const MEAL_TYPE_ICONS = {
+  breakfast: '🍳',
+  lunch: '🥗',
+  snack: '☕',
+  dinner: '🍲',
+  Breakfast: '🍳',
+  Lunch: '🥗',
+  Snack: '☕',
+  Dinner: '🍲',
+};
+
 export default function HomeScreen({ navigation, user, onLogout }) {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(insets.top, Platform.OS === 'android' ? 12 : 0);
+
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -55,6 +72,10 @@ export default function HomeScreen({ navigation, user, onLogout }) {
   const [submitting, setSubmitting] = useState(false);
   const [newWeight, setNewWeight] = useState('');
   const [previewImage, setPreviewImage] = useState(null);
+
+  // Planned Meals State
+  const [loggingPlannedMeal, setLoggingPlannedMeal] = useState(null);
+  const [selectedPlannedMealModal, setSelectedPlannedMealModal] = useState(null);
 
   // Summary Tab & Health Connect State
   const [summaryTab, setSummaryTab] = useState('calories');
@@ -118,6 +139,67 @@ export default function HomeScreen({ navigation, user, onLogout }) {
   };
 
   const isToday = formatDateStr(selectedDate) === formatDateStr(new Date());
+
+  // Active Plan parsing for Planned Meals widget
+  const activePlan = useMemo(() => {
+    const raw = userSettings?.selected_meal_plan;
+    if (!raw) return null;
+    if (typeof raw === 'object') return Object.keys(raw).length > 0 ? raw : null;
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0 ? parsed : null;
+    } catch {
+      return null;
+    }
+  }, [userSettings]);
+
+  const isPlannedMealLogged = useCallback(
+    (plannedMeal) => {
+      if (!summary?.meals?.length || !plannedMeal) return false;
+      const pType = (plannedMeal.meal_type || '').toLowerCase().trim();
+      const pName = (plannedMeal.dish_name || '').toLowerCase().trim();
+      return summary.meals.some((logged) => {
+        const lType = (logged.meal_type || '').toLowerCase().trim();
+        const lRaw = (logged.raw_input || '').toLowerCase().trim();
+        return (pType && lType === pType) || (pName && (lRaw.includes(pName) || pName.includes(lRaw)));
+      });
+    },
+    [summary?.meals]
+  );
+
+  const getCurrentMealIndex = (meals = []) => {
+    const hour = new Date().getHours();
+    let currentType = 'dinner';
+    if (hour < 11) currentType = 'breakfast';
+    else if (hour < 16) currentType = 'lunch';
+    else if (hour < 19) currentType = 'snack';
+
+    const idx = meals.findIndex(
+      (m) => (m.meal_type || '').toLowerCase() === currentType
+    );
+    return idx >= 0 ? idx : 0;
+  };
+
+  const handleLogPlannedMeal = async (plannedMeal) => {
+    const mealTypeLower = (plannedMeal.meal_type || 'lunch').toLowerCase();
+    try {
+      setLoggingPlannedMeal(mealTypeLower);
+      const dateStr = formatDateStr(selectedDate);
+      await logMeal(plannedMeal.dish_name, mealTypeLower, dateStr);
+      await loadData();
+      Alert.alert(
+        'Logged to Today! 🎉',
+        `${plannedMeal.dish_name} (${plannedMeal.calories} kcal) added to your diary.`
+      );
+      if (selectedPlannedMealModal) {
+        setSelectedPlannedMealModal(null);
+      }
+    } catch (err) {
+      Alert.alert('Logging Failed', err.message || 'Failed to log planned meal.');
+    } finally {
+      setLoggingPlannedMeal(null);
+    }
+  };
 
   const fetchCalendar = useCallback(async (y, m) => {
     try {
@@ -357,9 +439,9 @@ export default function HomeScreen({ navigation, user, onLogout }) {
   });
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       {/* Top Header */}
-      <View style={[styles.topHeader, isScrolled && styles.topHeaderShadow]}>
+      <View style={[styles.topHeader, { paddingTop: topInset }, isScrolled && styles.topHeaderShadow]}>
         <View style={styles.logoRow}>
           <Text style={styles.logoIcon}>🏋️</Text>
           <Text style={styles.logoText}>CoreControl</Text>
@@ -381,8 +463,11 @@ export default function HomeScreen({ navigation, user, onLogout }) {
         >
           <TouchableOpacity
             style={styles.streakHeaderPill}
-            onPress={() => navigation.navigate('Progress')}
+            onPress={() => navigation.navigate('Streak')}
             activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel={`Streak: ${adherenceStats?.current_streak ?? 0} days. Tap to view streak and achievements.`}
           >
             <Text style={styles.streakHeaderIcon}>🔥</Text>
             <Text style={styles.streakHeaderText}>
@@ -393,6 +478,21 @@ export default function HomeScreen({ navigation, user, onLogout }) {
 
         <View style={styles.headerRight}>
           <Text style={styles.dateLabel}>{dateLabel}</Text>
+          <TouchableOpacity
+            style={styles.headerAvatarBtn}
+            onPress={() => navigation.navigate('Profile')}
+            activeOpacity={0.8}
+          >
+            {user?.avatar_url ? (
+              <Image source={{ uri: user.avatar_url }} style={styles.headerAvatarImg} />
+            ) : (
+              <View style={styles.headerAvatarPlaceholder}>
+                <Text style={styles.headerAvatarText}>
+                  {(user?.name || user?.email || 'U')[0].toUpperCase()}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -409,8 +509,10 @@ export default function HomeScreen({ navigation, user, onLogout }) {
         {/* Compact Streak Banner matching Web (stable, non-jerking) */}
         <TouchableOpacity
           style={styles.streakBanner}
-          onPress={() => navigation.navigate('Progress')}
+          onPress={() => navigation.navigate('Streak')}
           activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel={`Streak banner: ${adherenceStats?.current_streak ?? 0} day streak, ${Math.round(adherenceStats?.weekly_adherence_score ?? 0)}% weekly adherence. Tap to view details.`}
         >
           <Text style={styles.streakBannerText}>
             🔥 <Text style={styles.boldText}>{adherenceStats?.current_streak ?? 0}</Text> day streak
@@ -594,7 +696,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
               </Text>
             </View>
             <View style={styles.barBg}>
-              <View style={[styles.barFill, { width: `${Math.min(((summary?.total_protein || 0) / (summary?.protein_goal || 150)) * 100, 100)}%`, backgroundColor: '#7BA05B' }]} />
+              <View style={[styles.barFill, { width: `${Math.min(((summary?.total_protein || 0) / (summary?.protein_goal || 150)) * 100, 100)}%`, backgroundColor: colors.protein }]} />
             </View>
           </View>
 
@@ -607,7 +709,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
               </Text>
             </View>
             <View style={styles.barBg}>
-              <View style={[styles.barFill, { width: `${Math.min(((summary?.total_carbs || 0) / (summary?.carbs_goal || 200)) * 100, 100)}%`, backgroundColor: '#D9A441' }]} />
+              <View style={[styles.barFill, { width: `${Math.min(((summary?.total_carbs || 0) / (summary?.carbs_goal || 200)) * 100, 100)}%`, backgroundColor: colors.carbs }]} />
             </View>
           </View>
 
@@ -620,10 +722,106 @@ export default function HomeScreen({ navigation, user, onLogout }) {
               </Text>
             </View>
             <View style={styles.barBg}>
-              <View style={[styles.barFill, { width: `${Math.min(((summary?.total_fat || 0) / (summary?.fat_goal || 65)) * 100, 100)}%`, backgroundColor: '#C7502F' }]} />
+              <View style={[styles.barFill, { width: `${Math.min(((summary?.total_fat || 0) / (summary?.fat_goal || 65)) * 100, 100)}%`, backgroundColor: colors.fat }]} />
             </View>
           </View>
         </View>
+
+        {/* Today's Planned Meals Quick-Access Widget */}
+        {isToday && activePlan?.meals?.length > 0 && (
+          <View style={styles.plannedMealsContainer}>
+            <View style={styles.plannedHeaderRow}>
+              <View>
+                <Text style={styles.cardTitle}>Today's Planned Meals</Text>
+                <Text style={styles.plannedSubTitle}>
+                  {activePlan.title || 'AI Daily Schedule'}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Meals')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="View full meal plan schedule"
+              >
+                <Text style={styles.viewPlanLink}>View Plan →</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.plannedScrollRow}
+            >
+              {activePlan.meals.map((m, idx) => {
+                const typeLower = (m.meal_type || 'lunch').toLowerCase();
+                const icon = MEAL_TYPE_ICONS[m.meal_type] || MEAL_TYPE_ICONS[typeLower] || '🍱';
+                const logged = isPlannedMealLogged(m);
+                const isCurrentSlot = getCurrentMealIndex(activePlan.meals) === idx;
+                const isLoggingThis = loggingPlannedMeal === typeLower;
+                const costInfo = estimateMealCost(m, activePlan, userSettings);
+
+                return (
+                  <Card
+                    key={idx}
+                    variant={isCurrentSlot ? 'highlight' : 'default'}
+                    style={[
+                      styles.plannedMealCard,
+                      isCurrentSlot && { borderColor: colors.primary },
+                    ]}
+                    onPress={() => setSelectedPlannedMealModal(m)}
+                  >
+                    {/* Header */}
+                    <View style={styles.plannedCardHeader}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text style={styles.plannedTypeTag}>{icon} {m.meal_type}</Text>
+                        {isCurrentSlot && (
+                          <Badge variant="primary" size="sm" label="Next Up" />
+                        )}
+                      </View>
+                      <Text style={styles.plannedCals}>{m.calories} kcal</Text>
+                    </View>
+
+                    {/* Dish Title */}
+                    <Text style={styles.plannedDishName} numberOfLines={2}>
+                      {m.dish_name}
+                    </Text>
+
+                    {/* Macros & Cost Badges */}
+                    <View style={styles.plannedMacroRow}>
+                      <Text style={styles.plannedMacroText}>
+                        P: <Text style={{ color: colors.protein, fontWeight: '700' }}>{m.protein}g</Text> • C: {m.carbs}g
+                      </Text>
+                      <Badge variant="warning" size="sm" icon="💰" label={costInfo.formatted} />
+                    </View>
+
+                    {/* 1-Tap Action Button */}
+                    <View style={styles.plannedActionArea}>
+                      {logged ? (
+                        <Badge
+                          variant="success"
+                          icon="✓"
+                          label="Logged to Diary"
+                          size="md"
+                          style={{ width: '100%', justifyContent: 'center' }}
+                        />
+                      ) : (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          fullWidth
+                          title="Log to Today"
+                          icon="🍴"
+                          loading={isLoggingThis}
+                          onPress={() => handleLogPlannedMeal(m)}
+                        />
+                      )}
+                    </View>
+                  </Card>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Morning Welcome Feedback & Improvements Card */}
         {isToday && morningBriefing && !briefingDismissed && (
@@ -658,7 +856,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
             <TextInput
               style={styles.input}
               placeholder="e.g. 2 eggs, 1 toast with butter"
-              placeholderTextColor="#A79A85"
+              placeholderTextColor={colors.textSecondary || '#A79A85'}
               value={rawInput}
               onChangeText={setRawInput}
             />
@@ -670,6 +868,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
                   key={t}
                   style={[styles.typeBtn, mealType === t && styles.typeBtnActive]}
                   onPress={() => setMealType(t)}
+                  hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
                 >
                   <Text style={[styles.typeBtnText, mealType === t && styles.typeBtnTextActive]}>
                     {t.charAt(0).toUpperCase() + t.slice(1)}
@@ -679,12 +878,22 @@ export default function HomeScreen({ navigation, user, onLogout }) {
             </View>
 
             <View style={styles.actionBtnRow}>
-              <TouchableOpacity style={styles.submitBtn} onPress={handleLogMeal} disabled={submitting}>
-                {submitting ? <ActivityIndicator color="#221803" /> : <Text style={styles.submitBtnText}>Log Meal</Text>}
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.scanBtn} onPress={() => navigation.navigate('Scan', { mealDate: formatDateStr(selectedDate) })}>
-                <Text style={styles.scanBtnText}>📸 Scan Photo</Text>
-              </TouchableOpacity>
+              <Button
+                title="Log Meal"
+                onPress={handleLogMeal}
+                loading={submitting}
+                variant="primary"
+                size="md"
+                style={styles.submitBtn}
+              />
+              <Button
+                title="Scan Photo"
+                icon="📸"
+                onPress={() => navigation.navigate('Scan', { mealDate: formatDateStr(selectedDate) })}
+                variant="secondary"
+                size="md"
+                style={styles.scanBtn}
+              />
             </View>
           </View>
         )}
@@ -693,7 +902,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
         <View style={styles.card}>
           <View style={styles.mealsHeader}>
             <Text style={styles.cardTitle}>Logged Meals</Text>
-            <Text style={styles.mealCountBadge}>{summary?.meal_count || 0} meals</Text>
+            <Badge label={`${summary?.meal_count || 0} meals`} variant="neutral" size="sm" />
           </View>
 
           {summary?.meals?.length === 0 ? (
@@ -727,7 +936,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
                     <View style={styles.mealTextCol}>
                       <View style={styles.mealItemHeader}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Text style={styles.mealTypeBadge}>{m.meal_type.toUpperCase()}</Text>
+                          <Badge label={m.meal_type.toUpperCase()} variant="primary" size="sm" />
                           {mealTimeStr ? <Text style={styles.mealTimeText}>• {mealTimeStr}</Text> : null}
                         </View>
                         <Text style={styles.mealCals}>{m.total_calories} kcal</Text>
@@ -739,7 +948,13 @@ export default function HomeScreen({ navigation, user, onLogout }) {
                     </View>
                   </View>
                   {isToday && (
-                    <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteMeal(m.id)}>
+                    <TouchableOpacity
+                      style={styles.deleteBtn}
+                      onPress={() => handleDeleteMeal(m.id)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Delete ${m.raw_input}`}
+                    >
                       <Text style={styles.deleteText}>🗑️ Delete</Text>
                     </TouchableOpacity>
                   )}
@@ -794,6 +1009,17 @@ export default function HomeScreen({ navigation, user, onLogout }) {
         }}
       />
 
+      {/* Shared Meal Detail Modal */}
+      <MealDetailModal
+        visible={Boolean(selectedPlannedMealModal)}
+        meal={selectedPlannedMealModal}
+        selectedPlan={activePlan}
+        userSettings={userSettings}
+        isAlreadyLogged={isPlannedMealLogged(selectedPlannedMealModal)}
+        isLogging={loggingPlannedMeal === (selectedPlannedMealModal?.meal_type || '').toLowerCase()}
+        onLogMeal={handleLogPlannedMeal}
+        onClose={() => setSelectedPlannedMealModal(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -801,8 +1027,73 @@ export default function HomeScreen({ navigation, user, onLogout }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#181410',
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 8 : 0,
+    backgroundColor: colors.background || '#181410',
+  },
+  plannedMealsContainer: {
+    marginBottom: spacing.cardPadding || 16,
+  },
+  plannedHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.cardPadding || 16,
+    marginBottom: spacing.sm || 8,
+  },
+  plannedSubTitle: {
+    fontSize: typography?.sizes?.xs || 11,
+    color: colors.textSecondary || '#A79A85',
+    marginTop: 2,
+  },
+  viewPlanLink: {
+    color: colors.primary || '#E8A020',
+    fontSize: typography?.sizes?.sm || 13,
+    fontWeight: '700',
+  },
+  plannedScrollRow: {
+    paddingHorizontal: spacing.cardPadding || 16,
+    gap: spacing.sm || 8,
+  },
+  plannedMealCard: {
+    width: 250,
+    minHeight: 170,
+    justifyContent: 'space-between',
+  },
+  plannedCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  plannedTypeTag: {
+    fontSize: typography?.sizes?.xs || 11,
+    fontWeight: '700',
+    color: colors.primary || '#E8A020',
+  },
+  plannedCals: {
+    fontSize: typography?.sizes?.xs || 11,
+    fontWeight: '700',
+    color: colors.textPrimary || '#F4ECDD',
+  },
+  plannedDishName: {
+    fontSize: typography?.sizes?.sm || 13,
+    fontWeight: '700',
+    color: colors.textPrimary || '#F4ECDD',
+    marginBottom: 6,
+    minHeight: 38,
+  },
+  plannedMacroRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  plannedMacroText: {
+    fontSize: typography?.sizes?.xs || 11,
+    color: colors.textSecondary || '#A79A85',
+  },
+  plannedActionArea: {
+    minHeight: 38,
+    justifyContent: 'center',
   },
   topHeader: {
     flexDirection: 'row',
@@ -843,8 +1134,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   headerRight: {
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerAvatarBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#3A3128',
+    overflow: 'hidden',
+  },
+  headerAvatarImg: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+  },
+  headerAvatarPlaceholder: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#2C251D',
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerAvatarText: {
+    color: '#E8A020',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   streakHeaderPill: {
     flexDirection: 'row',

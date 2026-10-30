@@ -9,11 +9,12 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-  StatusBar,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import { colors, typography, spacing, radius, shadows } from '../theme';
+import { ScreenHeader, Card, Button } from '../components/ui';
 import { getWeightHistory, logWeight, deleteWeightLog, getSettings, getAdherenceStats } from '../services/api';
 import WeightTrendChart from '../components/WeightTrendChart';
 import AdherenceCard from '../components/AdherenceCard';
@@ -100,9 +101,9 @@ export default function ProgressScreen() {
 
   if (loading && !refreshing) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
         <View style={styles.loader}>
-          <ActivityIndicator size="large" color="#E8A020" />
+          <ActivityIndicator size="large" color={colors.primary || '#E8A020'} />
           <Text style={styles.loaderText}>Loading Progress...</Text>
         </View>
       </SafeAreaView>
@@ -129,10 +130,11 @@ export default function ProgressScreen() {
       : history?.net_change_kg;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.topHeader}>
-        <Text style={styles.brandTitle}>Progress & Adherence</Text>
-      </View>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+      <ScreenHeader
+        title="Progress & Adherence"
+        subtitle="Weight Trend & Habit Analytics"
+      />
 
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -143,7 +145,7 @@ export default function ProgressScreen() {
               setRefreshing(true);
               loadData(timeframe);
             }}
-            tintColor="#E8A020"
+            tintColor={colors.primary || '#E8A020'}
           />
         }
       >
@@ -154,7 +156,7 @@ export default function ProgressScreen() {
         <Text style={styles.sectionTitle}>Weight Trend & Targets</Text>
 
         {/* Weight Hero & Change Stats Box */}
-        <View style={styles.heroCard}>
+        <Card variant="default" style={styles.heroCard}>
           <Text style={styles.heroLabel}>CURRENT WEIGHT</Text>
           <View style={styles.weightDisplayRow}>
             <Text style={styles.weightVal}>{currentWeight}</Text>
@@ -189,7 +191,7 @@ export default function ProgressScreen() {
               </Text>
             </View>
           </View>
-        </View>
+        </Card>
 
         {/* Visual Weight Trend Bar Chart */}
         <WeightTrendChart
@@ -200,12 +202,12 @@ export default function ProgressScreen() {
 
         {/* Quick Log Weight Form */}
         <Text style={styles.sectionTitle}>Log Weight Entry</Text>
-        <View style={styles.card}>
+        <Card variant="default" style={styles.card}>
           <View style={styles.weightRow}>
             <TextInput
               style={[styles.input, { flex: 1, marginBottom: 0 }]}
               placeholder="Enter weight in kg (e.g. 74.5)"
-              placeholderTextColor="#A79A85"
+              placeholderTextColor={colors.textSecondary || '#A79A85'}
               keyboardType="decimal-pad"
               value={weightInput}
               onChangeText={(t) => {
@@ -213,22 +215,23 @@ export default function ProgressScreen() {
                 if (weightError) setWeightError('');
               }}
             />
-            <TouchableOpacity style={styles.saveBtn} onPress={handleSaveWeight} disabled={submitting}>
-              {submitting ? (
-                <ActivityIndicator color="#221803" />
-              ) : (
-                <Text style={styles.saveBtnText}>Save</Text>
-              )}
-            </TouchableOpacity>
+            <Button
+              title="Save"
+              onPress={handleSaveWeight}
+              loading={submitting}
+              variant="primary"
+              size="md"
+              style={styles.saveBtn}
+            />
           </View>
           {weightError ? (
-            <Text style={{ color: '#f85149', fontSize: 12, marginTop: 6 }}>{weightError}</Text>
+            <Text style={{ color: colors.dangerText || '#E57453', fontSize: 12, marginTop: 6 }}>{weightError}</Text>
           ) : null}
-        </View>
+        </Card>
 
         {/* Weight Log History List */}
         <Text style={styles.sectionTitle}>History (Past {timeframe} Days)</Text>
-        <View style={styles.card}>
+        <Card variant="default" style={styles.card}>
           {logs.length === 0 ? (
             <Text style={styles.emptyText}>No weight entries logged for this timeframe.</Text>
           ) : (
@@ -242,18 +245,18 @@ export default function ProgressScreen() {
                   </View>
                   <View style={styles.historyRight}>
                     <Text style={styles.historyVal}>{item.weight_kg} kg</Text>
-                    <TouchableOpacity
-                      style={styles.deleteBtn}
+                    <Button
+                      title="Delete"
                       onPress={() => handleDeleteEntry(item.id)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.deleteText}>Delete</Text>
-                    </TouchableOpacity>
+                      variant="ghost"
+                      size="sm"
+                      textStyle={{ color: colors.dangerText || '#E57453', fontSize: 13 }}
+                    />
                   </View>
                 </View>
               ))
           )}
-        </View>
+        </Card>
       </ScrollView>
     </SafeAreaView>
   );
@@ -262,8 +265,7 @@ export default function ProgressScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#181410',
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 8 : 0,
+    backgroundColor: colors.background || '#181410',
   },
   loader: {
     flex: 1,

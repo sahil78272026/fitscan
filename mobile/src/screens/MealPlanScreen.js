@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,15 +6,22 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Platform,
-  StatusBar,
   Share,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getSettings } from '../services/api';
+import { useFocusEffect } from '@react-navigation/native';
+import { colors, typography, radius, spacing } from '../theme';
+import { Card, Badge, Button, ScreenHeader } from '../components/ui';
+import MealDetailModal from '../components/MealDetailModal';
+import { getSettings, getDailySummary, logMeal } from '../services/api';
+import { estimateMealCost } from '../utils/mealCostEstimator';
 
 const MEAL_TYPE_ICONS = {
+  breakfast: '🍳',
+  lunch: '🥗',
+  snack: '☕',
+  dinner: '🍲',
   Breakfast: '🍳',
   Lunch: '🥗',
   Snack: '☕',
@@ -23,24 +30,100 @@ const MEAL_TYPE_ICONS = {
 
 export default function MealPlanScreen({ navigation }) {
   const [userSettings, setUserSettings] = useState(null);
+  const [todayMeals, setTodayMeals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loggingMealType, setLoggingMealType] = useState(null);
+  const [activeMeal, setActiveMeal] = useState(null);
 
-  useEffect(() => {
-    async function fetchPlan() {
-      try {
-        setLoading(true);
-        const settings = await getSettings();
-        setUserSettings(settings);
-      } catch (err) {
-        console.warn('Error fetching meal plan:', err);
-      } finally {
-        setLoading(false);
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [settings, summary] = await Promise.all([
+        getSettings().catch(() => null),
+        getDailySummary(todayStr).catch(() => null),
+      ]);
+      setUserSettings(settings);
+      if (summary && Array.isArray(summary.meals)) {
+        setTodayMeals(summary.meals);
       }
+    } catch (err) {
+      console.warn('Error fetching meal plan:', err);
+    } finally {
+      setLoading(false);
     }
-    fetchPlan();
-  }, []);
+  }, [todayStr]);
 
-  const selectedPlan = userSettings?.selected_meal_plan;
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
+
+  // Safely parse selected_meal_plan (handles JSON string or dict)
+  const selectedPlan = useMemo(() => {
+    const raw = userSettings?.selected_meal_plan;
+    if (!raw) return null;
+    if (typeof raw === 'object') return Object.keys(raw).length > 0 ? raw : null;
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0 ? parsed : null;
+    } catch {
+      return null;
+    }
+  }, [userSettings]);
+
+  // Set of logged meal types / dishes today for quick check
+  const loggedMealsSet = useMemo(() => {
+    const set = new Set();
+    todayMeals.forEach((m) => {
+      if (m.meal_type) set.add(m.meal_type.toLowerCase().trim());
+      if (m.raw_input) set.add(m.raw_input.toLowerCase().trim());
+    });
+    return set;
+  }, [todayMeals]);
+
+  const isMealLoggedToday = useCallback(
+    (meal) => {
+      if (!meal) return false;
+      const typeKey = (meal.meal_type || '').toLowerCase().trim();
+      const dishKey = (meal.dish_name || '').toLowerCase().trim();
+      if (typeKey && loggedMealsSet.has(typeKey)) return true;
+      for (const logged of loggedMealsSet) {
+        if (dishKey && (dishKey.includes(logged) || logged.includes(dishKey))) return true;
+      }
+      return false;
+    },
+    [loggedMealsSet]
+  );
+
+  // 1-Tap Log Meal Action
+  const handleLogMeal = async (meal) => {
+    const mealTypeLower = (meal.meal_type || 'lunch').toLowerCase();
+    try {
+      setLoggingMealType(mealTypeLower);
+      await logMeal(meal.dish_name, mealTypeLower, todayStr);
+
+      // Refresh today's summary so diary and badges update
+      const updatedSummary = await getDailySummary(todayStr).catch(() => null);
+      if (updatedSummary && Array.isArray(updatedSummary.meals)) {
+        setTodayMeals(updatedSummary.meals);
+      }
+
+      Alert.alert(
+        'Meal Logged! 🎉',
+        `${meal.dish_name} (${meal.calories} kcal) has been logged to today's diary.`
+      );
+      if (activeMeal) {
+        setActiveMeal(null);
+      }
+    } catch (err) {
+      Alert.alert('Logging Failed', err.message || 'Unable to log meal to diary.');
+    } finally {
+      setLoggingMealType(null);
+    }
+  };
 
   const handleDownloadMealPlan = async () => {
     if (!selectedPlan) {
@@ -58,11 +141,15 @@ export default function MealPlanScreen({ navigation }) {
     let content = `CORECONTROL - DAILY MEAL PLAN\n`;
     content += `Plan: ${selectedPlan.title || 'AI Meal Plan'}\n`;
     content += `Goal: ${goal} | Diet: ${diet}\n`;
-    content += `Daily Targets: ${calories} kcal | ${protein}g Protein | ${carbs}g Carbs | ${fat}g Fat\n\n`;
-    content += `--- MEAL SCHEDULE ---\n\n`;
+    content += `Daily Targets: ${calories} kcal | ${protein}g Protein | ${carbs}g Carbs | ${fat}g Fat\n`;
+    if (selectedPlan.estimated_cost) {
+      content += `Daily Budget: ${selectedPlan.estimated_cost}\n`;
+    }
+    content += `\n--- MEAL SCHEDULE & COST BREAKDOWN ---\n\n`;
 
     (selectedPlan.meals || []).forEach((m, idx) => {
-      content += `${idx + 1}. [${m.meal_type.toUpperCase()}] ${m.dish_name} (${m.calories} kcal)\n`;
+      const costInfo = estimateMealCost(m, selectedPlan, userSettings);
+      content += `${idx + 1}. [${m.meal_type.toUpperCase()}] ${m.dish_name} (${m.calories} kcal • ${costInfo.formatted})\n`;
       content += `   Macros: ${m.protein}g P | ${m.carbs}g C | ${m.fat}g F\n`;
       if (m.ingredients && m.ingredients.length > 0) {
         content += `   Ingredients:\n`;
@@ -75,11 +162,11 @@ export default function MealPlanScreen({ navigation }) {
       content += `\n`;
     });
 
-    content += `Generated with CoreControl • www.corecontrol.fit\n`;
+    content += `Generated with FitScan • AI Nutrition Coach\n`;
 
     try {
       await Share.share({
-        title: `CoreControl Meal Plan - ${selectedPlan.title || 'Daily Plan'}`,
+        title: `FitScan Meal Plan - ${selectedPlan.title || 'Daily Plan'}`,
         message: content,
       });
     } catch (error) {
@@ -89,148 +176,291 @@ export default function MealPlanScreen({ navigation }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
         <View style={styles.loader}>
-          <ActivityIndicator size="large" color="#E8A020" />
+          <ActivityIndicator size="large" color={colors.primary || '#E8A020'} />
           <Text style={styles.loaderText}>Loading Meal Plan...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Top Header matching Web */}
-      <View style={styles.topHeader}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backBtnText}>← Tracker</Text>
-        </TouchableOpacity>
-        <Text style={styles.pageTitle}>Meal Plan Details</Text>
-        <TouchableOpacity style={styles.headerDownloadBtn} onPress={handleDownloadMealPlan}>
-          <Text style={styles.headerDownloadBtnText}>📥 Download</Text>
-        </TouchableOpacity>
-      </View>
+  const downloadAction = (
+    <TouchableOpacity
+      style={styles.headerDownloadBtn}
+      onPress={handleDownloadMealPlan}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      accessibilityRole="button"
+      accessibilityLabel="Download Meal Plan"
+    >
+      <Text style={styles.headerDownloadBtnText}>📥 Share</Text>
+    </TouchableOpacity>
+  );
 
-      <ScrollView contentContainerStyle={styles.scroll}>
+  return (
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+      {/* Normalized Header without Android double status bar padding */}
+      <ScreenHeader
+        title="Meal Plan Details"
+        subtitle="Daily schedule & recipes"
+        onBack={() => navigation.navigate('Today')}
+        backTitle="Tracker"
+        backIcon="←"
+        rightAction={downloadAction}
+      />
+
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {!selectedPlan ? (
-          <View style={styles.emptyCard}>
+          <Card variant="default" style={styles.emptyCard}>
             <Text style={styles.emptyIcon}>📋</Text>
             <Text style={styles.emptyTitle}>No Active Meal Plan Selected</Text>
             <Text style={styles.emptySubtext}>
-              Go to Profile to set your metrics and select an AI-generated daily meal plan schedule.
+              Set your target metrics in Profile and choose an AI-generated daily meal schedule with cost breakdowns.
             </Text>
-            <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.navigate('Profile')}>
-              <Text style={styles.primaryBtnText}>Go to Profile & Select Plan</Text>
-            </TouchableOpacity>
-          </View>
+            <Button
+              variant="primary"
+              size="md"
+              title="Go to Profile & Select Plan"
+              onPress={() => navigation.navigate('Profile')}
+              fullWidth
+            />
+          </Card>
         ) : (
           <>
             {/* Active Plan Hero Card */}
-            <View style={styles.heroCard}>
+            <Card variant="highlight" style={styles.heroCard}>
               <View style={styles.badgeRow}>
-                <View style={styles.badge}><Text style={styles.badgeText}>✨ Active Plan</Text></View>
+                <Badge variant="primary" label="✨ Active Plan" size="sm" />
                 {userSettings?.can_change_plan === false && (
-                  <View style={[styles.badge, { backgroundColor: 'rgba(234, 88, 12, 0.15)', borderColor: 'rgba(234, 88, 12, 0.35)' }]}>
-                    <Text style={[styles.badgeText, { color: '#fb923c' }]}>
-                      ⏳ Next change in {userSettings.hours_until_next_plan_change || 1}h
-                    </Text>
-                  </View>
+                  <Badge
+                    variant="warning"
+                    label={`⏳ Change in ${userSettings.hours_until_next_plan_change || 1}h`}
+                    size="sm"
+                  />
                 )}
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{(userSettings?.goal_type || 'fat_loss').replace('_', ' ').toUpperCase()}</Text>
-                </View>
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{(userSettings?.diet_type || 'veg').toUpperCase()}</Text>
-                </View>
+                <Badge
+                  variant="neutral"
+                  label={(userSettings?.goal_type || 'fat_loss').replace('_', ' ').toUpperCase()}
+                  size="sm"
+                />
+                <Badge
+                  variant="neutral"
+                  label={(userSettings?.diet_type || 'veg').toUpperCase()}
+                  size="sm"
+                />
                 {selectedPlan.estimated_cost && (
-                  <View style={[styles.badge, styles.costBadge]}>
-                    <Text style={styles.costBadgeText}>💰 {selectedPlan.estimated_cost}</Text>
-                  </View>
+                  <Badge
+                    variant="warning"
+                    icon="💰"
+                    label={selectedPlan.estimated_cost}
+                    size="sm"
+                  />
                 )}
               </View>
 
               <Text style={styles.planTitle}>{selectedPlan.title || 'Personalized AI Meal Plan'}</Text>
-              <Text style={styles.planTagline}>{selectedPlan.tagline || 'Tailored specifically to hit your daily macro targets.'}</Text>
+              <Text style={styles.planTagline}>
+                {selectedPlan.tagline || 'Tailored specifically to hit your daily macro targets.'}
+              </Text>
 
               {/* Macro Distribution Cards Grid */}
               <View style={styles.macroGrid}>
                 <View style={styles.macroCard}>
                   <Text style={styles.macroLabel}>Calories</Text>
-                  <Text style={[styles.macroVal, { color: '#E8A020' }]}>
+                  <Text style={[styles.macroVal, { color: colors.primary }]}>
                     {selectedPlan.daily_calories || userSettings?.calorie_goal} kcal
                   </Text>
                 </View>
                 <View style={styles.macroCard}>
                   <Text style={styles.macroLabel}>Protein</Text>
-                  <Text style={[styles.macroVal, { color: '#7BA05B' }]}>
+                  <Text style={[styles.macroVal, { color: colors.protein }]}>
                     {selectedPlan.protein_g || userSettings?.protein_goal}g
                   </Text>
                 </View>
                 <View style={styles.macroCard}>
                   <Text style={styles.macroLabel}>Carbs</Text>
-                  <Text style={[styles.macroVal, { color: '#D9A441' }]}>
+                  <Text style={[styles.macroVal, { color: colors.carbs }]}>
                     {selectedPlan.carbs_g || userSettings?.carbs_goal}g
                   </Text>
                 </View>
                 <View style={styles.macroCard}>
                   <Text style={styles.macroLabel}>Fat</Text>
-                  <Text style={[styles.macroVal, { color: '#C7502F' }]}>
+                  <Text style={[styles.macroVal, { color: colors.fatText }]}>
                     {selectedPlan.fat_g || userSettings?.fat_goal}g
                   </Text>
                 </View>
               </View>
-            </View>
+            </Card>
 
-            {/* Daily 4-Meal Schedule Section */}
-            <Text style={styles.sectionTitle}>Daily Meal Schedule & Recipes</Text>
+            {/* Daily Meal Schedule Section */}
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>Daily Meal Schedule & Recipes</Text>
+              <Text style={styles.sectionSub}>Tap meal card for recipe & cost breakdown</Text>
+            </View>
 
             {selectedPlan.meals && selectedPlan.meals.length > 0 ? (
               selectedPlan.meals.map((m, idx) => {
-                const icon = MEAL_TYPE_ICONS[m.meal_type] || '🍱';
+                const typeLower = (m.meal_type || 'lunch').toLowerCase();
+                const icon = MEAL_TYPE_ICONS[m.meal_type] || MEAL_TYPE_ICONS[typeLower] || '🍱';
+                const costInfo = estimateMealCost(m, selectedPlan, userSettings);
+                const logged = isMealLoggedToday(m);
+                const isLoggingThis = loggingMealType === typeLower;
+
+                // Proportional macro bar for card
+                const pCal = (m.protein || 0) * 4;
+                const cCal = (m.carbs || 0) * 4;
+                const fCal = (m.fat || 0) * 9;
+                const totalCal = pCal + cCal + fCal || m.calories || 1;
+                const pPct = Math.round((pCal / totalCal) * 100);
+                const cPct = Math.round((cCal / totalCal) * 100);
+                const fPct = Math.max(0, 100 - pPct - cPct);
+
                 return (
-                  <View key={idx} style={styles.mealCard}>
-                    <View style={styles.mealCardHeader}>
-                      <Text style={styles.mealTypeTag}>{icon} {m.meal_type}</Text>
-                      <Text style={styles.mealCalsPill}>{m.calories} kcal</Text>
+                  <Card
+                    key={idx}
+                    variant="default"
+                    onPress={() => setActiveMeal(m)}
+                    style={styles.interactiveMealCard}
+                    accessibilityLabel={`View recipe for ${m.dish_name}`}
+                    accessibilityHint="Opens meal details, cost breakdown, ingredients checklist, and 1-tap logging"
+                  >
+                    {/* Meal Card Top Header */}
+                    <View style={styles.mealCardTopRow}>
+                      <View style={styles.mealTypeCluster}>
+                        <Badge
+                          variant="primary"
+                          icon={icon}
+                          label={m.meal_type}
+                          size="sm"
+                        />
+                        {logged && (
+                          <Badge
+                            variant="success"
+                            icon="✓"
+                            label="Logged Today"
+                            size="sm"
+                          />
+                        )}
+                      </View>
+
+                      <View style={styles.costAndCalCluster}>
+                        <Badge
+                          variant="warning"
+                          icon="💰"
+                          label={costInfo.formatted}
+                          size="sm"
+                        />
+                        <Badge
+                          variant="neutral"
+                          label={`${m.calories} kcal`}
+                          size="sm"
+                        />
+                      </View>
                     </View>
 
+                    {/* Dish Name */}
                     <Text style={styles.dishName}>{m.dish_name}</Text>
-                    {m.ingredients && m.ingredients.length > 0 ? (
-                      <View style={{ marginVertical: 6, gap: 3 }}>
-                        {m.ingredients.map((ing, ingIdx) => (
-                          <Text key={ingIdx} style={styles.dishDesc}>• {ing}</Text>
-                        ))}
-                      </View>
-                    ) : m.description ? (
-                      <Text style={styles.dishDesc}>{m.description}</Text>
+
+                    {/* Description or Ingredients Preview */}
+                    {m.description ? (
+                      <Text style={styles.dishDesc} numberOfLines={2}>
+                        {m.description}
+                      </Text>
+                    ) : m.ingredients && m.ingredients.length > 0 ? (
+                      <Text style={styles.dishDesc} numberOfLines={2}>
+                        • {m.ingredients.slice(0, 2).join('\n• ')}
+                        {m.ingredients.length > 2 ? ` (+${m.ingredients.length - 2} more)` : ''}
+                      </Text>
                     ) : null}
 
-                    <View style={styles.macroSubRow}>
-                      <Text style={styles.macroSubItem}>Protein: <Text style={{ color: '#F4ECDD', fontWeight: 'bold' }}>{m.protein}g</Text></Text>
-                      <Text style={styles.macroSubItem}>Carbs: <Text style={{ color: '#F4ECDD', fontWeight: 'bold' }}>{m.carbs}g</Text></Text>
-                      <Text style={styles.macroSubItem}>Fat: <Text style={{ color: '#F4ECDD', fontWeight: 'bold' }}>{m.fat}g</Text></Text>
+                    {/* Proportional Macro Distribution Bar */}
+                    <View style={styles.cardMacroBar}>
+                      <View style={[styles.macroBarSeg, { width: `${pPct}%`, backgroundColor: colors.protein }]} />
+                      <View style={[styles.macroBarSeg, { width: `${cPct}%`, backgroundColor: colors.carbs }]} />
+                      <View style={[styles.macroBarSeg, { width: `${fPct}%`, backgroundColor: colors.fat }]} />
                     </View>
-                  </View>
+
+                    {/* Macro Tags Row */}
+                    <View style={styles.macroPillsRow}>
+                      <Badge variant="protein" label={`P: ${m.protein}g`} size="sm" />
+                      <Badge variant="carbs" label={`C: ${m.carbs}g`} size="sm" />
+                      <Badge variant="fat" label={`F: ${m.fat}g`} size="sm" />
+
+                      <View style={styles.viewRecipeAffordance}>
+                        <Text style={styles.viewRecipeText}>Recipe & Prep ›</Text>
+                      </View>
+                    </View>
+
+                    {/* 1-Tap Action Row */}
+                    <View style={styles.cardActionRow}>
+                      {logged ? (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          title="✓ Logged to Today"
+                          icon="✓"
+                          disabled={true}
+                          style={{ flex: 1 }}
+                        />
+                      ) : (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          title="Mark as Eaten"
+                          icon="🍴"
+                          loading={isLoggingThis}
+                          onPress={() => handleLogMeal(m)}
+                          style={{ flex: 1 }}
+                        />
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title="Details →"
+                        onPress={() => setActiveMeal(m)}
+                      />
+                    </View>
+                  </Card>
                 );
               })
             ) : (
               <Text style={styles.emptySubtext}>No meal items listed in this plan.</Text>
             )}
 
-            <View style={{ gap: 10, marginTop: 12 }}>
-              <TouchableOpacity style={styles.downloadActionBtn} onPress={handleDownloadMealPlan}>
-                <Text style={styles.downloadActionBtnText}>📥 Download / Share Meal Plan</Text>
-              </TouchableOpacity>
+            {/* Bottom Actions */}
+            <View style={styles.bottomActions}>
+              <Button
+                variant="secondary"
+                size="md"
+                icon="📥"
+                title="Download / Share Full Meal Plan"
+                onPress={handleDownloadMealPlan}
+                fullWidth
+              />
 
-              <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.navigate('Profile')}>
-                <Text style={styles.primaryBtnText}>
-                  Change Meal Plan in Profile
-                </Text>
-              </TouchableOpacity>
+              <Button
+                variant="outline"
+                size="md"
+                title="Change Meal Plan in Profile"
+                onPress={() => navigation.navigate('Profile')}
+                fullWidth
+              />
             </View>
           </>
         )}
       </ScrollView>
+
+      {/* Rich Meal Detail Modal */}
+      <MealDetailModal
+        visible={Boolean(activeMeal)}
+        meal={activeMeal}
+        selectedPlan={selectedPlan}
+        userSettings={userSettings}
+        isAlreadyLogged={isMealLoggedToday(activeMeal)}
+        isLogging={loggingMealType === (activeMeal?.meal_type || '').toLowerCase()}
+        onLogMeal={handleLogMeal}
+        onClose={() => setActiveMeal(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -238,8 +468,7 @@ export default function MealPlanScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#181410',
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 8 : 0,
+    backgroundColor: colors.background || '#181410',
   },
   loader: {
     flex: 1,
@@ -247,76 +476,51 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loaderText: {
-    color: '#A79A85',
-    fontSize: 14,
+    color: colors.textSecondary || '#A79A85',
+    fontSize: typography?.sizes?.sm || 13,
     marginTop: 10,
   },
-  topHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  headerDownloadBtn: {
+    minHeight: 48,
+    minWidth: 48,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#221D17',
-    borderBottomWidth: 1,
-    borderBottomColor: '#3A3128',
+    paddingHorizontal: 8,
   },
-  backBtn: {
-    padding: 6,
-  },
-  backBtnText: {
-    color: '#E8A020',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  pageTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#F4ECDD',
-  },
-  profileBtn: {
-    padding: 6,
-  },
-  profileBtnText: {
-    color: '#A79A85',
-    fontSize: 13,
-    fontWeight: '600',
+  headerDownloadBtnText: {
+    color: colors.primary || '#E8A020',
+    fontSize: typography?.sizes?.sm || 13,
+    fontWeight: '700',
   },
   scroll: {
-    padding: 16,
+    padding: spacing.screenPadding || 16,
+    paddingBottom: 36,
   },
   emptyCard: {
-    backgroundColor: '#221D17',
-    borderRadius: 16,
-    padding: 24,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#3A3128',
-    marginTop: 40,
+    padding: 24,
+    marginTop: 30,
   },
   emptyIcon: {
     fontSize: 48,
     marginBottom: 12,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#F4ECDD',
+    fontSize: typography?.sizes?.lg || 20,
+    fontWeight: '700',
+    color: colors.textPrimary || '#F4ECDD',
     marginBottom: 8,
   },
   emptySubtext: {
-    fontSize: 13,
-    color: '#A79A85',
+    fontSize: typography?.sizes?.sm || 13,
+    color: colors.textSecondary || '#A79A85',
     textAlign: 'center',
     marginBottom: 20,
+    lineHeight: 18,
   },
   heroCard: {
-    backgroundColor: '#221D17',
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#E8A020',
+    padding: spacing.cardPadding || 16,
+    marginBottom: spacing.sectionGap || 20,
   },
   badgeRow: {
     flexDirection: 'row',
@@ -324,65 +528,17 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 12,
   },
-  badge: {
-    backgroundColor: '#2C251D',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  badgeText: {
-    color: '#E8A020',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  proPlanBadge: {
-    backgroundColor: 'rgba(232, 160, 32, 0.15)',
-    borderWidth: 1,
-    borderColor: '#E8A020',
-  },
-  proPlanBadgeText: {
-    color: '#E8A020',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  rotationBadgeReady: {
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.4)',
-  },
-  rotationBadgeReadyText: {
-    color: '#4ADE80',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  rotationBadgeCooldown: {
-    backgroundColor: 'rgba(234, 88, 12, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(234, 88, 12, 0.35)',
-  },
-  rotationBadgeCooldownText: {
-    color: '#FB923C',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  costBadge: {
-    backgroundColor: '#E8A020',
-  },
-  costBadgeText: {
-    color: '#221803',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
   planTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#F4ECDD',
-    marginBottom: 6,
+    fontSize: typography?.sizes?.lg || 20,
+    fontWeight: '700',
+    color: colors.textPrimary || '#F4ECDD',
+    marginBottom: 4,
   },
   planTagline: {
-    fontSize: 13,
-    color: '#A79A85',
+    fontSize: typography?.sizes?.sm || 13,
+    color: colors.textSecondary || '#A79A85',
     marginBottom: 16,
+    lineHeight: 18,
   },
   macroGrid: {
     flexDirection: 'row',
@@ -390,127 +546,104 @@ const styles = StyleSheet.create({
   },
   macroCard: {
     flex: 1,
-    backgroundColor: '#181410',
-    borderRadius: 8,
+    backgroundColor: colors.background || '#181410',
+    borderRadius: radius.md || 10,
     padding: 10,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#3A3128',
+    borderColor: colors.borderSubtle || '#2D261F',
   },
   macroLabel: {
-    fontSize: 10,
-    color: '#A79A85',
+    fontSize: typography?.sizes?.xs || 11,
+    color: colors.textSecondary || '#A79A85',
     marginBottom: 4,
+    fontWeight: '600',
   },
   macroVal: {
-    fontSize: 13,
-    fontWeight: 'bold',
+    fontSize: typography?.sizes?.sm || 13,
+    fontWeight: '700',
+  },
+  sectionHeaderRow: {
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#F4ECDD',
-    marginBottom: 14,
+    fontSize: typography?.sizes?.md || 17,
+    fontWeight: '700',
+    color: colors.textPrimary || '#F4ECDD',
   },
-  mealCard: {
-    backgroundColor: '#221D17',
-    borderRadius: 14,
-    padding: 16,
+  sectionSub: {
+    fontSize: typography?.sizes?.xs || 11,
+    color: colors.textSecondary || '#A79A85',
+    marginTop: 2,
+  },
+  interactiveMealCard: {
+    padding: spacing.cardPadding || 16,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#3A3128',
   },
-  mealCardHeader: {
+  mealCardTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
   },
-  mealTypeTag: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: '#E8A020',
+  mealTypeCluster: {
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
   },
-  mealCalsPill: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#7BA05B',
-    backgroundColor: '#181410',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+  costAndCalCluster: {
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
   },
   dishName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#F4ECDD',
+    fontSize: typography?.sizes?.base || 15,
+    fontWeight: '700',
+    color: colors.textPrimary || '#F4ECDD',
     marginBottom: 4,
   },
   dishDesc: {
-    fontSize: 13,
-    color: '#A79A85',
-    marginBottom: 12,
+    fontSize: typography?.sizes?.xs || 11,
+    color: colors.textSecondary || '#A79A85',
+    marginBottom: 10,
+    lineHeight: 16,
   },
-  macroSubRow: {
+  cardMacroBar: {
+    height: 4,
+    backgroundColor: colors.surfaceElevated || '#2C251D',
+    borderRadius: 2,
+    overflow: 'hidden',
     flexDirection: 'row',
-    gap: 16,
-    backgroundColor: '#181410',
-    padding: 8,
-    borderRadius: 6,
+    marginBottom: 10,
   },
-  macroSubItem: {
-    fontSize: 12,
-    color: '#A79A85',
+  macroBarSeg: {
+    height: '100%',
   },
-  primaryBtn: {
-    backgroundColor: '#E8A020',
-    borderRadius: 10,
-    paddingVertical: 14,
+  macroPillsRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+  },
+  viewRecipeAffordance: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  viewRecipeText: {
+    fontSize: typography?.sizes?.xs || 11,
+    color: colors.primary || '#E8A020',
+    fontWeight: '600',
+  },
+  cardActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm || 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSubtle || '#2D261F',
+    paddingTop: 10,
+    marginTop: 10,
+  },
+  bottomActions: {
+    gap: 12,
     marginTop: 16,
-  },
-  primaryBtnText: {
-    color: '#221803',
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
-  headerDownloadBtn: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    backgroundColor: 'rgba(232, 160, 32, 0.15)',
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(232, 160, 32, 0.4)',
-  },
-  headerDownloadBtnText: {
-    color: '#E8A020',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  downloadActionBtn: {
-    backgroundColor: 'rgba(232, 160, 32, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(232, 160, 32, 0.5)',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  downloadActionBtnText: {
-    color: '#E8A020',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  proActionBtn: {
-    backgroundColor: 'rgba(232, 160, 32, 0.12)',
-    borderWidth: 1,
-    borderColor: '#E8A020',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  proActionBtnText: {
-    color: '#E8A020',
-    fontSize: 14,
-    fontWeight: 'bold',
   },
 });

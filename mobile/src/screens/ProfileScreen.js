@@ -8,11 +8,13 @@ import {
   TextInput,
   ActivityIndicator,
   Platform,
-  StatusBar,
   Alert,
   Switch,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, typography, spacing, radius, shadows } from '../theme';
+import { ScreenHeader, Card, Button, Badge } from '../components/ui';
 import { getSettings, updateMorningBriefingPreferences, deleteAccount } from '../services/api';
 import { auth } from '../services/firebase';
 import { deleteUser } from 'firebase/auth';
@@ -118,7 +120,7 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
         <View style={styles.loader}>
           <ActivityIndicator size="large" color="#E8A020" />
           <Text style={styles.loaderText}>Loading Profile...</Text>
@@ -130,7 +132,7 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
   const selectedPlan = userSettings?.selected_meal_plan;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       {/* Onboarding Wizard Modal */}
       <OnboardingModal
         visible={wizardOpen}
@@ -159,23 +161,39 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
       />
 
       {/* Navigation Header */}
-      <View style={styles.topHeader}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backBtnText}>← Tracker</Text>
-        </TouchableOpacity>
-        <Text style={styles.pageTitle}>Profile & Goals</Text>
-        <TouchableOpacity style={styles.mealPlanBtn} onPress={() => navigation.navigate('Meals')}>
-          <Text style={styles.mealPlanBtnText}>📋 Schedule</Text>
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title="Profile & Goals"
+        onBack={() => navigation.navigate('Today')}
+        backTitle="Tracker"
+        backIcon="←"
+        rightAction={
+          <TouchableOpacity
+            style={styles.mealPlanBtn}
+            onPress={() => navigation.navigate('Meals')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel="View Meal Plan Schedule"
+          >
+            <Text style={styles.mealPlanBtnText}>📋 Schedule</Text>
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView contentContainerStyle={styles.scroll}>
         {/* User Card */}
-        <View style={styles.userCard}>
+        <Card variant="default" style={styles.userCard}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {(user?.name || user?.email || user?.phone || 'U')[0].toUpperCase()}
-            </Text>
+            {user?.avatar_url ? (
+              <Image
+                source={{ uri: user.avatar_url }}
+                style={styles.avatarImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <Text style={styles.avatarText}>
+                {(user?.name || user?.email || user?.phone || 'U')[0].toUpperCase()}
+              </Text>
+            )}
           </View>
           <View style={styles.userInfo}>
             <View style={styles.userHeaderRow}>
@@ -183,20 +201,18 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
             </View>
             <Text style={styles.userPhone}>{user?.email || user?.phone || 'Account Active'}</Text>
           </View>
-        </View>
+        </Card>
 
         {/* Active Selected Meal Plan Section */}
-        <View style={styles.activePlanCard}>
+        <Card variant="highlight" style={styles.activePlanCard}>
           <View style={styles.planBadgeRow}>
-            <View style={styles.planBadge}>
-              <Text style={styles.planBadgeText}>Active Meal Plan</Text>
-            </View>
+            <Badge label="Active Meal Plan" icon="✨" variant="primary" size="sm" />
             {userSettings?.can_change_plan === false && (
-              <View style={[styles.planBadge, { backgroundColor: 'rgba(234, 88, 12, 0.15)', borderColor: 'rgba(234, 88, 12, 0.35)' }]}>
-                <Text style={[styles.planBadgeText, { color: '#fb923c' }]}>
-                  ⏳ Cooldown: {userSettings.hours_until_next_plan_change || 1}h left
-                </Text>
-              </View>
+              <Badge
+                label={`⏳ Cooldown: ${userSettings.hours_until_next_plan_change || 1}h left`}
+                variant="warning"
+                size="sm"
+              />
             )}
           </View>
 
@@ -207,113 +223,118 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
 
           {selectedPlan && (
             <View style={styles.macroPills}>
-              <View style={styles.macroPill}>
-                <Text style={styles.macroPillText}>Target: {userSettings?.calorie_goal || selectedPlan.daily_calories} kcal</Text>
-              </View>
-              <View style={styles.macroPill}>
-                <Text style={styles.macroPillText}>Protein: {userSettings?.protein_goal || selectedPlan.protein_g}g</Text>
-              </View>
-              <View style={styles.macroPill}>
-                <Text style={styles.macroPillText}>Carbs: {userSettings?.carbs_goal || selectedPlan.carbs_g}g</Text>
-              </View>
-              <View style={styles.macroPill}>
-                <Text style={styles.macroPillText}>Fat: {userSettings?.fat_goal || selectedPlan.fat_g}g</Text>
-              </View>
+              <Badge label={`Target: ${userSettings?.calorie_goal || selectedPlan.daily_calories} kcal`} variant="neutral" size="sm" />
+              <Badge label={`Protein: ${userSettings?.protein_goal || selectedPlan.protein_g}g`} variant="protein" size="sm" />
+              <Badge label={`Carbs: ${userSettings?.carbs_goal || selectedPlan.carbs_g}g`} variant="carbs" size="sm" />
+              <Badge label={`Fat: ${userSettings?.fat_goal || selectedPlan.fat_g}g`} variant="fat" size="sm" />
             </View>
           )}
 
-          {/* Action Buttons matching Web */}
+          {/* Action Buttons */}
           <View style={styles.actionBtnStack}>
             {selectedPlan && (
-              <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.navigate('Meals')}>
-                <Text style={styles.primaryBtnText}>View Full Meal Plan Schedule →</Text>
-              </TouchableOpacity>
+              <Button
+                variant="primary"
+                size="md"
+                fullWidth
+                title="View Full Meal Plan Schedule →"
+                onPress={() => navigation.navigate('Meals')}
+              />
             )}
 
-            <TouchableOpacity
-              style={selectedPlan ? styles.generatorBtn : styles.primaryBtn}
-              onPress={handleOpenPlanSelector}
-            >
-              <Text style={styles.generatorBtnText}>
-                {selectedPlan
+            <Button
+              variant={selectedPlan ? 'secondary' : 'primary'}
+              size="md"
+              fullWidth
+              title={
+                selectedPlan
                   ? userSettings?.can_change_plan === false
                     ? `Change Plan (${userSettings.hours_until_next_plan_change || 1}h cooldown)`
                     : 'Change AI Meal Plan'
-                  : 'Generate AI Meal Plans'}
-              </Text>
-            </TouchableOpacity>
+                  : 'Generate AI Meal Plans'
+              }
+              onPress={handleOpenPlanSelector}
+            />
 
-            <TouchableOpacity style={styles.secondaryBtn} onPress={handleOpenWizard}>
-              <Text style={styles.secondaryBtnText}>
-                Re-run Onboarding & Goals
-              </Text>
-            </TouchableOpacity>
+            <Button
+              variant="outline"
+              size="md"
+              fullWidth
+              title="Re-run Onboarding & Goals"
+              onPress={handleOpenWizard}
+            />
           </View>
-        </View>
+        </Card>
 
-        {/* Personal Metrics Grid matching Web */}
+        {/* Personal Metrics Grid */}
         <Text style={styles.sectionTitle}>Personal Metrics & Preferences</Text>
         <View style={styles.metricsGrid}>
-          <View style={styles.metricCard}>
+          <Card variant="elevated" style={styles.metricCard}>
             <Text style={styles.metricLabel}>Goal Type</Text>
             <Text style={styles.metricValue}>
               {(userSettings?.goal_type || 'fat_loss').replace('_', ' ').toUpperCase()}
             </Text>
-          </View>
+          </Card>
 
-          <View style={styles.metricCard}>
+          <Card variant="elevated" style={styles.metricCard}>
             <Text style={styles.metricLabel}>Diet Type</Text>
             <Text style={styles.metricValue}>
               {(userSettings?.diet_type || 'veg').replace('_', ' ').toUpperCase()}
             </Text>
-          </View>
+          </Card>
 
-          <View style={styles.metricCard}>
+          <Card variant="elevated" style={styles.metricCard}>
             <Text style={styles.metricLabel}>Budget Tier</Text>
             <Text style={styles.metricValue}>
               {(userSettings?.budget_tier || 'moderate').replace('_', ' ').toUpperCase()}
             </Text>
-          </View>
+          </Card>
 
-          <View style={styles.metricCard}>
+          <Card variant="elevated" style={styles.metricCard}>
             <Text style={styles.metricLabel}>Current Weight</Text>
             <Text style={styles.metricValue}>
               {userSettings?.weight_kg ? `${userSettings.weight_kg} kg` : 'Not Set'}
             </Text>
-          </View>
+          </Card>
 
-          <View style={styles.metricCard}>
+          <Card variant="elevated" style={styles.metricCard}>
             <Text style={styles.metricLabel}>Height</Text>
             <Text style={styles.metricValue}>
               {userSettings?.height_cm ? `${userSettings.height_cm} cm` : 'Not Set'}
             </Text>
-          </View>
+          </Card>
 
-          <View style={styles.metricCard}>
+          <Card variant="elevated" style={styles.metricCard}>
             <Text style={styles.metricLabel}>Activity</Text>
             <Text style={styles.metricValue}>
               {(userSettings?.activity_level || 'moderate').replace('_', ' ').toUpperCase()}
             </Text>
-          </View>
+          </Card>
         </View>
 
         {/* Account Logout */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
-          <Text style={styles.logoutBtnText}>🚪 Logout of Account</Text>
-        </TouchableOpacity>
+        <Button
+          title="Logout of Account"
+          icon="🚪"
+          variant="secondary"
+          size="md"
+          fullWidth
+          onPress={onLogout}
+          style={styles.logoutBtn}
+        />
 
-        {/* Account Deletion (Apple Guideline 5.1.1 & Google Play Compliance) */}
-        <TouchableOpacity
-          style={styles.deleteAccountBtn}
+        {/* Account Deletion */}
+        <Button
+          title="Delete Account & All Data"
+          icon="🗑️"
+          variant="outline"
+          size="md"
+          fullWidth
+          loading={deleting}
           onPress={handleDeleteAccount}
-          disabled={deleting}
-        >
-          {deleting ? (
-            <ActivityIndicator color="#ff7b72" size="small" />
-          ) : (
-            <Text style={styles.deleteAccountBtnText}>🗑️ Delete Account & All Data</Text>
-          )}
-        </TouchableOpacity>
+          style={styles.deleteAccountBtn}
+          textStyle={{ color: colors.dangerText }}
+        />
         <Text style={styles.deleteWarningText}>
           Permanently erases your user profile, meal logs, weights, and health metrics.
         </Text>
@@ -325,8 +346,7 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#181410',
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 8 : 0,
+    backgroundColor: colors.background || '#181410',
   },
   loader: {
     flex: 1,
@@ -349,7 +369,11 @@ const styles = StyleSheet.create({
     borderBottomColor: '#3A3128',
   },
   backBtn: {
-    padding: 6,
+    minHeight: 48,
+    minWidth: 48,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingHorizontal: 4,
   },
   backBtnText: {
     color: '#E8A020',
@@ -392,6 +416,12 @@ const styles = StyleSheet.create({
     marginRight: 14,
     borderWidth: 1,
     borderColor: '#3A3128',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   avatarText: {
     color: '#E8A020',

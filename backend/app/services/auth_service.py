@@ -123,7 +123,7 @@ async def get_or_create_user(
             user.name = name
         if email and not user.email:
             user.email = email
-        if avatar_url and not user.avatar_url:
+        if avatar_url and user.avatar_url != avatar_url:
             user.avatar_url = avatar_url
         await db.commit()
         await db.refresh(user)
