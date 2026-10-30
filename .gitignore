@@ -62,6 +62,7 @@ expo-env.d.ts
 .metro-health-check*
 .kotlin/
 *.orig.*
+mobile/eas.json
 
 # ─── Next.js / Frontend ───────────────────────────────────
 .next/

@@ -40,6 +40,9 @@ play-store-key.json
 # Firebase secrets — use EAS Secrets instead (eas secret:create)
 google-services.json
 GoogleService-Info.plist
+
+# EAS build config — contains env vars & key paths, use EAS Secrets
+eas.json
 # typescript
 *.tsbuildinfo
 
