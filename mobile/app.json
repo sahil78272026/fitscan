@@ -7,6 +7,11 @@
     "orientation": "portrait",
     "icon": "./assets/corecontrol_logo.png",
     "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#181410"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.fitscan.wellness",
@@ -23,7 +28,7 @@
       },
       "package": "com.fitscan.wellness",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 5,
+      "versionCode": 6,
       "permissions": [
         "ACTIVITY_RECOGNITION",
         "android.permission.health.READ_STEPS",
@@ -47,8 +52,13 @@
         "expo-splash-screen",
         {
           "image": "./assets/splash.png",
+          "imageWidth": 160,
           "resizeMode": "contain",
-          "backgroundColor": "#181410"
+          "backgroundColor": "#181410",
+          "dark": {
+            "image": "./assets/splash.png",
+            "backgroundColor": "#181410"
+          }
         }
       ],
       [

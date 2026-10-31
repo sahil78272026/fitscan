@@ -13,6 +13,7 @@ import {
   Alert,
   Image,
   Modal,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, typography, spacing, radius, shadows } from '../theme';
@@ -59,6 +60,14 @@ const MEAL_TYPE_ICONS = {
   Dinner: '🍲',
 };
 
+const getInitialMealType = () => {
+  const hour = new Date().getHours();
+  if (hour < 11) return 'breakfast';
+  if (hour < 16) return 'lunch';
+  if (hour < 19) return 'snack';
+  return 'dinner';
+};
+
 export default function HomeScreen({ navigation, user, onLogout }) {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? 12 : 0);
@@ -68,7 +77,8 @@ export default function HomeScreen({ navigation, user, onLogout }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [rawInput, setRawInput] = useState('');
-  const [mealType, setMealType] = useState('lunch');
+  const [mealType, setMealType] = useState(getInitialMealType);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [newWeight, setNewWeight] = useState('');
   const [previewImage, setPreviewImage] = useState(null);
@@ -161,7 +171,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
       return summary.meals.some((logged) => {
         const lType = (logged.meal_type || '').toLowerCase().trim();
         const lRaw = (logged.raw_input || '').toLowerCase().trim();
-        return (pType && lType === pType) || (pName && (lRaw.includes(pName) || pName.includes(lRaw)));
+        return (pType && lType === pType) || (pName && lRaw && (lRaw.includes(pName) || pName.includes(lRaw)));
       });
     },
     [summary?.meals]
@@ -343,13 +353,14 @@ export default function HomeScreen({ navigation, user, onLogout }) {
       Alert.alert('Empty Input', 'Please type a meal description or use photo scan.');
       return;
     }
+    Keyboard.dismiss();
     setSubmitting(true);
     try {
       const dateStr = formatDateStr(selectedDate);
       await logMeal(rawInput.trim(), mealType, dateStr);
       setRawInput('');
-      Alert.alert('Success! 🎉', 'Meal logged and macros updated.');
       await loadData();
+      Alert.alert('Success! 🎉', 'Meal logged and macros updated.');
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to log meal');
     } finally {
@@ -571,7 +582,10 @@ export default function HomeScreen({ navigation, user, onLogout }) {
             onPress={() =>
               navigation.navigate('ActivityDetail', {
                 selectedDate: formatDateStr(selectedDate),
-                stepData,
+                stepData: {
+                  ...stepData,
+                  date: formatDateStr(selectedDate),
+                },
                 summary,
                 calendarData,
                 initialTab: summaryTab,
@@ -646,7 +660,10 @@ export default function HomeScreen({ navigation, user, onLogout }) {
               } else {
                 navigation.navigate('ActivityDetail', {
                   selectedDate: formatDateStr(selectedDate),
-                  stepData,
+                  stepData: {
+                    ...stepData,
+                    date: formatDateStr(selectedDate),
+                  },
                   summary,
                   calendarData,
                   initialTab: summaryTab,
@@ -851,40 +868,105 @@ export default function HomeScreen({ navigation, user, onLogout }) {
 
         {/* Quick Log Meal Section */}
         {isToday && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Quick Log Meal</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. 2 eggs, 1 toast with butter"
-              placeholderTextColor={colors.textSecondary || '#A79A85'}
-              value={rawInput}
-              onChangeText={setRawInput}
-            />
-
-            {/* Meal Type Buttons */}
-            <View style={styles.typeRow}>
-              {['breakfast', 'lunch', 'snack', 'dinner'].map((t) => (
-                <TouchableOpacity
-                  key={t}
-                  style={[styles.typeBtn, mealType === t && styles.typeBtnActive]}
-                  onPress={() => setMealType(t)}
-                  hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-                >
-                  <Text style={[styles.typeBtnText, mealType === t && styles.typeBtnTextActive]}>
-                    {t.charAt(0).toUpperCase() + t.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+          <Card variant="default" style={styles.quickLogCard}>
+            {/* Card Header with Icon, Subtitle, and Active Badge */}
+            <View style={styles.quickLogHeaderRow}>
+              <View style={styles.quickLogHeaderLeft}>
+                <View style={styles.quickLogTitleRow}>
+                  <Text style={styles.quickLogIcon}>⚡</Text>
+                  <Text style={styles.quickLogTitle}>Quick Log Meal</Text>
+                </View>
+                <Text style={styles.quickLogSubTitle}>
+                  Type food or snap a photo for instant macro breakdown
+                </Text>
+              </View>
+              <Badge
+                variant="primary"
+                label={mealType.toUpperCase()}
+                icon={MEAL_TYPE_ICONS[mealType] || '🍽️'}
+                size="sm"
+              />
             </View>
 
-            <View style={styles.actionBtnRow}>
+            {/* Enhanced Input Field with Leading Icon, Focus Glow & Clear Button */}
+            <View
+              style={[
+                styles.quickLogInputWrapper,
+                isInputFocused && styles.quickLogInputFocused,
+              ]}
+            >
+              <Text style={styles.quickLogInputLeadingIcon}>✍️</Text>
+              <TextInput
+                style={styles.quickLogTextInput}
+                placeholder="e.g. 2 eggs, 1 toast with butter"
+                placeholderTextColor={colors.textSecondary || '#A79A85'}
+                value={rawInput}
+                onChangeText={setRawInput}
+                onFocus={() => setIsInputFocused(true)}
+                onBlur={() => setIsInputFocused(false)}
+                returnKeyType="done"
+                onSubmitEditing={handleLogMeal}
+                blurOnSubmit
+              />
+              {rawInput.length > 0 && (
+                <TouchableOpacity
+                  style={styles.quickLogClearBtn}
+                  onPress={() => setRawInput('')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear meal description"
+                >
+                  <Text style={styles.quickLogClearIcon}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Meal Type Pills with Emojis */}
+            <View style={styles.quickLogTypeRow}>
+              {['breakfast', 'lunch', 'snack', 'dinner'].map((t) => {
+                const isSelected = mealType === t;
+                const icon = MEAL_TYPE_ICONS[t] || '🍽️';
+                const label = t.charAt(0).toUpperCase() + t.slice(1);
+                return (
+                  <TouchableOpacity
+                    key={t}
+                    style={[
+                      styles.quickLogTypePill,
+                      isSelected && styles.quickLogTypePillActive,
+                    ]}
+                    onPress={() => setMealType(t)}
+                    activeOpacity={0.75}
+                    hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isSelected }}
+                    accessibilityLabel={`${label} meal`}
+                  >
+                    <Text style={styles.quickLogTypePillIcon}>{icon}</Text>
+                    <Text
+                      style={[
+                        styles.quickLogTypePillText,
+                        isSelected && styles.quickLogTypePillTextActive,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Symmetrical Action Buttons Row */}
+            <View style={styles.quickLogActionRow}>
               <Button
                 title="Log Meal"
+                icon="✓"
                 onPress={handleLogMeal}
                 loading={submitting}
                 variant="primary"
                 size="md"
-                style={styles.submitBtn}
+                style={styles.quickLogBtnFlex}
+                disabled={submitting}
               />
               <Button
                 title="Scan Photo"
@@ -892,10 +974,11 @@ export default function HomeScreen({ navigation, user, onLogout }) {
                 onPress={() => navigation.navigate('Scan', { mealDate: formatDateStr(selectedDate) })}
                 variant="secondary"
                 size="md"
-                style={styles.scanBtn}
+                style={styles.quickLogBtnFlex}
+                disabled={submitting}
               />
             </View>
-          </View>
+          </Card>
         )}
 
         {/* Logged Meals List */}
@@ -1568,6 +1651,125 @@ const styles = StyleSheet.create({
     color: '#F4ECDD',
     fontSize: 14,
     fontWeight: '600',
+  },
+  quickLogCard: {
+    padding: spacing.cardPadding || 16,
+    marginBottom: spacing.cardPadding || 16,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.lg || 16,
+    ...(shadows.sm || {}),
+  },
+  quickLogHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  quickLogHeaderLeft: {
+    flex: 1,
+    marginRight: 8,
+  },
+  quickLogTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
+  quickLogIcon: {
+    fontSize: 16,
+  },
+  quickLogTitle: {
+    fontSize: typography?.sizes?.md || 16,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  quickLogSubTitle: {
+    fontSize: typography?.sizes?.xs || 11,
+    color: colors.textSecondary,
+    lineHeight: 15,
+  },
+  quickLogInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radius.md || 10,
+    paddingHorizontal: 12,
+    minHeight: 48,
+    marginBottom: 12,
+  },
+  quickLogInputFocused: {
+    borderColor: colors.primary,
+    backgroundColor: colors.surfaceActive || colors.surfaceElevated,
+  },
+  quickLogInputLeadingIcon: {
+    fontSize: 15,
+    marginRight: 8,
+  },
+  quickLogTextInput: {
+    flex: 1,
+    color: colors.textPrimary,
+    fontSize: typography?.sizes?.base || 14,
+    paddingVertical: 10,
+  },
+  quickLogClearBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 6,
+  },
+  quickLogClearIcon: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  quickLogTypeRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 14,
+  },
+  quickLogTypePill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.md || 10,
+    paddingVertical: 9,
+    paddingHorizontal: 4,
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  quickLogTypePillActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+    ...(shadows.primaryGlow || {}),
+  },
+  quickLogTypePillIcon: {
+    fontSize: 13,
+  },
+  quickLogTypePillText: {
+    color: colors.textSecondary,
+    fontSize: typography?.sizes?.xs || 11,
+    fontWeight: '600',
+  },
+  quickLogTypePillTextActive: {
+    color: colors.textOnPrimary || '#221803',
+    fontWeight: '700',
+  },
+  quickLogActionRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  quickLogBtnFlex: {
+    flex: 1,
   },
   weightRow: {
     flexDirection: 'row',

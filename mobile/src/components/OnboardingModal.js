@@ -61,6 +61,62 @@ const getBudgetName = (id) => {
   return b.label.replace(/^[^\w]+/, '').trim();
 };
 
+export const sanitizeWeightInput = (val) => {
+  if (val === '' || val === null || val === undefined) return '';
+  if (typeof val !== 'string') val = String(val);
+  let cleaned = val.replace(/[^0-9.]/g, '');
+  const parts = cleaned.split('.');
+  if (parts.length > 2) {
+    cleaned = parts[0] + '.' + parts.slice(1).join('');
+  }
+  const dotIndex = cleaned.indexOf('.');
+  if (dotIndex !== -1 && cleaned.length > dotIndex + 2) {
+    cleaned = cleaned.slice(0, dotIndex + 2);
+  }
+  return cleaned;
+};
+
+export const clampWeight = (val, unit = 'kg') => {
+  const num = parseFloat(val);
+  if (unit === 'kg') {
+    const defaultKg = 70.0;
+    const validNum = isNaN(num) || num <= 0 ? defaultKg : num;
+    const clamped = Math.max(30, Math.min(250, validNum));
+    return Math.round(clamped * 10) / 10;
+  } else {
+    const defaultLbs = 154.3;
+    const validNum = isNaN(num) || num <= 0 ? defaultLbs : num;
+    const clamped = Math.max(66, Math.min(550, validNum));
+    return Math.round(clamped * 10) / 10;
+  }
+};
+
+export const calculateStepWeight = (currentVal, delta = 0.5, unit = 'kg') => {
+  const parsed = parseFloat(currentVal);
+  const current = !isNaN(parsed) && parsed > 0
+    ? parsed
+    : (unit === 'kg' ? 70.0 : 154.3);
+  const next = Math.round((current + delta) * 10) / 10;
+  return clampWeight(next, unit);
+};
+
+export const convertWeightUnit = (val, fromUnit, toUnit) => {
+  if (fromUnit === toUnit) {
+    const num = parseFloat(val);
+    return isNaN(num) ? 0 : Math.round(num * 10) / 10;
+  }
+  const num = parseFloat(val);
+  if (isNaN(num) || num <= 0) {
+    return toUnit === 'lbs' ? 154.3 : 70.0;
+  }
+  if (fromUnit === 'kg' && toUnit === 'lbs') {
+    return Math.round(num * 2.20462 * 10) / 10;
+  } else if (fromUnit === 'lbs' && toUnit === 'kg') {
+    return Math.round((num / 2.20462) * 10) / 10;
+  }
+  return num;
+};
+
 export default function OnboardingModal({ visible, initialSettings, onClose, onComplete }) {
   const [step, setStep] = useState(1);
   const [goalType, setGoalType] = useState(initialSettings?.goal_type || 'fat_loss');
@@ -70,9 +126,11 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
   const [age, setAge] = useState(initialSettings?.age || 25);
   const [gender, setGender] = useState(initialSettings?.gender || 'male');
   const [heightCm, setHeightCm] = useState(initialSettings?.height_cm || 170);
-  const [weightKg, setWeightKg] = useState(initialSettings?.weight_kg || 70);
+  const initialWeight = initialSettings?.weight_kg ? Number(initialSettings.weight_kg) : 70;
+  const [weightKg, setWeightKg] = useState(initialWeight);
 
   const [weightUnit, setWeightUnit] = useState('kg');
+  const [weightInput, setWeightInput] = useState(String(initialWeight));
   const [heightUnit, setHeightUnit] = useState('cm');
   const [loading, setLoading] = useState(false);
 
@@ -107,7 +165,11 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
       if (initialSettings.age) setAge(Number(initialSettings.age));
       if (initialSettings.gender) setGender(initialSettings.gender);
       if (initialSettings.height_cm) setHeightCm(Number(initialSettings.height_cm));
-      if (initialSettings.weight_kg) setWeightKg(Number(initialSettings.weight_kg));
+      if (initialSettings.weight_kg) {
+        const kg = Number(initialSettings.weight_kg);
+        setWeightKg(kg);
+        setWeightInput(weightUnit === 'kg' ? String(kg) : String(convertWeightUnit(kg, 'kg', 'lbs')));
+      }
     }
   }, [initialSettings]);
 
@@ -131,22 +193,73 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
   const displayWeight = weightUnit === 'kg' ? weightKg : Math.round(weightKg * 2.20462 * 10) / 10;
 
   const handleWeightChange = (val) => {
-    const num = parseFloat(val);
-    if (isNaN(num)) return;
-    if (weightUnit === 'kg') {
-      setWeightKg(Math.max(30, Math.min(250, num)));
-    } else {
-      setWeightKg(Math.max(30, Math.min(250, Math.round((num / 2.20462) * 10) / 10)));
+    if (val === '') {
+      setWeightInput('');
+      return;
+    }
+
+    const sanitized = sanitizeWeightInput(val);
+    if (!/^[0-9]*\.?[0-9]?$/.test(sanitized)) {
+      return;
+    }
+    setWeightInput(sanitized);
+
+    const num = parseFloat(sanitized);
+    if (!isNaN(num) && num > 0) {
+      if (weightUnit === 'kg') {
+        setWeightKg(Math.round(num * 10) / 10);
+      } else {
+        setWeightKg(convertWeightUnit(num, 'lbs', 'kg'));
+      }
     }
   };
 
-  const stepWeight = (delta) => {
+  const handleWeightBlur = () => {
+    const num = parseFloat(weightInput);
     if (weightUnit === 'kg') {
-      setWeightKg((prev) => Math.max(30, Math.min(250, Math.round((Number(prev) + delta) * 10) / 10)));
+      const clamped = clampWeight(isNaN(num) || num <= 0 ? weightKg : num, 'kg');
+      setWeightKg(clamped);
+      setWeightInput(String(clamped));
     } else {
-      const currentLbs = weightKg * 2.20462;
-      const newLbs = Math.max(66, Math.min(550, currentLbs + delta));
-      setWeightKg(Math.round((newLbs / 2.20462) * 10) / 10);
+      const fallbackLbs = convertWeightUnit(weightKg, 'kg', 'lbs');
+      const clamped = clampWeight(isNaN(num) || num <= 0 ? fallbackLbs : num, 'lbs');
+      const kgVal = convertWeightUnit(clamped, 'lbs', 'kg');
+      setWeightKg(kgVal);
+      setWeightInput(String(clamped));
+    }
+  };
+
+  const stepWeight = (delta = 0.5) => {
+    const current = parseFloat(weightInput);
+    const effectiveCurrent = !isNaN(current) && current > 0
+      ? current
+      : (weightUnit === 'kg' ? weightKg : convertWeightUnit(weightKg, 'kg', 'lbs'));
+
+    const stepped = calculateStepWeight(effectiveCurrent, delta, weightUnit);
+    if (weightUnit === 'kg') {
+      setWeightKg(stepped);
+      setWeightInput(String(stepped));
+    } else {
+      const kgVal = convertWeightUnit(stepped, 'lbs', 'kg');
+      setWeightKg(kgVal);
+      setWeightInput(String(stepped));
+    }
+  };
+
+  const handleUnitToggle = (targetUnit) => {
+    if (targetUnit === weightUnit) return;
+    const parsed = parseFloat(weightInput);
+    if (targetUnit === 'lbs') {
+      const currentKg = !isNaN(parsed) && parsed > 0 ? parsed : weightKg;
+      const lbsVal = convertWeightUnit(currentKg, 'kg', 'lbs');
+      setWeightInput(String(lbsVal));
+      setWeightUnit('lbs');
+    } else {
+      const currentLbs = !isNaN(parsed) && parsed > 0 ? parsed : convertWeightUnit(weightKg, 'kg', 'lbs');
+      const kgVal = convertWeightUnit(currentLbs, 'lbs', 'kg');
+      setWeightKg(kgVal);
+      setWeightInput(String(kgVal));
+      setWeightUnit('kg');
     }
   };
 
@@ -246,6 +359,12 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
   const handleSubmit = async () => {
     setLoading(true);
     try {
+      const parsedInput = parseFloat(weightInput);
+      const finalKg = weightUnit === 'kg'
+        ? (!isNaN(parsedInput) && parsedInput > 0 ? parsedInput : weightKg)
+        : (!isNaN(parsedInput) && parsedInput > 0 ? convertWeightUnit(parsedInput, 'lbs', 'kg') : weightKg);
+      const clampedKg = clampWeight(finalKg, 'kg');
+
       const payload = {
         goal_type: goalType,
         diet_type: dietType,
@@ -254,7 +373,7 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
         age: parseInt(age, 10) || 25,
         gender,
         height_cm: parseFloat(heightCm) || 170,
-        weight_kg: parseFloat(weightKg) || 70,
+        weight_kg: clampedKg,
       };
 
       const updated = await updateUserGoals(payload);
@@ -400,7 +519,7 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
                   <View style={styles.miniStepperChip}>
                     <TouchableOpacity
                       style={styles.miniChipBtn}
-                      onPress={() => stepWeight(weightUnit === 'kg' ? -0.5 : -1)}
+                      onPress={() => stepWeight(-0.5)}
                       hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
                       activeOpacity={0.6}
                     >
@@ -411,12 +530,12 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
                       activeOpacity={0.7}
                     >
                       <Text style={styles.stickyMetricChipText}>
-                        ⚖️ {displayWeight} {weightUnit}
+                        ⚖️ {weightInput || displayWeight} {weightUnit}
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.miniChipBtn}
-                      onPress={() => stepWeight(weightUnit === 'kg' ? 0.5 : 1)}
+                      onPress={() => stepWeight(0.5)}
                       hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
                       activeOpacity={0.6}
                     >
@@ -619,13 +738,13 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
                     <View style={styles.unitToggleGroup}>
                       <TouchableOpacity
                         style={[styles.unitToggleBtn, weightUnit === 'kg' && styles.unitToggleBtnActive]}
-                        onPress={() => setWeightUnit('kg')}
+                        onPress={() => handleUnitToggle('kg')}
                       >
                         <Text style={[styles.unitToggleText, weightUnit === 'kg' && styles.unitToggleTextActive]}>kg</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.unitToggleBtn, weightUnit === 'lbs' && styles.unitToggleBtnActive]}
-                        onPress={() => setWeightUnit('lbs')}
+                        onPress={() => handleUnitToggle('lbs')}
                       >
                         <Text style={[styles.unitToggleText, weightUnit === 'lbs' && styles.unitToggleTextActive]}>lbs</Text>
                       </TouchableOpacity>
@@ -633,19 +752,21 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
                   </View>
 
                   <View style={styles.stepperContainer}>
-                    <TouchableOpacity style={styles.stepperBtn} onPress={() => stepWeight(weightUnit === 'kg' ? -0.5 : -1)}>
+                    <TouchableOpacity style={styles.stepperBtn} onPress={() => stepWeight(-0.5)}>
                       <Text style={styles.stepperBtnText}>–</Text>
                     </TouchableOpacity>
                     <View style={styles.stepperValWrapper}>
                       <TextInput
                         style={styles.stepperInput}
-                        value={String(displayWeight)}
+                        value={weightInput}
                         onChangeText={handleWeightChange}
+                        onBlur={handleWeightBlur}
                         keyboardType="decimal-pad"
+                        selectTextOnFocus
                       />
                       <Text style={styles.stepperUnit}>{weightUnit}</Text>
                     </View>
-                    <TouchableOpacity style={styles.stepperBtn} onPress={() => stepWeight(weightUnit === 'kg' ? 0.5 : 1)}>
+                    <TouchableOpacity style={styles.stepperBtn} onPress={() => stepWeight(0.5)}>
                       <Text style={styles.stepperBtnText}>+</Text>
                     </TouchableOpacity>
                   </View>

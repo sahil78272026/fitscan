@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Share,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +15,7 @@ import { Card, Badge, Button, ScreenHeader } from '../components/ui';
 import MealDetailModal from '../components/MealDetailModal';
 import { getSettings, getDailySummary, logMeal } from '../services/api';
 import { estimateMealCost } from '../utils/mealCostEstimator';
+import { exportMealPlanPdf } from '../utils/mealPlanPdfGenerator';
 
 const MEAL_TYPE_ICONS = {
   breakfast: '🍳',
@@ -34,6 +34,7 @@ export default function MealPlanScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [loggingMealType, setLoggingMealType] = useState(null);
   const [activeMeal, setActiveMeal] = useState(null);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
@@ -78,8 +79,10 @@ export default function MealPlanScreen({ navigation }) {
   const loggedMealsSet = useMemo(() => {
     const set = new Set();
     todayMeals.forEach((m) => {
-      if (m.meal_type) set.add(m.meal_type.toLowerCase().trim());
-      if (m.raw_input) set.add(m.raw_input.toLowerCase().trim());
+      const typeTrimmed = (m.meal_type || '').toLowerCase().trim();
+      if (typeTrimmed) set.add(typeTrimmed);
+      const rawTrimmed = (m.raw_input || '').toLowerCase().trim();
+      if (rawTrimmed) set.add(rawTrimmed);
     });
     return set;
   }, [todayMeals]);
@@ -91,7 +94,7 @@ export default function MealPlanScreen({ navigation }) {
       const dishKey = (meal.dish_name || '').toLowerCase().trim();
       if (typeKey && loggedMealsSet.has(typeKey)) return true;
       for (const logged of loggedMealsSet) {
-        if (dishKey && (dishKey.includes(logged) || logged.includes(dishKey))) return true;
+        if (logged && dishKey && (dishKey.includes(logged) || logged.includes(dishKey))) return true;
       }
       return false;
     },
@@ -127,50 +130,17 @@ export default function MealPlanScreen({ navigation }) {
 
   const handleDownloadMealPlan = async () => {
     if (!selectedPlan) {
-      Alert.alert('No Plan', 'No active meal plan found to download.');
+      Alert.alert('No Plan', 'No active meal plan found to export.');
       return;
     }
 
-    const goal = (userSettings?.goal_type || 'fat_loss').replace('_', ' ').toUpperCase();
-    const diet = (userSettings?.diet_type || 'veg').toUpperCase();
-    const calories = selectedPlan.daily_calories || userSettings?.calorie_goal || 2000;
-    const protein = selectedPlan.protein_g || userSettings?.protein_goal || 150;
-    const carbs = selectedPlan.carbs_g || userSettings?.carbs_goal || 200;
-    const fat = selectedPlan.fat_g || userSettings?.fat_goal || 65;
-
-    let content = `CORECONTROL - DAILY MEAL PLAN\n`;
-    content += `Plan: ${selectedPlan.title || 'AI Meal Plan'}\n`;
-    content += `Goal: ${goal} | Diet: ${diet}\n`;
-    content += `Daily Targets: ${calories} kcal | ${protein}g Protein | ${carbs}g Carbs | ${fat}g Fat\n`;
-    if (selectedPlan.estimated_cost) {
-      content += `Daily Budget: ${selectedPlan.estimated_cost}\n`;
-    }
-    content += `\n--- MEAL SCHEDULE & COST BREAKDOWN ---\n\n`;
-
-    (selectedPlan.meals || []).forEach((m, idx) => {
-      const costInfo = estimateMealCost(m, selectedPlan, userSettings);
-      content += `${idx + 1}. [${m.meal_type.toUpperCase()}] ${m.dish_name} (${m.calories} kcal • ${costInfo.formatted})\n`;
-      content += `   Macros: ${m.protein}g P | ${m.carbs}g C | ${m.fat}g F\n`;
-      if (m.ingredients && m.ingredients.length > 0) {
-        content += `   Ingredients:\n`;
-        m.ingredients.forEach((ing) => {
-          content += `    • ${ing}\n`;
-        });
-      } else if (m.description) {
-        content += `   Notes: ${m.description}\n`;
-      }
-      content += `\n`;
-    });
-
-    content += `Generated with FitScan • AI Nutrition Coach\n`;
-
+    setExportingPdf(true);
     try {
-      await Share.share({
-        title: `FitScan Meal Plan - ${selectedPlan.title || 'Daily Plan'}`,
-        message: content,
-      });
+      await exportMealPlanPdf(selectedPlan, userSettings);
     } catch (error) {
-      Alert.alert('Download Error', error.message);
+      Alert.alert('Export Failed', error.message || 'Unable to generate meal plan PDF.');
+    } finally {
+      setExportingPdf(false);
     }
   };
 
@@ -189,11 +159,16 @@ export default function MealPlanScreen({ navigation }) {
     <TouchableOpacity
       style={styles.headerDownloadBtn}
       onPress={handleDownloadMealPlan}
+      disabled={exportingPdf}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       accessibilityRole="button"
-      accessibilityLabel="Download Meal Plan"
+      accessibilityLabel="Export Meal Plan as PDF"
     >
-      <Text style={styles.headerDownloadBtnText}>📥 Share</Text>
+      {exportingPdf ? (
+        <ActivityIndicator size="small" color={colors.primary || '#E8A020'} />
+      ) : (
+        <Text style={styles.headerDownloadBtnText}>📄 PDF</Text>
+      )}
     </TouchableOpacity>
   );
 
@@ -432,9 +407,11 @@ export default function MealPlanScreen({ navigation }) {
               <Button
                 variant="secondary"
                 size="md"
-                icon="📥"
-                title="Download / Share Full Meal Plan"
+                icon="📄"
+                title={exportingPdf ? 'Exporting PDF...' : 'Export Meal Plan (PDF)'}
                 onPress={handleDownloadMealPlan}
+                disabled={exportingPdf}
+                loading={exportingPdf}
                 fullWidth
               />
 
@@ -584,6 +561,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
     marginBottom: 8,
   },
   mealTypeCluster: {
@@ -622,6 +601,7 @@ const styles = StyleSheet.create({
   macroPillsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 6,
   },
   viewRecipeAffordance: {

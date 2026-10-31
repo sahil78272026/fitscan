@@ -23,12 +23,13 @@ export const BUDGET_TIER_COSTS = {
  * @returns {{ dailyBudget: number, currency: string, tierLabel: string }}
  */
 export function parseDailyBudget(costString, budgetTier = 'moderate', currencyPreference = 'INR') {
-  const isUsd = (costString && costString.includes('$')) || currencyPreference === 'USD';
+  const isString = typeof costString === 'string';
+  const isUsd = (isString && costString.includes('$')) || currencyPreference === 'USD';
   const currency = isUsd ? '$' : '₹';
   const tierKey = budgetTier in BUDGET_TIER_COSTS ? budgetTier : 'moderate';
   const fallbackTier = BUDGET_TIER_COSTS[tierKey];
 
-  if (!costString || typeof costString !== 'string') {
+  if (!isString || !costString.trim()) {
     return {
       dailyBudget: isUsd ? fallbackTier.usd : fallbackTier.inr,
       currency,
@@ -37,7 +38,7 @@ export function parseDailyBudget(costString, budgetTier = 'moderate', currencyPr
   }
 
   // 1. Try parsing range e.g. "180-250" or "100 - 140"
-  const rangeMatch = costString.match(/(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)/);
+  const rangeMatch = costString.match(/(\d+(?:\.\d+)?)\s*[-–]\s*[$₹Rs.]*\s*(\d+(?:\.\d+)?)/);
   if (rangeMatch) {
     const low = parseFloat(rangeMatch[1]);
     const high = parseFloat(rangeMatch[2]);

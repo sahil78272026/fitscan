@@ -2,7 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View, StyleSheet, Text, Image, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SplashScreen from 'expo-splash-screen';
 import { NavigationContainer } from '@react-navigation/native';
+
+// Keep the native splash screen visible while loading resources and verifying auth state
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
@@ -140,6 +145,7 @@ export default function App() {
         console.warn('Auth restore error:', e);
       } finally {
         setLoading(false);
+        await SplashScreen.hideAsync().catch(() => {});
       }
     }
     checkAuth();
@@ -168,11 +174,7 @@ export default function App() {
   };
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#E8A020" />
-      </View>
-    );
+    return null;
   }
 
   return (

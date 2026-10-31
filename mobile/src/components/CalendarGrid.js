@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { formatStepLabel } from '../utils/stepMetrics';
 
 export default function CalendarGrid({
   year,
@@ -9,6 +10,10 @@ export default function CalendarGrid({
   selectedDateStr,
   onSelectDate,
   onChangeMonth,
+  metric = 'calories',
+  stepHistory = {},
+  todaySteps = 0,
+  selectedDateSteps = 0,
 }) {
   const daysInMonth = new Date(year, month, 0).getDate();
   // Get index of first day of month (0 = Mon, 6 = Sun)
@@ -51,10 +56,33 @@ export default function CalendarGrid({
     const totalCals = dayData?.total_calories || 0;
     const goal = dayData?.calorie_goal || calendarGoal || 2000;
 
+    const rawHist = Math.max(0, Math.round(Number(stepHistory?.[dateStr] ?? dayData?.step_count ?? 0) || 0));
+    let daySteps = rawHist;
+    if (isSelected) {
+      if (selectedDateSteps > 0) {
+        daySteps = Math.max(0, Math.round(Number(selectedDateSteps) || 0));
+      } else if (isToday && todaySteps > 0) {
+        daySteps = Math.max(0, Math.round(Number(todaySteps) || 0));
+      }
+    } else if (isToday && todaySteps > 0) {
+      daySteps = Math.max(0, Math.round(Number(todaySteps) || 0));
+    }
+
     let calColor = null;
     let cellBg = 'transparent';
 
-    if (dayData && totalCals > 0) {
+    if (metric === 'steps') {
+      const stepGoal = 10000;
+      if (daySteps > 0) {
+        if (daySteps >= stepGoal) {
+          calColor = '#3fb950'; // Met goal (green)
+          cellBg = 'rgba(63, 185, 80, 0.16)';
+        } else {
+          calColor = '#4285F4'; // Active steps (blue)
+          cellBg = 'rgba(66, 133, 244, 0.14)';
+        }
+      }
+    } else if (dayData && totalCals > 0) {
       const pct = totalCals / goal;
       if (pct > 1) {
         calColor = '#f85149'; // Over goal (red)
@@ -74,22 +102,36 @@ export default function CalendarGrid({
         style={[
           styles.dayCell,
           cellBg !== 'transparent' && !isSelected && { backgroundColor: cellBg },
-          isToday && !isSelected && styles.todayCell,
-          isSelected && styles.selectedCell,
+          isToday && !isSelected && (metric === 'steps' ? styles.todayCellSteps : styles.todayCell),
+          isSelected && (metric === 'steps' ? styles.selectedCellSteps : styles.selectedCell),
         ]}
-        onPress={() => onSelectDate(new Date(year, month - 1, day))}
+        onPress={() => onSelectDate(new Date(year, month - 1, day, 12, 0, 0))}
         activeOpacity={0.7}
       >
         <Text
           style={[
             styles.dayNum,
-            isToday && styles.todayDayNum,
-            isSelected && styles.selectedDayNum,
+            isToday && (metric === 'steps' ? styles.todayDayNumSteps : styles.todayDayNum),
+            isSelected && (metric === 'steps' ? styles.selectedDayNumSteps : styles.selectedDayNum),
           ]}
         >
           {day}
         </Text>
-        {totalCals > 0 ? (
+        {metric === 'steps' ? (
+          daySteps > 0 ? (
+            <Text
+              style={[
+                styles.calNum,
+                { color: isSelected ? '#60A5FA' : calColor },
+              ]}
+              numberOfLines={1}
+            >
+              {formatStepLabel(daySteps)}
+            </Text>
+          ) : (
+            <Text style={styles.calPlaceholder}> </Text>
+          )
+        ) : totalCals > 0 ? (
           <Text
             style={[
               styles.calNum,
@@ -113,7 +155,9 @@ export default function CalendarGrid({
         <TouchableOpacity onPress={prevMonth} style={styles.navBtn}>
           <Text style={styles.navText}>‹</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>{monthName} {year}</Text>
+        <Text style={[styles.title, metric === 'steps' && { color: '#60A5FA' }]}>
+          {monthName} {year}
+        </Text>
         <TouchableOpacity onPress={nextMonth} style={styles.navBtn}>
           <Text style={styles.navText}>›</Text>
         </TouchableOpacity>
@@ -130,20 +174,33 @@ export default function CalendarGrid({
       <View style={styles.grid}>{cells}</View>
 
       {/* Legend */}
-      <View style={styles.legendRow}>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: '#3fb950' }]} />
-          <Text style={styles.legendText}>On Target</Text>
+      {metric === 'steps' ? (
+        <View style={styles.legendRow}>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#3fb950' }]} />
+            <Text style={styles.legendText}>Goal (≥10k)</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#4285F4' }]} />
+            <Text style={styles.legendText}>Active Steps</Text>
+          </View>
         </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: '#E8A020' }]} />
-          <Text style={styles.legendText}>Under</Text>
+      ) : (
+        <View style={styles.legendRow}>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#3fb950' }]} />
+            <Text style={styles.legendText}>On Target</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#E8A020' }]} />
+            <Text style={styles.legendText}>Under</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#f85149' }]} />
+            <Text style={styles.legendText}>Over Goal</Text>
+          </View>
         </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: '#f85149' }]} />
-          <Text style={styles.legendText}>Over Goal</Text>
-        </View>
-      </View>
+      )}
     </View>
   );
 }
@@ -214,14 +271,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E8A020',
   },
+  todayCellSteps: {
+    borderWidth: 1,
+    borderColor: '#4285F4',
+  },
   todayDayNum: {
     color: '#E8A020',
+    fontWeight: 'bold',
+  },
+  todayDayNumSteps: {
+    color: '#60A5FA',
     fontWeight: 'bold',
   },
   selectedCell: {
     backgroundColor: '#3A3128',
     borderWidth: 1.5,
     borderColor: '#E8A020',
+  },
+  selectedCellSteps: {
+    backgroundColor: '#1E293B',
+    borderWidth: 1.5,
+    borderColor: '#60A5FA',
   },
   dayNum: {
     fontSize: 13,
@@ -231,6 +301,10 @@ const styles = StyleSheet.create({
   selectedDayNum: {
     fontWeight: 'bold',
     color: '#E8A020',
+  },
+  selectedDayNumSteps: {
+    fontWeight: 'bold',
+    color: '#60A5FA',
   },
   calNum: {
     fontSize: 10,

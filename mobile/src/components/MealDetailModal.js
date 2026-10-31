@@ -82,48 +82,14 @@ export default function MealDetailModal({
     );
   }, [selectedPlan, effectiveSettings]);
 
-  if (!visible || !meal) return null;
-
-  const mealTypeStr = meal.meal_type || 'Lunch';
-  const mealIcon = MEAL_TYPE_ICONS[mealTypeStr] || MEAL_TYPE_ICONS[mealTypeStr.toLowerCase()] || '🍱';
-  const isLoggedToday = hasLoggedLocal || isAlreadyLogged || isLogged;
-  const isCurrentlyLogging = isLogging || isLoggingLocal;
-
-  // Macro Calculations for Visual Share Bar
-  const pCal = (meal.protein || 0) * 4;
-  const cCal = (meal.carbs || 0) * 4;
-  const fCal = (meal.fat || 0) * 9;
-  const totalMacroCal = pCal + cCal + fCal || meal.calories || 1;
-  const pPercent = Math.round((pCal / totalMacroCal) * 100);
-  const cPercent = Math.round((cCal / totalMacroCal) * 100);
-  const fPercent = Math.max(0, 100 - pPercent - cPercent);
-
   // Ingredients Handling
-  const ingredients = Array.isArray(meal.ingredients) ? meal.ingredients : [];
-  const checkedCount = Object.values(checkedIngredients).filter(Boolean).length;
-  const allIngredientsChecked = ingredients.length > 0 && checkedCount === ingredients.length;
-
-  const toggleIngredient = (idx) => {
-    setCheckedIngredients((prev) => ({
-      ...prev,
-      [idx]: !prev[idx],
-    }));
-  };
-
-  const handleToggleAllIngredients = () => {
-    if (allIngredientsChecked) {
-      setCheckedIngredients({});
-    } else {
-      const allTrue = {};
-      ingredients.forEach((_, idx) => {
-        allTrue[idx] = true;
-      });
-      setCheckedIngredients(allTrue);
-    }
-  };
+  const ingredients = useMemo(() => {
+    return Array.isArray(meal?.ingredients) ? meal.ingredients : [];
+  }, [meal]);
 
   // Preparation Steps Parsing
   const prepSteps = useMemo(() => {
+    if (!meal) return [];
     if (Array.isArray(meal.instructions) && meal.instructions.length > 0) {
       return meal.instructions;
     }
@@ -134,7 +100,7 @@ export default function MealDetailModal({
       return meal.description.split(/\.\s+/).filter((s) => s.trim().length > 0);
     }
     return [
-      `Prepare ${meal.dish_name} with listed measured ingredients.`,
+      `Prepare ${meal.dish_name || 'meal'} with listed measured ingredients.`,
       `Cook lightly using at most 1 teaspoon oil/ghee.`,
       `Serve warm and enjoy your macro-balanced meal.`,
     ];
@@ -142,6 +108,7 @@ export default function MealDetailModal({
 
   // Recipe Variations / Swaps
   const recipeVariations = useMemo(() => {
+    if (!meal) return [];
     const list = [];
     const dish = (meal.dish_name || '').toLowerCase();
     const ings = ingredients.join(' ').toLowerCase();
@@ -190,6 +157,44 @@ export default function MealDetailModal({
 
     return list.slice(0, 3);
   }, [meal, ingredients]);
+
+  if (!visible || !meal) return null;
+
+  const mealTypeStr = meal.meal_type || 'Lunch';
+  const mealIcon = MEAL_TYPE_ICONS[mealTypeStr] || MEAL_TYPE_ICONS[mealTypeStr.toLowerCase()] || '🍱';
+  const isLoggedToday = hasLoggedLocal || isAlreadyLogged || isLogged;
+  const isCurrentlyLogging = isLogging || isLoggingLocal;
+
+  // Macro Calculations for Visual Share Bar
+  const pCal = (meal.protein || 0) * 4;
+  const cCal = (meal.carbs || 0) * 4;
+  const fCal = (meal.fat || 0) * 9;
+  const totalMacroCal = pCal + cCal + fCal || meal.calories || 1;
+  const pPercent = Math.round((pCal / totalMacroCal) * 100);
+  const cPercent = Math.round((cCal / totalMacroCal) * 100);
+  const fPercent = Math.max(0, 100 - pPercent - cPercent);
+
+  const checkedCount = Object.values(checkedIngredients).filter(Boolean).length;
+  const allIngredientsChecked = ingredients.length > 0 && checkedCount === ingredients.length;
+
+  const toggleIngredient = (idx) => {
+    setCheckedIngredients((prev) => ({
+      ...prev,
+      [idx]: !prev[idx],
+    }));
+  };
+
+  const handleToggleAllIngredients = () => {
+    if (allIngredientsChecked) {
+      setCheckedIngredients({});
+    } else {
+      const allTrue = {};
+      ingredients.forEach((_, idx) => {
+        allTrue[idx] = true;
+      });
+      setCheckedIngredients(allTrue);
+    }
+  };
 
   // Action: Log Meal to Today's Tracker
   const handleLogMealAction = async () => {
@@ -389,6 +394,7 @@ export default function MealDetailModal({
               {/* Macro Cards Row */}
               <View style={styles.macroGridRow}>
                 <View style={styles.macroStatCard}>
+                  <View style={[styles.macroDotIndicator, { backgroundColor: colors.protein }]} />
                   <Text style={styles.macroStatLabel}>PROTEIN</Text>
                   <Text style={[styles.macroStatVal, { color: colors.protein }]}>
                     {meal.protein}g
@@ -397,6 +403,7 @@ export default function MealDetailModal({
                 </View>
 
                 <View style={styles.macroStatCard}>
+                  <View style={[styles.macroDotIndicator, { backgroundColor: colors.carbs }]} />
                   <Text style={styles.macroStatLabel}>CARBS</Text>
                   <Text style={[styles.macroStatVal, { color: colors.carbs }]}>
                     {meal.carbs}g
@@ -405,6 +412,7 @@ export default function MealDetailModal({
                 </View>
 
                 <View style={styles.macroStatCard}>
+                  <View style={[styles.macroDotIndicator, { backgroundColor: colors.fatText }]} />
                   <Text style={styles.macroStatLabel}>FAT</Text>
                   <Text style={[styles.macroStatVal, { color: colors.fatText }]}>
                     {meal.fat}g
@@ -585,20 +593,22 @@ const styles = StyleSheet.create({
   },
   sheetCard: {
     backgroundColor: colors.surface || '#221D17',
-    borderTopLeftRadius: radius.xl || 20,
-    borderTopRightRadius: radius.xl || 20,
-    maxHeight: '90%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '92%',
     minHeight: '65%',
     borderWidth: 1,
     borderColor: colors.border || '#3A3128',
     paddingBottom: Platform.OS === 'ios' ? 24 : 12,
+    ...(shadows.lg || {}),
   },
   dragIndicatorWrapper: {
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
   dragIndicator: {
-    width: 38,
+    width: 44,
     height: 4,
     borderRadius: 2,
     backgroundColor: colors.borderHover || '#4A3F34',
@@ -618,14 +628,16 @@ const styles = StyleSheet.create({
   },
   badgeCluster: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
     marginBottom: 8,
   },
   dishTitle: {
     fontSize: typography?.sizes?.lg || 20,
-    fontWeight: '700',
+    fontWeight: '800',
     color: colors.textPrimary || '#F4ECDD',
     lineHeight: 26,
+    letterSpacing: -0.2,
   },
   closeBtn: {
     width: 48,
@@ -759,12 +771,18 @@ const styles = StyleSheet.create({
   },
   macroStatCard: {
     flex: 1,
-    backgroundColor: colors.background || '#181410',
+    backgroundColor: colors.surfaceElevated || '#2C251D',
     borderRadius: radius.md || 10,
     padding: 10,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.borderSubtle || '#2D261F',
+  },
+  macroDotIndicator: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginBottom: 4,
   },
   macroStatLabel: {
     fontSize: typography?.sizes?.xs || 11,

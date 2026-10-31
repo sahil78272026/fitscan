@@ -509,7 +509,7 @@ export default function StoreScreen({ navigation, user }) {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       {/* Universal Screen Header */}
       <ScreenHeader
         title="FitScan Store 🛍️"
