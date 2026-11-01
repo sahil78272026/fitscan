@@ -100,7 +100,7 @@
 
 .phoneInput:focus-within {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  box-shadow: 0 0 0 3px var(--color-primary-glow, rgba(232, 160, 32, 0.18));
 }
 
 .countryCode {
@@ -127,7 +127,7 @@
 
 .input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  box-shadow: 0 0 0 3px var(--color-primary-glow, rgba(232, 160, 32, 0.18));
 }
 
 .phoneInput .input {
@@ -158,19 +158,19 @@
 
 .otpInput:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  box-shadow: 0 0 0 3px var(--color-primary-glow, rgba(232, 160, 32, 0.18));
 }
 
 .button {
   width: 100%;
   padding: 0.85rem;
   background: var(--color-primary);
-  color: white;
+  color: var(--color-text-on-primary, #221803);
   border: none;
   border-radius: 0.75rem;
   font-family: inherit;
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
@@ -183,7 +183,7 @@
 .button:hover:not(:disabled) {
   background: var(--color-primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 16px var(--color-primary-glow, rgba(232, 160, 32, 0.28));
 }
 
 .button:disabled {
@@ -208,10 +208,10 @@
 
 .error {
   padding: 0.75rem 1rem;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: rgba(199, 80, 47, 0.15);
+  border: 1px solid rgba(199, 80, 47, 0.3);
   border-radius: 0.75rem;
-  color: var(--color-danger);
+  color: var(--color-danger, #C7502F);
   font-size: 0.85rem;
   text-align: center;
 }
@@ -226,8 +226,8 @@
 .spinner {
   width: 20px;
   height: 20px;
-  border: 2.5px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+  border: 2.5px solid rgba(34, 24, 3, 0.25);
+  border-top-color: var(--color-text-on-primary, #221803);
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }

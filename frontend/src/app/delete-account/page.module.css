@@ -1,7 +1,7 @@
 .main {
   min-height: 100vh;
-  background-color: var(--color-bg, #0f0f13);
-  color: var(--color-text-primary, #f0f0f5);
+  background-color: var(--color-bg, #181410);
+  color: var(--color-text-primary, #F4ECDD);
   padding: 2rem 1rem 6rem;
 }
 
@@ -25,7 +25,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  color: var(--color-text-secondary, #a0a0b8);
+  color: var(--color-text-secondary, #A79A85);
   font-size: 0.875rem;
   font-weight: 500;
   text-decoration: none;
@@ -33,7 +33,7 @@
 }
 
 .backBtn:hover {
-  color: var(--color-text-primary, #f0f0f5);
+  color: var(--color-text-primary, #F4ECDD);
 }
 
 .brand {
@@ -52,13 +52,13 @@
 .logoText {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--color-text-primary, #f0f0f5);
+  color: var(--color-text-primary, #F4ECDD);
 }
 
 /* Hero Card */
 .heroCard {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(185, 28, 28, 0.04) 100%);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: linear-gradient(135deg, rgba(199, 80, 47, 0.15) 0%, rgba(199, 80, 47, 0.05) 100%);
+  border: 1px solid rgba(199, 80, 47, 0.35);
   border-radius: 1rem;
   padding: 1.75rem;
   display: flex;
@@ -72,7 +72,7 @@
   gap: 0.4rem;
   font-size: 0.75rem;
   font-weight: 700;
-  color: #ff7b72;
+  color: #E57453;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -80,22 +80,22 @@
 .title {
   font-size: 1.75rem;
   font-weight: 800;
-  color: #f0f0f5;
+  color: var(--color-text-primary, #F4ECDD);
   margin: 0;
   line-height: 1.25;
 }
 
 .subtitle {
   font-size: 0.9rem;
-  color: #a0a0b8;
+  color: var(--color-text-secondary, #A79A85);
   margin: 0;
   line-height: 1.5;
 }
 
 /* Card Container */
 .card {
-  background: var(--color-surface, #181820);
-  border: 1px solid var(--color-border, #23232f);
+  background: var(--color-surface, #221D17);
+  border: 1px solid var(--color-border, #3A3128);
   border-radius: 1rem;
   padding: 1.75rem;
   display: flex;
@@ -106,14 +106,14 @@
 .sectionTitle {
   font-size: 1.15rem;
   font-weight: 700;
-  color: #f0f0f5;
+  color: var(--color-text-primary, #F4ECDD);
   margin: 0;
 }
 
 .paragraph {
   font-size: 0.9rem;
   line-height: 1.6;
-  color: #c9d1d9;
+  color: var(--color-text-secondary, #A79A85);
   margin: 0;
 }
 
@@ -128,13 +128,13 @@
 .listItem {
   font-size: 0.88rem;
   line-height: 1.5;
-  color: #c9d1d9;
+  color: var(--color-text-secondary, #A79A85);
 }
 
 /* Action Box for Authenticated User */
 .actionBox {
-  background: rgba(239, 68, 68, 0.06);
-  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: rgba(199, 80, 47, 0.08);
+  border: 1px solid rgba(199, 80, 47, 0.25);
   border-radius: 0.75rem;
   padding: 1.25rem;
   display: flex;
@@ -145,12 +145,12 @@
 .actionBoxTitle {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #ff7b72;
+  color: #E57453;
   margin: 0;
 }
 
 .deleteBtn {
-  background: #dc2626;
+  background: var(--color-danger, #C7502F);
   color: #ffffff;
   border: none;
   padding: 0.8rem 1.4rem;
@@ -166,8 +166,9 @@
 }
 
 .deleteBtn:hover:not(:disabled) {
-  background: #ef4444;
+  background: #B34323;
   transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(199, 80, 47, 0.3);
 }
 
 .deleteBtn:disabled {
@@ -191,24 +192,25 @@
 .label {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #a0a0b8;
+  color: var(--color-text-secondary, #A79A85);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
 .input {
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--color-border, #23232f);
+  border: 1px solid var(--color-border, #3A3128);
   border-radius: 0.6rem;
   padding: 0.8rem 1rem;
   font-size: 0.9rem;
-  color: #f0f0f5;
+  color: var(--color-text-primary, #F4ECDD);
   outline: none;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .input:focus {
-  border-color: #58a6ff;
+  border-color: var(--color-primary, #E8A020);
+  box-shadow: 0 0 0 3px var(--color-primary-glow, rgba(232, 160, 32, 0.18));
 }
 
 .textarea {
@@ -217,7 +219,7 @@
 }
 
 .submitBtn {
-  background: #dc2626;
+  background: var(--color-danger, #C7502F);
   color: #ffffff;
   border: none;
   padding: 0.8rem 1.4rem;
@@ -229,7 +231,8 @@
 }
 
 .submitBtn:hover:not(:disabled) {
-  background: #ef4444;
+  background: #B34323;
+  box-shadow: 0 4px 14px rgba(199, 80, 47, 0.3);
 }
 
 .submitBtn:disabled {
@@ -239,8 +242,8 @@
 
 /* Success Alert */
 .successAlert {
-  background: rgba(34, 197, 94, 0.12);
-  border: 1px solid rgba(34, 197, 94, 0.35);
+  background: rgba(123, 160, 91, 0.18);
+  border: 1px solid rgba(123, 160, 91, 0.35);
   border-radius: 0.75rem;
   padding: 1.25rem;
   display: flex;
@@ -251,24 +254,24 @@
 .successTitle {
   font-size: 1rem;
   font-weight: 700;
-  color: #34d399;
+  color: var(--color-success, #7BA05B);
   margin: 0;
 }
 
 .successText {
   font-size: 0.88rem;
-  color: #c9d1d9;
+  color: var(--color-text-secondary, #A79A85);
   margin: 0;
   line-height: 1.5;
 }
 
 /* Notice Box */
 .noticeBox {
-  background: rgba(245, 158, 11, 0.08);
-  border: 1px dashed rgba(245, 158, 11, 0.3);
+  background: rgba(232, 160, 32, 0.10);
+  border: 1px dashed rgba(232, 160, 32, 0.35);
   border-radius: 0.75rem;
   padding: 1rem;
   font-size: 0.82rem;
-  color: #fbbf24;
+  color: var(--color-warning, #E8A020);
   line-height: 1.5;
 }

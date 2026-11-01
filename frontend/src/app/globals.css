@@ -1,35 +1,80 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Instrument+Sans:wght@400;500;600;700&display=swap');
 
 :root {
-  /* Warm Culinary Palette */
+  /* Warm Culinary Palette - Canonical Mobile Standard */
   --color-bg: #181410;
   --color-surface: #221D17;
   --color-surface-elevated: #2C251D;
+  --color-surface-active: #2A2219;
+  --color-surface-hover: #2E271F;
+  --color-surface-overlay: rgba(0, 0, 0, 0.80);
+
+  /* Borders & Dividers */
   --color-border: #3A3128;
+  --color-border-subtle: #2D261F;
   --color-border-hover: #4A3F34;
 
-  /* Primary (Turmeric Gold) */
+  /* Primary Brand (Turmeric Gold) */
   --color-primary: #E8A020;
   --color-primary-hover: #D4901A;
+  --color-primary-dark: #221803;
   --color-primary-glow: rgba(232, 160, 32, 0.18);
-
-  /* Macro Accents */
-  --color-protein: #7BA05B;
-  --color-carbs: #D9A441;
-  --color-fat: #C7502F;
-
-  /* Semantic */
-  --color-success: #7BA05B;
-  --color-warning: #E8A020;
-  --color-danger: #C7502F;
+  --color-primary-subtle: rgba(232, 160, 32, 0.10);
+  --color-primary-border: rgba(232, 160, 32, 0.35);
   --color-accent: #E8A020;
 
-  /* Text */
+  /* High-Contrast Accessible Text on Primary (WCAG AAA 7.9:1) */
+  --color-text-on-primary: #221803;
+
+  /* Macro Accents (Canonical Nutrition Standards) */
+  --color-protein: #7BA05B;
+  --color-protein-subtle: rgba(123, 160, 91, 0.18);
+  --color-carbs: #D9A441;
+  --color-carbs-subtle: rgba(217, 164, 65, 0.18);
+  --color-fat: #C7502F;
+  --color-fat-subtle: rgba(199, 80, 47, 0.18);
+  --color-fat-text: #E57453;
+
+  /* Semantic Status */
+  --color-success: #7BA05B;
+  --color-success-subtle: rgba(123, 160, 91, 0.18);
+  --color-warning: #E8A020;
+  --color-warning-subtle: rgba(232, 160, 32, 0.18);
+  --color-danger: #C7502F;
+  --color-danger-subtle: rgba(199, 80, 47, 0.18);
+  --color-danger-text: #E57453;
+  --color-info: #4285F4;
+  --color-info-subtle: rgba(66, 133, 244, 0.18);
+  --color-neutral: #A79A85;
+  --color-neutral-subtle: rgba(167, 154, 133, 0.15);
+
+  /* Typography & Foreground Text */
   --color-text-primary: #F4ECDD;
   --color-text-secondary: #A79A85;
   --color-text-tertiary: #706555;
+  --color-text-muted: #948675;
+  --color-text-inverse: #181410;
 
-  /* Spacing */
+  /* Backward-Compatible Token Aliases */
+  --color-background: var(--color-bg);
+  --color-text: var(--color-text-primary);
+  --color-primary-light: var(--color-primary-subtle);
+
+  /* Corner Radii System (Aligned with mobile radius.js) */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* Elevation & Shadows (Aligned with mobile shadows.js) */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.22);
+  --shadow-md: 0 3px 6px rgba(0, 0, 0, 0.30);
+  --shadow-lg: 0 6px 16px rgba(0, 0, 0, 0.38);
+  --shadow-primary-glow: 0 2px 12px rgba(232, 160, 32, 0.25);
+
+  /* Layout Spacing */
   --container-max: 520px;
   --container-padding: 1.25rem;
 }
@@ -44,12 +89,35 @@ html, body {
   height: 100%;
 }
 
+html {
+  color-scheme: dark;
+  background-color: var(--color-bg);
+}
+
 body {
   font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--color-bg);
   color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Accessible Primary Button Standard (WCAG AAA Contrast >= 7.0:1) */
+button.btn-primary,
+.btn-primary,
+button[data-variant="primary"],
+.button-primary {
+  background-color: var(--color-primary);
+  color: var(--color-text-on-primary);
+  font-weight: 600;
+}
+
+button.btn-primary:hover,
+.btn-primary:hover,
+button[data-variant="primary"]:hover,
+.button-primary:hover {
+  background-color: var(--color-primary-hover);
+  color: var(--color-text-on-primary);
 }
 
 /* Subtle warm background radial gradient */

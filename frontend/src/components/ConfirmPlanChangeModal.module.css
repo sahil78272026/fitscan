@@ -1,7 +1,7 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.78);
+  background: var(--color-surface-overlay, rgba(0, 0, 0, 0.80));
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   display: flex;
@@ -19,13 +19,13 @@
 
 .modal {
   position: relative;
-  background: #111422;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--color-surface, #221D17);
+  border: 1px solid var(--color-border, #3A3128);
   border-radius: 1.25rem;
   width: 100%;
   max-width: 500px;
   padding: 1.75rem;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(99, 102, 241, 0.12);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 40px var(--color-primary-glow, rgba(232, 160, 32, 0.18));
   animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
@@ -47,9 +47,9 @@
   position: absolute;
   top: 1rem;
   right: 1rem;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--color-text-secondary);
+  background: var(--color-surface-elevated, #2C251D);
+  border: 1px solid var(--color-border, #3A3128);
+  color: var(--color-text-secondary, #A79A85);
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -62,8 +62,9 @@
 }
 
 .closeBtn:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
+  background: var(--color-surface-active, #2A2219);
+  border-color: var(--color-border-hover, #4A3F34);
+  color: var(--color-text-primary, #F4ECDD);
 }
 
 .header {
@@ -76,8 +77,8 @@
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2));
-  border: 1px solid rgba(99, 102, 241, 0.35);
+  background: var(--color-primary-glow, rgba(232, 160, 32, 0.18));
+  border: 1px solid rgba(232, 160, 32, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -94,20 +95,20 @@
 .modalTitle {
   font-size: 1.2rem;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--color-text-primary, #F4ECDD);
   margin: 0;
 }
 
 .modalSubtitle {
   font-size: 0.82rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-secondary, #A79A85);
   margin: 0;
 }
 
 /* Active Plan Context Card */
 .currentPlanCard {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--color-surface-elevated, #2C251D);
+  border: 1px solid var(--color-border, #3A3128);
   border-radius: 0.85rem;
   padding: 0.85rem 1rem;
   display: flex;
@@ -119,38 +120,38 @@
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-text-secondary);
+  color: var(--color-text-secondary, #A79A85);
   font-weight: 600;
 }
 
 .planCardTitle {
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--color-primary);
+  color: var(--color-primary, #E8A020);
 }
 
 /* Warning & Rate-Limit Notice Box */
 .warningBox {
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: var(--color-primary-glow, rgba(232, 160, 32, 0.12));
+  border: 1px solid rgba(232, 160, 32, 0.3);
   border-radius: 0.85rem;
   padding: 1rem;
   font-size: 0.85rem;
   line-height: 1.5;
-  color: #fef08a;
+  color: var(--color-text-primary, #F4ECDD);
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
 }
 
 .warningBoxPro {
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: var(--color-primary-glow, rgba(232, 160, 32, 0.12));
+  border: 1px solid rgba(232, 160, 32, 0.3);
   border-radius: 0.85rem;
   padding: 1rem;
   font-size: 0.85rem;
   line-height: 1.5;
-  color: #c7d2fe;
+  color: var(--color-text-primary, #F4ECDD);
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -162,11 +163,12 @@
   align-items: center;
   gap: 0.4rem;
   font-size: 0.88rem;
+  color: var(--color-primary, #E8A020);
 }
 
 .warningDetail {
   margin: 0;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--color-text-secondary, #A79A85);
   font-size: 0.82rem;
 }
 
@@ -180,9 +182,9 @@
 }
 
 .cancelBtn {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: var(--color-text-secondary);
+  background: var(--color-surface-elevated, #2C251D);
+  border: 1px solid var(--color-border, #3A3128);
+  color: var(--color-text-secondary, #A79A85);
   padding: 0.7rem 1.15rem;
   border-radius: 0.75rem;
   font-size: 0.875rem;
@@ -192,24 +194,26 @@
 }
 
 .cancelBtn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+  background: var(--color-surface-active, #2A2219);
+  border-color: var(--color-border-hover, #4A3F34);
+  color: var(--color-text-primary, #F4ECDD);
 }
 
 .confirmBtn {
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+  background: linear-gradient(135deg, var(--color-primary, #E8A020) 0%, var(--color-primary-hover, #D4901A) 100%);
   border: none;
-  color: #fff;
+  color: var(--color-text-on-primary, #221803);
   padding: 0.7rem 1.25rem;
   border-radius: 0.75rem;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 4px 14px var(--color-primary-glow);
+  box-shadow: 0 4px 14px var(--color-primary-glow, rgba(232, 160, 32, 0.25));
 }
 
 .confirmBtn:hover {
   opacity: 0.95;
   transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(232, 160, 32, 0.4);
 }

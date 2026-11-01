@@ -4,6 +4,10 @@ import BottomTabBar from "@/components/BottomTabBar";
 
 export const viewport = {
   themeColor: "#181410",
+  colorScheme: "dark",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export const metadata = {
@@ -21,7 +25,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body>
         <AuthProvider>
           {children}

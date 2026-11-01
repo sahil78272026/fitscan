@@ -1,6 +1,6 @@
 .card {
-  background: var(--color-surface, #13131a);
-  border: 1px solid var(--color-border, #23232f);
+  background: var(--color-surface, #221D17);
+  border: 1px solid var(--color-border, #3A3128);
   border-radius: 1rem;
   padding: 1.25rem;
   display: flex;
@@ -21,11 +21,11 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(239, 68, 68, 0.1) 100%);
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: linear-gradient(135deg, rgba(232, 160, 32, 0.18) 0%, rgba(199, 80, 47, 0.12) 100%);
+  border: 1px solid rgba(232, 160, 32, 0.35);
   padding: 0.5rem 1rem;
   border-radius: 9999px;
-  color: var(--color-warning, #f59e0b);
+  color: var(--color-warning, #E8A020);
   font-weight: 700;
   font-size: 0.95rem;
 }
@@ -55,13 +55,13 @@
 
 .scoreCircleBg {
   fill: none;
-  stroke: var(--color-border, #23232f);
+  stroke: var(--color-border, #3A3128);
   stroke-width: 4;
 }
 
 .scoreCircleFg {
   fill: none;
-  stroke: var(--color-primary, #6366f1);
+  stroke: var(--color-primary, #E8A020);
   stroke-width: 4;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.6s ease;
@@ -74,7 +74,7 @@
   transform: translate(-50%, -50%);
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--color-text-primary, #f0f0f5);
+  color: var(--color-text-primary, #F4ECDD);
 }
 
 .scoreLabelGroup {
@@ -85,12 +85,12 @@
 .scoreTitle {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--color-text-primary, #f0f0f5);
+  color: var(--color-text-primary, #F4ECDD);
 }
 
 .scoreSubtitle {
   font-size: 0.75rem;
-  color: var(--color-text-secondary, #a0a0b8);
+  color: var(--color-text-secondary, #A79A85);
 }
 
 /* 7-Day Grid */
@@ -103,7 +103,7 @@
 .gridHeader {
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--color-text-tertiary, #606078);
+  color: var(--color-text-tertiary, #706555);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -123,7 +123,7 @@
 
 .dayName {
   font-size: 0.75rem;
-  color: var(--color-text-secondary, #a0a0b8);
+  color: var(--color-text-secondary, #A79A85);
   font-weight: 500;
 }
 
@@ -140,27 +140,27 @@
 }
 
 .dayDot.on_target {
-  background: rgba(34, 197, 94, 0.2);
-  color: var(--color-success, #22c55e);
-  border: 1px solid rgba(34, 197, 94, 0.4);
+  background: rgba(123, 160, 91, 0.2);
+  color: var(--color-success, #7BA05B);
+  border: 1px solid rgba(123, 160, 91, 0.4);
 }
 
 .dayDot.close {
-  background: rgba(245, 158, 11, 0.2);
-  color: var(--color-warning, #f59e0b);
-  border: 1px solid rgba(245, 158, 11, 0.4);
+  background: rgba(232, 160, 32, 0.2);
+  color: var(--color-warning, #E8A020);
+  border: 1px solid rgba(232, 160, 32, 0.4);
 }
 
 .dayDot.off_target {
-  background: rgba(239, 68, 68, 0.2);
-  color: var(--color-danger, #ef4444);
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(199, 80, 47, 0.2);
+  color: var(--color-danger, #C7502F);
+  border: 1px solid rgba(199, 80, 47, 0.4);
 }
 
 .dayDot.no_log {
   background: rgba(255, 255, 255, 0.04);
-  color: var(--color-text-tertiary, #606078);
-  border: 1px solid var(--color-border, #23232f);
+  color: var(--color-text-tertiary, #706555);
+  border: 1px solid var(--color-border, #3A3128);
 }
 
 /* Badges Section */
@@ -178,7 +178,7 @@
 
 .badgeCard {
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--color-border, #23232f);
+  border: 1px solid var(--color-border, #3A3128);
   border-radius: 0.75rem;
   padding: 0.6rem 0.75rem;
   display: flex;
@@ -190,8 +190,8 @@
 }
 
 .badgeCard.unlocked {
-  background: rgba(99, 102, 241, 0.08);
-  border-color: rgba(99, 102, 241, 0.3);
+  background: var(--color-primary-glow, rgba(232, 160, 32, 0.12));
+  border-color: rgba(232, 160, 32, 0.35);
   opacity: 1;
   filter: grayscale(0%);
 }
@@ -208,10 +208,10 @@
 .badgeTitle {
   font-size: 0.8rem;
   font-weight: 700;
-  color: var(--color-text-primary, #f0f0f5);
+  color: var(--color-text-primary, #F4ECDD);
 }
 
 .badgeStatus {
   font-size: 0.7rem;
-  color: var(--color-text-secondary, #a0a0b8);
+  color: var(--color-text-secondary, #A79A85);
 }

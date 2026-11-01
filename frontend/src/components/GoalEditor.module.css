@@ -45,7 +45,7 @@
   font-size: 0.9rem;
   font-weight: 600;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  box-shadow: 0 0 0 3px var(--color-primary-glow, rgba(232, 160, 32, 0.18));
   -moz-appearance: textfield;
 }
 
@@ -63,19 +63,20 @@
 
 .saveBtn {
   padding: 0.4rem 0.8rem;
-  background: var(--color-success);
-  color: white;
+  background: var(--color-primary);
+  color: var(--color-text-on-primary, #221803);
   border: none;
   border-radius: 0.5rem;
   font-family: inherit;
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: opacity 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .saveBtn:hover:not(:disabled) {
-  opacity: 0.9;
+  background: var(--color-primary-hover);
+  opacity: 0.95;
 }
 
 .saveBtn:disabled {

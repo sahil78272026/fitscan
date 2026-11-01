@@ -1,6 +1,6 @@
 .card {
-  background: var(--color-surface, #13131a);
-  border: 1px solid var(--color-border, #23232f);
+  background: var(--color-surface, #221D17);
+  border: 1px solid var(--color-border, #3A3128);
   border-radius: 1rem;
   padding: 1.25rem;
   display: flex;
@@ -25,7 +25,7 @@
 .title {
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--color-text-primary, #f0f0f5);
+  color: var(--color-text-primary, #F4ECDD);
   margin: 0;
   display: flex;
   align-items: center;
@@ -34,7 +34,7 @@
 
 .subtitle {
   font-size: 0.8rem;
-  color: var(--color-text-secondary, #a0a0b8);
+  color: var(--color-text-secondary, #A79A85);
 }
 
 .timeframeSelector {
@@ -43,13 +43,13 @@
   background: rgba(255, 255, 255, 0.04);
   padding: 0.2rem;
   border-radius: 0.5rem;
-  border: 1px solid var(--color-border, #23232f);
+  border: 1px solid var(--color-border, #3A3128);
 }
 
 .timeframeBtn {
   background: transparent;
   border: none;
-  color: var(--color-text-secondary, #a0a0b8);
+  color: var(--color-text-secondary, #A79A85);
   font-size: 0.75rem;
   font-weight: 600;
   padding: 0.25rem 0.6rem;
@@ -59,8 +59,9 @@
 }
 
 .timeframeBtn.active {
-  background: var(--color-primary, #6366f1);
-  color: #fff;
+  background: var(--color-primary, #E8A020);
+  color: var(--color-text-on-primary, #221803);
+  font-weight: 700;
 }
 
 /* Stats Row */
@@ -72,7 +73,7 @@
 
 .statItem {
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--color-border, #23232f);
+  border: 1px solid var(--color-border, #3A3128);
   border-radius: 0.75rem;
   padding: 0.75rem;
   display: flex;
@@ -82,7 +83,7 @@
 
 .statLabel {
   font-size: 0.75rem;
-  color: var(--color-text-tertiary, #606078);
+  color: var(--color-text-tertiary, #706555);
   text-transform: uppercase;
   font-weight: 500;
 }
@@ -90,15 +91,15 @@
 .statVal {
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--color-text-primary, #f0f0f5);
+  color: var(--color-text-primary, #F4ECDD);
 }
 
 .statVal.loss {
-  color: var(--color-success, #22c55e);
+  color: var(--color-success, #7BA05B);
 }
 
 .statVal.gain {
-  color: var(--color-accent, #a78bfa);
+  color: var(--color-accent, #E8A020);
 }
 
 /* SVG Chart */
@@ -116,7 +117,7 @@
 }
 
 .gridLine {
-  stroke: var(--color-border, #23232f);
+  stroke: var(--color-border, #3A3128);
   stroke-dasharray: 4 4;
 }
 
@@ -127,15 +128,15 @@
 
 .linePath {
   fill: none;
-  stroke: var(--color-primary, #6366f1);
+  stroke: var(--color-primary, #E8A020);
   stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 .point {
-  fill: var(--color-primary, #6366f1);
-  stroke: var(--color-surface, #13131a);
+  fill: var(--color-primary, #E8A020);
+  stroke: var(--color-surface, #221D17);
   stroke-width: 2.5;
   cursor: pointer;
   transition: transform 0.2s ease, fill 0.2s ease;
@@ -143,12 +144,12 @@
 
 .point:hover {
   transform: scale(1.4);
-  fill: var(--color-accent, #a78bfa);
+  fill: var(--color-primary-hover, #D4901A);
 }
 
 .axisText {
   font-size: 10px;
-  fill: var(--color-text-tertiary, #606078);
+  fill: var(--color-text-tertiary, #706555);
 }
 
 .emptyChart {
@@ -158,11 +159,11 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  color: var(--color-text-secondary, #a0a0b8);
+  color: var(--color-text-secondary, #A79A85);
   font-size: 0.9rem;
   background: rgba(255, 255, 255, 0.02);
   border-radius: 0.75rem;
-  border: 1px dashed var(--color-border, #23232f);
+  border: 1px dashed var(--color-border, #3A3128);
 }
 
 /* Input Row */
@@ -171,7 +172,7 @@
   align-items: center;
   gap: 0.5rem;
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--color-border, #23232f);
+  border: 1px solid var(--color-border, #3A3128);
   padding: 0.5rem 0.75rem;
   border-radius: 0.75rem;
 }
@@ -186,9 +187,9 @@
 .input {
   width: 100%;
   max-width: 120px;
-  background: var(--color-surface, #13131a);
-  border: 1px solid var(--color-border, #23232f);
-  color: var(--color-text-primary, #f0f0f5);
+  background: var(--color-surface, #221D17);
+  border: 1px solid var(--color-border, #3A3128);
+  color: var(--color-text-primary, #F4ECDD);
   font-size: 0.95rem;
   font-weight: 600;
   padding: 0.4rem 0.6rem;
@@ -197,22 +198,23 @@
 }
 
 .input:focus {
-  border-color: var(--color-primary, #6366f1);
+  border-color: var(--color-primary, #E8A020);
+  box-shadow: 0 0 0 3px var(--color-primary-glow, rgba(232, 160, 32, 0.18));
 }
 
 .unit {
   font-size: 0.85rem;
-  color: var(--color-text-secondary, #a0a0b8);
+  color: var(--color-text-secondary, #A79A85);
 }
 
 .logBtn {
-  background: linear-gradient(135deg, var(--color-primary, #6366f1) 0%, var(--color-primary-hover, #5558e6) 100%);
-  color: #fff;
+  background: linear-gradient(135deg, var(--color-primary, #E8A020) 0%, var(--color-primary-hover, #D4901A) 100%);
+  color: var(--color-text-on-primary, #221803);
   border: none;
   padding: 0.45rem 1rem;
   border-radius: 0.5rem;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;

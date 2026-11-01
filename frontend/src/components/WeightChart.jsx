@@ -157,8 +157,8 @@ export default function WeightChart({
           <svg className={styles.svg} viewBox={`0 0 ${width} ${height}`}>
             <defs>
               <linearGradient id="weightGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--color-primary, #6366f1)" stopOpacity="0.4" />
-                <stop offset="100%" stopColor="var(--color-primary, #6366f1)" stopOpacity="0.0" />
+                <stop offset="0%" stopColor="var(--color-primary, #E8A020)" stopOpacity="0.4" />
+                <stop offset="100%" stopColor="var(--color-primary, #E8A020)" stopOpacity="0.0" />
               </linearGradient>
             </defs>
 
@@ -218,7 +218,7 @@ export default function WeightChart({
         </button>
       </form>
       {errorMsg ? (
-        <div style={{ color: "#ef4444", fontSize: "0.82rem", marginTop: "0.4rem", paddingLeft: "0.2rem" }}>
+        <div style={{ color: "var(--color-danger, #C7502F)", fontSize: "0.82rem", marginTop: "0.4rem", paddingLeft: "0.2rem" }}>
           {errorMsg}
         </div>
       ) : null}

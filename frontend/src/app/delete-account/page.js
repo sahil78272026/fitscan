@@ -121,7 +121,7 @@ export default function DeleteAccountPage() {
           </ul>
 
           <div className={styles.noticeBox}>
-            ℹ️ <strong>Subscription Notice:</strong> Deleting your CoreControl account permanently removes all stored data on our servers. If you have an active CoreControl Pro subscription billed through Apple App Store (Apple ID) or Google Play Store, please cancel your subscription in your device's Store settings to prevent future renewals.
+            ℹ️ <strong>Subscription Notice:</strong> Deleting your CoreControl account permanently removes all stored data on our servers. If you have an active CoreControl Pro subscription billed through Apple App Store (Apple ID) or Google Play Store, please cancel your subscription in your device&apos;s Store settings to prevent future renewals.
           </div>
         </div>
 
@@ -134,7 +134,7 @@ export default function DeleteAccountPage() {
         )}
 
         {error && (
-          <div className={styles.noticeBox} style={{ color: "#ef4444", borderColor: "rgba(239, 68, 68, 0.4)" }}>
+          <div className={styles.noticeBox} style={{ color: "var(--color-danger, #C7502F)", borderColor: "rgba(199, 80, 47, 0.4)" }}>
             ⚠️ {error}
           </div>
         )}
@@ -204,9 +204,9 @@ export default function DeleteAccountPage() {
         )}
 
         {/* Contact info */}
-        <div style={{ textAlign: "center", fontSize: "0.85rem", color: "#606078" }}>
+        <div style={{ textAlign: "center", fontSize: "0.85rem", color: "var(--color-text-secondary, #A79A85)" }}>
           Need assistance? You can also email us directly at{" "}
-          <a href="mailto:privacy@corecontrol.fit" style={{ color: "#58a6ff" }}>
+          <a href="mailto:privacy@corecontrol.fit" style={{ color: "var(--color-primary, #E8A020)" }}>
             privacy@corecontrol.fit
           </a>
           .

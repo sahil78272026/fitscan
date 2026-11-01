@@ -6,10 +6,10 @@
   display: flex;
   justify-content: space-around;
   align-items: stretch;
-  background: rgba(17, 17, 27, 0.94);
+  background: rgba(24, 20, 16, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--color-border);
   padding: 0.45rem 0.5rem calc(0.45rem + env(safe-area-inset-bottom, 0px));
   z-index: 999;
 }
@@ -22,8 +22,8 @@
   gap: 0.2rem;
   flex: 1;
   padding: 0.35rem 0;
-  border-radius: 0.6rem;
-  color: var(--color-text-tertiary, #706555);
+  border-radius: var(--radius-md, 0.6rem);
+  color: var(--color-text-secondary, #A79A85);
   text-decoration: none;
   transition: all 0.2s ease;
   cursor: pointer;
@@ -31,12 +31,13 @@
 }
 
 .navItem:hover {
-  color: var(--color-text-secondary, #a79a85);
-  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text-primary, #F4ECDD);
+  background: var(--color-surface-elevated, #2C251D);
 }
 
 .navItemActive {
-  color: var(--color-primary, #e8a020);
+  color: var(--color-primary, #E8A020);
+  background: var(--color-primary-subtle, rgba(232, 160, 32, 0.10));
 }
 
 .navIcon {

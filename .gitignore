@@ -84,6 +84,7 @@ desktop.ini
 *.swp
 *.swo
 *.log
+*.pdf
 
 # ─── Telegram Bot Config (stores bot token locally) ───────
 ~/.gemini/antigravity-cli/telegram_bridge.json
@@ -101,3 +102,4 @@ scripts/create_feature_*.py
 scripts/resize_*.py
 scripts/telegram_agent_bridge.py
 scripts/
+docs/
