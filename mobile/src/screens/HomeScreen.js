@@ -29,17 +29,8 @@ import {
   deleteMeal,
   getSettings,
   logWeight,
-  getStepHistory,
-  getDailySteps,
-  logSteps,
 } from '../services/api';
-import {
-  syncStepsToBackend,
-  checkHealthConnectAvailable,
-  requestHealthConnectPermissions,
-  checkHealthConnectPermissionsGranted,
-  getHealthConnectDailyMetrics,
-} from '../services/pedometer';
+import RecentMealsChips from '../components/RecentMealsChips';
 import AdherenceCard from '../components/AdherenceCard';
 import MorningBriefingCard from '../components/MorningBriefingCard';
 import OnboardingModal from '../components/OnboardingModal';
@@ -87,11 +78,6 @@ export default function HomeScreen({ navigation, user, onLogout }) {
   const [loggingPlannedMeal, setLoggingPlannedMeal] = useState(null);
   const [selectedPlannedMealModal, setSelectedPlannedMealModal] = useState(null);
 
-  // Summary Tab & Health Connect State
-  const [summaryTab, setSummaryTab] = useState('calories');
-  const [stepData, setStepData] = useState({ step_count: 0, calories_burned: 0 });
-  const [healthConnectAvailable, setHealthConnectAvailable] = useState(false);
-  const [healthConnectConnected, setHealthConnectConnected] = useState(false);
 
   // Calendar State
   const [calendarData, setCalendarData] = useState(null);
@@ -232,48 +218,10 @@ export default function HomeScreen({ navigation, user, onLogout }) {
       setCalendarYear(selYear);
       setCalendarMonth(selMonth);
 
-      // Fetch calendar, adherence streak stats, daily steps, and check onboarding status
+      // Fetch calendar, adherence streak stats, and check onboarding status
       const promises = [
         fetchCalendar(selYear, selMonth),
         getAdherenceStats().then(setAdherenceStats).catch(() => null),
-        (async () => {
-          try {
-            const hcAvail = await checkHealthConnectAvailable();
-            setHealthConnectAvailable(hcAvail);
-            if (hcAvail) {
-              const hcGranted = await checkHealthConnectPermissionsGranted();
-              setHealthConnectConnected(hcGranted);
-              if (hcGranted) {
-                const hcData = await getHealthConnectDailyMetrics(selectedDate);
-                if (hcData && typeof hcData.steps === 'number') {
-                  setStepData({
-                    step_count: hcData.steps,
-                    calories_burned: hcData.calories,
-                  });
-                  if (isToday && hcData.steps > 0) {
-                    syncStepsToBackend(hcData.steps, hcData.calories);
-                  }
-                  return;
-                }
-              }
-            }
-          } catch (hcErr) {
-            console.warn('Health Connect load error:', hcErr);
-          }
-
-          // Fallback to backend recorded steps
-          try {
-            const res = await getDailySteps(dateStr);
-            if (res) {
-              setStepData({
-                step_count: res.step_count || 0,
-                calories_burned: res.calories_burned || 0,
-              });
-            }
-          } catch (e) {
-            // ignore
-          }
-        })(),
         getSettings().then((settings) => {
           setUserSettings(settings);
           // Until a user fixes their metrics, it reappears:
@@ -402,46 +350,12 @@ export default function HomeScreen({ navigation, user, onLogout }) {
     }
   };
 
-  const handleConnectHealthConnect = async () => {
-    try {
-      const isAvail = await checkHealthConnectAvailable();
-      if (!isAvail) {
-        Alert.alert(
-          'Health Connect Not Available',
-          'Google Health Connect is not available in this environment.\n\n• If testing locally in Expo Go: Health Connect is a native module that requires an Android development build (npx expo run:android).\n• If testing on an Android device (Android 9-13): Install the "Health Connect" app from Google Play Store.'
-        );
-        return;
-      }
-      const granted = await requestHealthConnectPermissions();
-      if (granted) {
-        setHealthConnectConnected(true);
-        const hcData = await getHealthConnectDailyMetrics(selectedDate);
-        if (hcData && typeof hcData.steps === 'number') {
-          setStepData({
-            step_count: hcData.steps,
-            calories_burned: hcData.calories,
-          });
-          if (isToday && hcData.steps > 0) {
-            syncStepsToBackend(hcData.steps, hcData.calories);
-          }
-        }
-        Alert.alert('Health Connect Connected! 🎉', 'FitScan is now syncing live steps and calories from Google Health Connect.');
-      } else {
-        Alert.alert('Permission Needed', 'Health Connect permissions were not granted. You can manage access in Android Settings > Security & Privacy > Health Connect.');
-      }
-    } catch (err) {
-      Alert.alert('Health Connect', err?.message || 'Could not connect to Health Connect.');
-    }
-  };
-
   const consumedCals = summary?.total_calories || 0;
   const goalCals = summary?.calorie_goal || 2000;
+  const remainingCals = Math.max(0, goalCals - consumedCals);
+  const isSurplus = consumedCals > goalCals;
+  const surplusCals = isSurplus ? consumedCals - goalCals : 0;
   const calPercent = Math.min((consumedCals / goalCals) * 100, 100).toFixed(0);
-
-  const stepGoal = 10000;
-  const currentSteps = stepData?.step_count || 0;
-  const stepPercent = Math.min((currentSteps / stepGoal) * 100, 100).toFixed(0);
-  const distanceKm = (((stepData?.step_count || 0) * 0.762) / 1000).toFixed(2);
 
   const dateLabel = selectedDate.toLocaleDateString('en-US', {
     weekday: 'short',
@@ -535,168 +449,124 @@ export default function HomeScreen({ navigation, user, onLogout }) {
           <Text style={styles.streakArrow}>→</Text>
         </TouchableOpacity>
 
-        {/* Calorie & Pedometer Summary Card (Google Fit Style) */}
+        {/* Daily Nutrition & Calorie Budget Card */}
         <View style={styles.card}>
-          {/* Segmented Tab Switcher */}
-          <View style={styles.summaryTabContainer}>
-            <TouchableOpacity
-              style={[
-                styles.summaryTabBtn,
-                summaryTab === 'calories' && styles.summaryTabBtnActiveCal,
-              ]}
-              onPress={() => setSummaryTab('calories')}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={[
-                  styles.summaryTabText,
-                  summaryTab === 'calories' && styles.summaryTabTextActive,
-                ]}
-              >
-                🔥 Calories
+          {/* Header Row */}
+          <View style={styles.nutritionBudgetHeader}>
+            <View>
+              <Text style={styles.cardTitle}>Daily Calorie Budget</Text>
+              <Text style={styles.nutritionBudgetSub}>
+                {isSurplus
+                  ? `Over budget by ${surplusCals.toLocaleString()} kcal`
+                  : `${remainingCals.toLocaleString()} kcal remaining for today`}
               </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.summaryTabBtn,
-                summaryTab === 'steps' && styles.summaryTabBtnActiveStep,
-              ]}
-              onPress={() => setSummaryTab('steps')}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={[
-                  styles.summaryTabText,
-                  summaryTab === 'steps' && styles.summaryTabTextActive,
-                ]}
-              >
-                👟 Steps
-              </Text>
-            </TouchableOpacity>
+            </View>
+            <Badge
+              variant={isSurplus ? 'danger' : 'primary'}
+              label={`${calPercent}% Goal`}
+              size="sm"
+            />
           </View>
 
-          {/* Centered Circular Progress Ring (Tappable -> Opens ActivityDetailScreen) */}
+          {/* Centered Circular Progress Ring (Tappable -> Opens MyActivity Screen) */}
           <TouchableOpacity
             style={styles.fitRingContainer}
             onPress={() =>
               navigation.navigate('ActivityDetail', {
                 selectedDate: formatDateStr(selectedDate),
-                stepData: {
-                  ...stepData,
-                  date: formatDateStr(selectedDate),
-                },
                 summary,
                 calendarData,
-                initialTab: summaryTab,
+                initialTab: 'calories',
               })
             }
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={`Calorie progress: ${consumedCals} of ${goalCals} kcal eaten. Tap to view activity details.`}
           >
             {/* 3D Gauge Outer Casing & Shadow Well */}
-            <View
-              style={[
-                styles.fitRingCasing3D,
-                summaryTab === 'steps' ? styles.fitRingCasingSteps : styles.fitRingCasingCals,
-              ]}
-            >
-              <View
-                style={[
-                  styles.fitRingOuter,
-                  summaryTab === 'steps' ? styles.fitRingOuterSteps : styles.fitRingOuterCals,
-                ]}
-              >
+            <View style={styles.fitRingCasing3D}>
+              <View style={styles.fitRingOuter}>
                 <View style={styles.fitRingInner}>
                   <Text style={styles.fitRingValue}>
-                    {summaryTab === 'calories'
-                      ? consumedCals.toLocaleString()
-                      : (stepData?.step_count || 0).toLocaleString()}
+                    {consumedCals.toLocaleString()}
                   </Text>
                   <Text style={styles.fitRingSub}>
-                    {summaryTab === 'calories'
-                      ? `of ${goalCals.toLocaleString()} kcal eaten`
-                      : `of ${stepGoal.toLocaleString()} steps`}
+                    of {goalCals.toLocaleString()} kcal target
                   </Text>
+                  <View
+                    style={[
+                      styles.deficitStatusPill,
+                      isSurplus ? styles.deficitStatusSurplus : styles.deficitStatusDeficit,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.deficitStatusText,
+                        isSurplus && { color: colors.dangerText || '#E57453' },
+                      ]}
+                    >
+                      {isSurplus
+                        ? `+${surplusCals.toLocaleString()} kcal surplus`
+                        : `${remainingCals.toLocaleString()} kcal left`}
+                    </Text>
+                  </View>
                 </View>
               </View>
             </View>
           </TouchableOpacity>
 
-          {/* 3 Metric Stats Row (Google Fit Style: Cal Eaten / Burned • km • Move Min) */}
+          {/* 3 Metric Nutrition Stats Row: Protein • Carbs • Fat */}
           <View style={styles.fitStatsRow}>
             <View style={styles.fitStatItem}>
-              <Text style={styles.fitStatVal}>
-                {summaryTab === 'steps'
-                  ? (stepData?.calories_burned || 0).toLocaleString()
-                  : consumedCals.toLocaleString()}
+              <Text style={[styles.fitStatVal, { color: colors.protein }]}>
+                {summary?.total_protein || 0}g
               </Text>
               <Text style={styles.fitStatLbl}>
-                {summaryTab === 'steps' ? 'Cal Burned' : 'Cal Eaten'}
+                Protein ({summary?.protein_goal || 150}g)
               </Text>
             </View>
             <View style={styles.fitStatDivider} />
             <View style={styles.fitStatItem}>
-              <Text style={styles.fitStatVal}>{distanceKm}</Text>
-              <Text style={styles.fitStatLbl}>km</Text>
+              <Text style={[styles.fitStatVal, { color: colors.carbs }]}>
+                {summary?.total_carbs || 0}g
+              </Text>
+              <Text style={styles.fitStatLbl}>
+                Carbs ({summary?.carbs_goal || 200}g)
+              </Text>
             </View>
             <View style={styles.fitStatDivider} />
             <View style={styles.fitStatItem}>
-              <Text style={styles.fitStatVal}>
-                {Math.round((stepData?.step_count || 0) / 78) || 0}
+              <Text style={[styles.fitStatVal, { color: colors.fatText || '#E57453' }]}>
+                {summary?.total_fat || 0}g
               </Text>
-              <Text style={styles.fitStatLbl}>Move Min</Text>
+              <Text style={styles.fitStatLbl}>
+                Fat ({summary?.fat_goal || 65}g)
+              </Text>
             </View>
           </View>
 
-          {/* Health Connect Connection Action or Synced Indicator */}
+          {/* Quick Nutrition Insights Footer */}
           <TouchableOpacity
-            style={[
-              styles.fitCardFooter,
-              !healthConnectConnected && Platform.OS === 'android' && styles.fitCardFooterConnectable,
-            ]}
-            onPress={() => {
-              if (!healthConnectConnected && Platform.OS === 'android') {
-                handleConnectHealthConnect();
-              } else {
-                navigation.navigate('ActivityDetail', {
-                  selectedDate: formatDateStr(selectedDate),
-                  stepData: {
-                    ...stepData,
-                    date: formatDateStr(selectedDate),
-                  },
-                  summary,
-                  calendarData,
-                  initialTab: summaryTab,
-                });
-              }
-            }}
+            style={styles.nutritionCardFooter}
+            onPress={() =>
+              navigation.navigate('ActivityDetail', {
+                selectedDate: formatDateStr(selectedDate),
+                summary,
+                calendarData,
+                initialTab: 'calories',
+              })
+            }
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="View full nutrition activity breakdown"
           >
             <View style={styles.fitFooterLeft}>
-              <View
-                style={[
-                  styles.fitStatusDot,
-                  {
-                    backgroundColor: healthConnectConnected ? '#00D287' : '#E8A020',
-                  },
-                ]}
-              />
+              <View style={[styles.fitStatusDot, { backgroundColor: colors.primary }]} />
               <Text style={styles.fitFooterHint}>
-                {healthConnectConnected
-                  ? 'Health Connect Synced'
-                  : Platform.OS === 'android'
-                  ? 'Connect Google Health Connect ⚡'
-                  : 'Tap ring for hourly breakdown & graphs'}
+                {summary?.meal_count || 0} meals logged today • Tap for detailed analytics
               </Text>
             </View>
-            <Text
-              style={[
-                styles.fitFooterArrow,
-                !healthConnectConnected && Platform.OS === 'android' && { color: '#E8A020', fontWeight: '700' },
-              ]}
-            >
-              {!healthConnectConnected && Platform.OS === 'android' ? 'Connect →' : '→'}
-            </Text>
+            <Text style={styles.fitFooterArrow}>→</Text>
           </TouchableOpacity>
         </View>
 
@@ -956,6 +826,34 @@ export default function HomeScreen({ navigation, user, onLogout }) {
               })}
             </View>
 
+            {/* Previously Eaten Meal Suggestions (Follow-up 4) */}
+            <RecentMealsChips
+              recentItems={summary?.recent_items}
+              currentMealType={mealType}
+              onSelectSuggestion={(itemName) => {
+                setRawInput((prev) => {
+                  const trimmed = prev.trim();
+                  if (!trimmed) return itemName;
+                  return `${trimmed}, ${itemName}`;
+                });
+              }}
+              onQuickLog={async (item) => {
+                const itemMealType = (item.meal_type || mealType).toLowerCase();
+                try {
+                  setSubmitting(true);
+                  const dateStr = formatDateStr(selectedDate);
+                  await logMeal(item.name, itemMealType, dateStr);
+                  await loadData();
+                  Alert.alert('Meal Logged! 🎉', `${item.name} added to today's diary.`);
+                } catch (err) {
+                  Alert.alert('Logging Failed', err.message || 'Failed to log meal.');
+                } finally {
+                  setSubmitting(false);
+                }
+              }}
+              disabled={submitting}
+            />
+
             {/* Symmetrical Action Buttons Row */}
             <View style={styles.quickLogActionRow}>
               <Button
@@ -1012,17 +910,39 @@ export default function HomeScreen({ navigation, user, onLogout }) {
                         onPress={() => setPreviewImage(m.image_url)}
                         activeOpacity={0.8}
                         style={styles.mealThumbContainer}
+                        accessibilityRole="button"
+                        accessibilityLabel="View full meal photo"
                       >
                         <Image source={{ uri: m.image_url }} style={styles.mealThumb} resizeMode="cover" />
+                        <View style={styles.mealThumbZoomBadge}>
+                          <Text style={styles.mealThumbZoomIcon}>🔍</Text>
+                        </View>
                       </TouchableOpacity>
-                    ) : null}
+                    ) : (
+                      <View style={styles.mealIconPlaceholder}>
+                        <Text style={styles.mealIconPlaceholderText}>{MEAL_TYPE_ICONS[m.meal_type] || '🍽️'}</Text>
+                      </View>
+                    )}
                     <View style={styles.mealTextCol}>
                       <View style={styles.mealItemHeader}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <Badge label={m.meal_type.toUpperCase()} variant="primary" size="sm" />
                           {mealTimeStr ? <Text style={styles.mealTimeText}>• {mealTimeStr}</Text> : null}
                         </View>
-                        <Text style={styles.mealCals}>{m.total_calories} kcal</Text>
+                        <View style={styles.mealHeaderRight}>
+                          <Text style={styles.mealCals}>{m.total_calories} kcal</Text>
+                          {isToday && (
+                            <TouchableOpacity
+                              onPress={() => handleDeleteMeal(m.id)}
+                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                              accessibilityRole="button"
+                              accessibilityLabel={`Delete ${m.raw_input}`}
+                              style={styles.deleteHeaderBtn}
+                            >
+                              <Text style={styles.deleteHeaderBtnText}>✕</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
                       </View>
                       <Text style={styles.mealInputText}>{m.raw_input}</Text>
                       <Text style={styles.mealMacroSub}>
@@ -1030,16 +950,47 @@ export default function HomeScreen({ navigation, user, onLogout }) {
                       </Text>
                     </View>
                   </View>
-                  {isToday && (
+
+                  {/* Prominent Meal Image Banner if photo exists */}
+                  {m.image_url ? (
                     <TouchableOpacity
-                      style={styles.deleteBtn}
-                      onPress={() => handleDeleteMeal(m.id)}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      onPress={() => setPreviewImage(m.image_url)}
+                      activeOpacity={0.88}
+                      style={styles.mealImageBannerContainer}
                       accessibilityRole="button"
-                      accessibilityLabel={`Delete ${m.raw_input}`}
+                      accessibilityLabel="View enlarged meal photo"
                     >
-                      <Text style={styles.deleteText}>🗑️ Delete</Text>
+                      <Image source={{ uri: m.image_url }} style={styles.mealImageBanner} resizeMode="cover" />
+                      <View style={styles.mealImageBannerOverlay}>
+                        <Text style={styles.mealImageBannerText}>📸 Tap to enlarge photo</Text>
+                      </View>
                     </TouchableOpacity>
+                  ) : null}
+
+                  {/* Itemized Food Items Breakdown (Matches Web MealCard) */}
+                  {Array.isArray(m.food_items) && m.food_items.length > 0 && (
+                    <View style={styles.mealFoodItemsBox}>
+                      <View style={styles.mealFoodItemsHeader}>
+                        <Text style={styles.mealFoodItemsHeaderTitle}>ITEMS EATEN</Text>
+                        <Text style={styles.mealFoodItemsCount}>
+                          {m.food_items.length} {m.food_items.length === 1 ? 'item' : 'items'}
+                        </Text>
+                      </View>
+                      {m.food_items.map((item, idx) => (
+                        <View key={item.id || idx} style={styles.mealFoodItemRow}>
+                          <View style={styles.mealFoodItemLeft}>
+                            <Text style={styles.mealFoodItemName} numberOfLines={1}>
+                              {item.quantity && item.quantity > 1 ? `${item.quantity}× ` : ''}
+                              {item.name}
+                            </Text>
+                            <Text style={styles.mealFoodItemMacros}>
+                              P: {item.protein || 0}g · C: {item.carbs || 0}g · F: {item.fat || 0}g
+                            </Text>
+                          </View>
+                          <Text style={styles.mealFoodItemCals}>{item.calories} kcal</Text>
+                        </View>
+                      ))}
+                    </View>
                   )}
                 </View>
               );
@@ -1389,15 +1340,7 @@ const styles = StyleSheet.create({
     borderRightColor: '#281F15',
     borderBottomColor: '#0E0A07',
     elevation: 7,
-  },
-  fitRingCasingCals: {
     shadowColor: '#E8A020',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-  },
-  fitRingCasingSteps: {
-    shadowColor: '#4285F4',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 10,
@@ -1410,18 +1353,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#17130E',
-  },
-  fitRingOuterCals: {
     borderTopColor: '#FFAE2E',
     borderLeftColor: '#E8A020',
     borderRightColor: '#D4860D',
     borderBottomColor: '#6B3E03',
-  },
-  fitRingOuterSteps: {
-    borderTopColor: '#7AAEFF',
-    borderLeftColor: '#4285F4',
-    borderRightColor: '#2B6BD6',
-    borderBottomColor: '#123072',
   },
   fitRingInner: {
     width: 114,
@@ -1456,6 +1391,49 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontWeight: '500',
   },
+  nutritionBudgetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 6,
+  },
+  nutritionBudgetSub: {
+    fontSize: typography?.sizes?.xs || 11,
+    color: colors.textSecondary || '#A79A85',
+    marginTop: 2,
+  },
+  deficitStatusPill: {
+    marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  deficitStatusDeficit: {
+    backgroundColor: 'rgba(123, 160, 91, 0.12)',
+    borderColor: 'rgba(123, 160, 91, 0.35)',
+  },
+  deficitStatusSurplus: {
+    backgroundColor: 'rgba(199, 80, 47, 0.12)',
+    borderColor: 'rgba(199, 80, 47, 0.35)',
+  },
+  deficitStatusText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.protein || '#7BA05B',
+  },
+  nutritionCardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1A1510',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#2B2218',
+  },
   fitStatsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1483,22 +1461,6 @@ const styles = StyleSheet.create({
     width: 1,
     height: 22,
     backgroundColor: '#2E251B',
-  },
-  fitCardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#1A1510',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: '#2B2218',
-  },
-  fitCardFooterConnectable: {
-    backgroundColor: '#2A1F13',
-    borderColor: '#E8A020',
   },
   fitFooterLeft: {
     flexDirection: 'row',
@@ -1731,19 +1693,19 @@ const styles = StyleSheet.create({
   quickLogTypeRow: {
     flexDirection: 'row',
     gap: 6,
-    marginBottom: 14,
+    marginBottom: 10,
   },
   quickLogTypePill: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 3,
     backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.md || 10,
-    paddingVertical: 9,
+    borderRadius: 18,
+    paddingVertical: 6,
     paddingHorizontal: 4,
-    minHeight: 44,
+    minHeight: 32,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -1753,11 +1715,11 @@ const styles = StyleSheet.create({
     ...(shadows.primaryGlow || {}),
   },
   quickLogTypePillIcon: {
-    fontSize: 13,
+    fontSize: 11,
   },
   quickLogTypePillText: {
     color: colors.textSecondary,
-    fontSize: typography?.sizes?.xs || 11,
+    fontSize: 11,
     fontWeight: '600',
   },
   quickLogTypePillTextActive: {
@@ -1850,6 +1812,24 @@ const styles = StyleSheet.create({
     color: '#A79A85',
     fontSize: 12,
   },
+  mealHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  deleteHeaderBtn: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(199, 80, 47, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteHeaderBtnText: {
+    color: '#E06D53',
+    fontSize: 11,
+    fontWeight: '700',
+  },
   deleteBtn: {
     marginTop: 8,
     alignSelf: 'flex-end',
@@ -1861,19 +1841,125 @@ const styles = StyleSheet.create({
   mealContentRow: {
     flexDirection: 'row',
     gap: 12,
+    alignItems: 'flex-start',
+  },
+  mealIconPlaceholder: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#262019',
+    justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#3A3128',
+  },
+  mealIconPlaceholderText: {
+    fontSize: 20,
   },
   mealThumbContainer: {
-    borderRadius: 8,
+    borderRadius: 10,
     overflow: 'hidden',
     backgroundColor: '#2C251D',
     borderWidth: 1,
     borderColor: '#3A3128',
+    position: 'relative',
   },
   mealThumb: {
-    width: 60,
-    height: 60,
+    width: 58,
+    height: 58,
+    borderRadius: 10,
+  },
+  mealThumbZoomBadge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    borderRadius: 6,
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+  },
+  mealThumbZoomIcon: {
+    fontSize: 9,
+  },
+  mealImageBannerContainer: {
+    marginTop: 10,
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#2C251D',
+    borderWidth: 1,
+    borderColor: '#3A3128',
+    position: 'relative',
+  },
+  mealImageBanner: {
+    width: '100%',
+    height: 150,
+  },
+  mealImageBannerOverlay: {
+    position: 'absolute',
+    bottom: 6,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.72)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  mealImageBannerText: {
+    color: '#F4ECDD',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  mealFoodItemsBox: {
+    marginTop: 10,
+    backgroundColor: '#1E1914',
     borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#2E261E',
+  },
+  mealFoodItemsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  mealFoodItemsHeaderTitle: {
+    color: '#A79A85',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+  },
+  mealFoodItemsCount: {
+    color: '#E8A020',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  mealFoodItemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  mealFoodItemLeft: {
+    flex: 1,
+    marginRight: 8,
+  },
+  mealFoodItemName: {
+    color: '#F4ECDD',
+    fontSize: 12.5,
+    fontWeight: '600',
+  },
+  mealFoodItemMacros: {
+    color: '#A79A85',
+    fontSize: 10.5,
+    marginTop: 1,
+  },
+  mealFoodItemCals: {
+    color: '#7BA05B',
+    fontSize: 12,
+    fontWeight: '700',
   },
   mealTextCol: {
     flex: 1,
@@ -1905,77 +1991,5 @@ const styles = StyleSheet.create({
     height: '80%',
     borderRadius: 12,
   },
-  summaryTabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#1E1914',
-    borderRadius: 10,
-    padding: 3,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#2C251D',
-  },
-  summaryTabBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: 8,
-  },
-  summaryTabBtnActiveCal: {
-    backgroundColor: '#2C251D',
-    borderWidth: 1,
-    borderColor: '#E8A020',
-  },
-  summaryTabBtnActiveStep: {
-    backgroundColor: '#2C251D',
-    borderWidth: 1,
-    borderColor: '#4285F4',
-  },
-  summaryTabText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#A79A85',
-  },
-  summaryTabTextActive: {
-    color: '#F4ECDD',
-    fontWeight: 'bold',
-  },
-  stepCircle: {
-    borderColor: '#4285F4',
-  },
-  stepFooterRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 12,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#2C251D',
-  },
-  stepStatusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  stepStatusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  stepStatusText: {
-    fontSize: 11,
-    color: '#A79A85',
-  },
-  connectHcBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: '#1E293B',
-    borderWidth: 1,
-    borderColor: '#3B82F6',
-  },
-  connectHcBtnText: {
-    fontSize: 11,
-    color: '#60A5FA',
-    fontWeight: '600',
-  },
 });
+

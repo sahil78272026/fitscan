@@ -39,29 +39,9 @@ export default function MealPlanSelector({ initialPlans, onSelectPlan, onBackToW
   const [selectingId, setSelectingId] = useState(null);
   const [activeStepIndex, setActiveStepIndex] = useState(0);
 
-  useEffect(() => {
-    if (!initialPlans?.plans?.length) {
-      loadMealPlans();
-    }
-  }, [initialPlans]);
-
-  // Step sequencer interval during AI generation
-  useEffect(() => {
-    if (!loading) {
-      setActiveStepIndex(0);
-      return;
-    }
-    setActiveStepIndex(0);
-    const interval = setInterval(() => {
-      setActiveStepIndex((prev) => (prev < AI_STEPS.length - 1 ? prev + 1 : prev));
-    }, 3600);
-
-    return () => clearInterval(interval);
-  }, [loading]);
-
-  const loadMealPlans = async () => {
-    setLoading(true);
+  const loadMealPlans = useCallback(async () => {
     setError(null);
+    setLoading(true);
     try {
       const data = await getSuggestedMealPlans();
       setPlans(data.plans || []);
@@ -70,7 +50,40 @@ export default function MealPlanSelector({ initialPlans, onSelectPlan, onBackToW
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (initialPlans?.plans?.length) return;
+    let ignore = false;
+    async function load() {
+      setError(null);
+      try {
+        const data = await getSuggestedMealPlans();
+        if (!ignore) setPlans(data.plans || []);
+      } catch (err) {
+        if (!ignore) setError(err.message || "Failed to load meal plans. Please try again.");
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, [initialPlans]);
+
+  // Step sequencer interval during AI generation
+  useEffect(() => {
+    if (!loading) return;
+    const interval = setInterval(() => {
+      setActiveStepIndex((prev) => (prev < AI_STEPS.length - 1 ? prev + 1 : prev));
+    }, 3600);
+
+    return () => {
+      clearInterval(interval);
+      setActiveStepIndex(0);
+    };
+  }, [loading]);
 
   const handleChoosePlan = async (plan) => {
     setSelectingId(plan.plan_id || plan.title);

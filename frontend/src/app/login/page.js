@@ -107,126 +107,188 @@ export default function LoginPage() {
 
   return (
     <main className={styles.main}>
-      <div className={styles.container}>
-        <div className={styles.brand}>
-          <img
-            src="/corecontrol_logo.png"
-            alt="CoreControl Logo"
-            className={styles.brandLogo}
-          />
-          <h1 className={styles.brandName}>CoreControl</h1>
-          <p className={styles.brandTagline}>Track your calories with AI</p>
+      <div className={styles.layoutWrapper}>
+        {/* Left / Middle: Story & Habit Philosophy */}
+        <div className={styles.storySide}>
+          <div className={styles.brandRow}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/corecontrol_logo.png"
+              alt="FitScan Logo"
+              className={styles.brandLogo}
+            />
+            <div>
+              <h1 className={styles.brandName}>FitScan</h1>
+              <p className={styles.brandTagline}>Mindful meal logging & daily habits</p>
+            </div>
+          </div>
+
+          <div className={styles.heroContent}>
+            <h2 className={styles.heroHeadline}>
+              Build a healthy, peaceful rhythm with your food.
+            </h2>
+            <p className={styles.heroDescription}>
+              Sustainable health isn&apos;t built on rigid diets or stressful restrictions. It starts with simple awareness. FitScan gives you a calm, honest space to record what you eat, understand how your body is fueled, and build daily habits that stay with you for life.
+            </p>
+
+            <div className={styles.valuePillars}>
+              <div className={styles.pillarItem}>
+                <div className={styles.pillarIconBox}>🥣</div>
+                <div className={styles.pillarText}>
+                  <h3 className={styles.pillarTitle}>Effortless Meal Logging</h3>
+                  <p className={styles.pillarDesc}>
+                    Log your dishes naturally in seconds or snap a quick photo. No tedious database digging or rigid portion quizzes.
+                  </p>
+                </div>
+              </div>
+
+              <div className={styles.pillarItem}>
+                <div className={styles.pillarIconBox}>🌱</div>
+                <div className={styles.pillarText}>
+                  <h3 className={styles.pillarTitle}>Habits Over Perfection</h3>
+                  <p className={styles.pillarDesc}>
+                    Focus on showing up consistently. Build positive daily streaks, understand your eating patterns, and celebrate small wins.
+                  </p>
+                </div>
+              </div>
+
+              <div className={styles.pillarItem}>
+                <div className={styles.pillarIconBox}>🌾</div>
+                <div className={styles.pillarText}>
+                  <h3 className={styles.pillarTitle}>Balanced Macro Clarity</h3>
+                  <p className={styles.pillarDesc}>
+                    See your daily protein, carbs, and fats clearly at a glance without guilt, helping you stay energized every day.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.humanNote}>
+              <span className={styles.humanNoteIcon}>✨</span>
+              <p className={styles.humanNoteText}>
+                No high-pressure targets or complicated rules. Just honest daily awareness to help you feel your best.
+              </p>
+            </div>
+          </div>
         </div>
 
-        {error && <div className={styles.error}>{error}</div>}
+        {/* Right Side: Login & Sign Up Gate */}
+        <div className={styles.authSide}>
+          <div className={styles.authCard}>
+            <div className={styles.authHeader}>
+              <h2 className={styles.authTitle}>
+                {isSignUp ? "Create your account" : "Welcome back"}
+              </h2>
+              <p className={styles.authSubtitle}>
+                {isSignUp
+                  ? "Start logging your meals and building lifelong healthy habits today."
+                  : "Sign in to pick up right where you left off."}
+              </p>
+            </div>
 
-        <div className={styles.form}>
-          {/* Google SSO Button */}
-          <button
-            type="button"
-            className={styles.googleButton}
-            onClick={handleGoogleLogin}
-            disabled={loading}
-          >
-            <svg className={styles.googleIcon} viewBox="0 0 24 24">
-              <path
-                fill="#4285F4"
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-              />
-              <path
-                fill="#EA4335"
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-              />
-            </svg>
-            Continue with Google
-          </button>
+            {error && <div className={styles.error}>{error}</div>}
 
-          <div className={styles.divider}>or</div>
+            {/* Google SSO Button */}
+            <button
+              type="button"
+              className={styles.googleButton}
+              onClick={handleGoogleLogin}
+              disabled={loading}
+            >
+              <svg className={styles.googleIcon} viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                />
+              </svg>
+              Continue with Google
+            </button>
 
-          {/* Email + Password Form */}
-          <form onSubmit={handleEmailAuth} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            {isSignUp && (
+            <div className={styles.divider}>or continue with email</div>
+
+            {/* Email + Password Form */}
+            <form onSubmit={handleEmailAuth} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {isSignUp && (
+                <div>
+                  <label className={styles.label}>Your Name</label>
+                  <input
+                    type="text"
+                    className={styles.input}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Sahil Garg"
+                    disabled={loading}
+                  />
+                </div>
+              )}
+
               <div>
-                <label className={styles.label}>Your Name</label>
+                <label className={styles.label}>Email Address</label>
                 <input
-                  type="text"
+                  type="email"
                   className={styles.input}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Sahil Garg"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  required
                   disabled={loading}
                 />
               </div>
-            )}
 
-            <div>
-              <label className={styles.label}>Email Address</label>
-              <input
-                type="email"
-                className={styles.input}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
-                required
-                disabled={loading}
-              />
+              <div>
+                <label className={styles.label}>Password</label>
+                <input
+                  type="password"
+                  className={styles.input}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  minLength={6}
+                  disabled={loading}
+                />
+              </div>
+
+              <button type="submit" className={styles.button} disabled={loading || !email.trim() || !password}>
+                {loading ? (
+                  <span className={styles.spinner} />
+                ) : isSignUp ? (
+                  "Create Account"
+                ) : (
+                  "Sign In"
+                )}
+              </button>
+            </form>
+
+            {/* Mode Switcher */}
+            <div className={styles.toggleContainer}>
+              <span style={{ fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
+                {isSignUp ? "Already have an account?" : "Don't have an account?"}
+              </span>{" "}
+              <button
+                type="button"
+                className={styles.toggleBtn}
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setError("");
+                }}
+              >
+                {isSignUp ? "Sign In" : "Sign Up"}
+              </button>
             </div>
-
-            <div>
-              <label className={styles.label}>Password</label>
-              <input
-                type="password"
-                className={styles.input}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                minLength={6}
-                disabled={loading}
-              />
-            </div>
-
-            <button type="submit" className={styles.button} disabled={loading || !email.trim() || !password}>
-              {loading ? (
-                <span className={styles.spinner} />
-              ) : isSignUp ? (
-                "Create Account"
-              ) : (
-                "Sign In"
-              )}
-            </button>
-          </form>
-
-          {/* Mode Switcher */}
-          <div className={styles.toggleContainer}>
-            <span style={{ fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
-              {isSignUp ? "Already have an account?" : "Don't have an account?"}
-            </span>{" "}
-            <button
-              type="button"
-              className={styles.toggleBtn}
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                setError("");
-              }}
-            >
-              {isSignUp ? "Sign In" : "Sign Up"}
-            </button>
           </div>
-
-          <p className={styles.devHint}>
-            {isFirebaseConfigured()
-              ? "🔒 Secured with Firebase Authentication"
-              : "🔧 Dev mode active: instant local sign in"}
-          </p>
         </div>
       </div>
     </main>

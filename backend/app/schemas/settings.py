@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field
+from datetime import datetime
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 from typing import Optional, Any, Dict
 
 class UserGoalUpdate(BaseModel):
@@ -33,10 +34,48 @@ class CalorieGoalUpdate(BaseModel):
     calorie_goal: int = Field(..., gt=0, le=10000, description="Daily calorie target")
 
 
-from datetime import datetime
-
 class SelectMealPlanPayload(BaseModel):
     meal_plan: Dict[str, Any] = Field(..., description="The meal plan object selected by user")
+
+
+class MealPlanSwapRequest(BaseModel):
+    source_meal_type: Optional[str] = Field(
+        None,
+        description="Source meal slot identifier to swap (e.g. 'breakfast' or 'Breakfast')"
+    )
+    target_meal_type: Optional[str] = Field(
+        None,
+        description="Target meal slot identifier to swap (e.g. 'lunch' or 'Lunch')"
+    )
+    meal_plan: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Optional full reordered meal plan dictionary for direct drag-and-drop synchronization"
+    )
+
+    @model_validator(mode="after")
+    def validate_swap_payload(self) -> "MealPlanSwapRequest":
+        has_pair = bool(self.source_meal_type and self.target_meal_type)
+        has_plan = bool(self.meal_plan)
+        if not has_pair and not has_plan:
+            raise ValueError("Either both 'source_meal_type' and 'target_meal_type' must be provided, or 'meal_plan' must be provided.")
+        if has_pair and self.source_meal_type.strip().lower() == self.target_meal_type.strip().lower():
+            raise ValueError("source_meal_type and target_meal_type cannot be identical.")
+        return self
+
+
+class MealPlanItemSchema(BaseModel):
+    meal_type: str = Field(..., description="Meal slot: Breakfast, Lunch, Snack, Dinner")
+    dish_name: str = Field(..., description="Concise 2-3 word dish name")
+    calories: int = Field(..., ge=0, description="Calories in kcal")
+    protein: float = Field(..., ge=0.0, description="Protein in grams")
+    carbs: float = Field(..., ge=0.0, description="Carbs in grams")
+    fat: float = Field(..., ge=0.0, description="Fat in grams")
+    priority: str = Field("medium", pattern="^(high|medium|low)$", description="Visual priority tier")
+    timing_badge: str = Field("Sustained Energy", description="Timing/contextual badge")
+    ingredients: Optional[list[str]] = Field(default_factory=list, description="Ingredient list with breakdown")
+    description: Optional[str] = Field(None, description="Short prep instruction")
+
+    model_config = ConfigDict(from_attributes=True, extra="allow")
 
 
 class SubscriptionTierUpdate(BaseModel):
@@ -69,6 +108,5 @@ class SettingsResponse(BaseModel):
     morning_briefing_end_hour: int = 11
     morning_briefing_frequency: str = "daily"
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 

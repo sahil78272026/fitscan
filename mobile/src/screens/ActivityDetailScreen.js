@@ -9,6 +9,8 @@ import {
   TextInput,
   Alert,
   useWindowDimensions,
+  Image,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CalendarGrid from '../components/CalendarGrid';
@@ -84,6 +86,15 @@ export default function ActivityDetailScreen({ navigation, route }) {
   const [stepCaloriesHistory, setStepCaloriesHistory] = useState({});
   const [realHourlySteps, setRealHourlySteps] = useState(null);
   const [gridExpanded, setGridExpanded] = useState(false);
+  const [expandedMealIds, setExpandedMealIds] = useState({});
+  const [previewImage, setPreviewImage] = useState(null);
+
+  const toggleMealExpanded = (id) => {
+    setExpandedMealIds((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
 
   // Tab order & Horizontal Paging for buttery-smooth sliding
   const { width: windowWidth } = useWindowDimensions();
@@ -805,6 +816,119 @@ export default function ActivityDetailScreen({ navigation, route }) {
     </>
   );
 
+  const renderDayMacroBreakdown = () => {
+    if (metric !== 'calories') return null;
+
+    const p = Number(summary?.total_protein) || 0;
+    const pGoal = Number(summary?.protein_goal) || 150;
+    const c = Number(summary?.total_carbs) || 0;
+    const cGoal = Number(summary?.carbs_goal) || 200;
+    const f = Number(summary?.total_fat) || 0;
+    const fGoal = Number(summary?.fat_goal) || 65;
+
+    const pCals = Math.round(p * 4);
+    const cCals = Math.round(c * 4);
+    const fCals = Math.round(f * 9);
+    const macroCalsTotal = pCals + cCals + fCals;
+
+    const pPct = Math.min(100, Math.round((p / pGoal) * 100));
+    const cPct = Math.min(100, Math.round((c / cGoal) * 100));
+    const fPct = Math.min(100, Math.round((f / fGoal) * 100));
+
+    // Ratio for the segmented stacked bar
+    const pRatio = macroCalsTotal > 0 ? (pCals / macroCalsTotal) * 100 : 33.3;
+    const cRatio = macroCalsTotal > 0 ? (cCals / macroCalsTotal) * 100 : 33.3;
+    const fRatio = macroCalsTotal > 0 ? (fCals / macroCalsTotal) * 100 : 33.4;
+
+    return (
+      <View style={styles.macroBreakdownCard}>
+        <View style={styles.macroCardHeader}>
+          <View>
+            <Text style={styles.macroCardTitle}>All-Day Macro Breakdown</Text>
+            <Text style={styles.macroCardSubTitle}>
+              {macroCalsTotal > 0
+                ? `${macroCalsTotal.toLocaleString()} kcal from macronutrients`
+                : 'Target nutrition balance for today'}
+            </Text>
+          </View>
+          <View style={styles.macroRatioBadge}>
+            <Text style={styles.macroRatioBadgeText}>
+              {macroCalsTotal > 0
+                ? `${Math.round(pRatio)}% P • ${Math.round(cRatio)}% C • ${Math.round(fRatio)}% F`
+                : 'P · C · F'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Multi-segment macro distribution bar */}
+        {macroCalsTotal > 0 && (
+          <View style={styles.stackedMacroBar}>
+            <View style={[styles.stackedMacroSegment, { width: `${pRatio}%`, backgroundColor: '#3B82F6' }]} />
+            <View style={[styles.stackedMacroSegment, { width: `${cRatio}%`, backgroundColor: '#10B981' }]} />
+            <View style={[styles.stackedMacroSegment, { width: `${fRatio}%`, backgroundColor: '#F59E0B' }]} />
+          </View>
+        )}
+
+        {/* 3 Macro Progress Bars */}
+        <View style={styles.macroRowsContainer}>
+          {/* Protein */}
+          <View style={styles.macroDetailRow}>
+            <View style={styles.macroDetailHeader}>
+              <View style={styles.macroLabelWithIcon}>
+                <View style={[styles.macroDot, { backgroundColor: '#3B82F6' }]} />
+                <Text style={styles.macroDetailName}>Protein</Text>
+                <Text style={styles.macroDetailCalSub}>({pCals} kcal)</Text>
+              </View>
+              <Text style={styles.macroDetailValues}>
+                <Text style={[styles.macroDetailCurrent, { color: '#60A5FA' }]}>{p}g</Text>
+                <Text style={styles.macroDetailGoal}> / {pGoal}g ({pPct}%)</Text>
+              </Text>
+            </View>
+            <View style={styles.macroBarTrack}>
+              <View style={[styles.macroBarFill, { width: `${pPct}%`, backgroundColor: '#3B82F6' }]} />
+            </View>
+          </View>
+
+          {/* Carbs */}
+          <View style={styles.macroDetailRow}>
+            <View style={styles.macroDetailHeader}>
+              <View style={styles.macroLabelWithIcon}>
+                <View style={[styles.macroDot, { backgroundColor: '#10B981' }]} />
+                <Text style={styles.macroDetailName}>Carbs</Text>
+                <Text style={styles.macroDetailCalSub}>({cCals} kcal)</Text>
+              </View>
+              <Text style={styles.macroDetailValues}>
+                <Text style={[styles.macroDetailCurrent, { color: '#34D399' }]}>{c}g</Text>
+                <Text style={styles.macroDetailGoal}> / {cGoal}g ({cPct}%)</Text>
+              </Text>
+            </View>
+            <View style={styles.macroBarTrack}>
+              <View style={[styles.macroBarFill, { width: `${cPct}%`, backgroundColor: '#10B981' }]} />
+            </View>
+          </View>
+
+          {/* Fat */}
+          <View style={styles.macroDetailRow}>
+            <View style={styles.macroDetailHeader}>
+              <View style={styles.macroLabelWithIcon}>
+                <View style={[styles.macroDot, { backgroundColor: '#F59E0B' }]} />
+                <Text style={styles.macroDetailName}>Fat</Text>
+                <Text style={styles.macroDetailCalSub}>({fCals} kcal)</Text>
+              </View>
+              <Text style={styles.macroDetailValues}>
+                <Text style={[styles.macroDetailCurrent, { color: '#FBBF24' }]}>{f}g</Text>
+                <Text style={styles.macroDetailGoal}> / {fGoal}g ({fPct}%)</Text>
+              </Text>
+            </View>
+            <View style={styles.macroBarTrack}>
+              <View style={[styles.macroBarFill, { width: `${fPct}%`, backgroundColor: '#F59E0B' }]} />
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
   const renderDayActivities = () => {
     if (metric === 'calories') {
       return (
@@ -839,19 +963,121 @@ export default function ActivityDetailScreen({ navigation, route }) {
                   timeStr = m.meal_type ? `${m.meal_type.toUpperCase()} • ${formattedTime}` : formattedTime;
                 }
               }
+              const isExpanded = !!expandedMealIds[m.id];
+              const hasItems = Array.isArray(m.food_items) && m.food_items.length > 0;
+
               return (
-                <View key={m.id} style={styles.activityCard}>
-                  <View style={styles.activityIconBox}>
-                    <Text style={styles.activityIcon}>{getMealIcon(m.meal_type)}</Text>
+                <TouchableOpacity
+                  key={m.id}
+                  style={[styles.activityCard, isExpanded && styles.activityCardExpanded]}
+                  onPress={() => toggleMealExpanded(m.id)}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${m.raw_input || m.meal_type}, ${m.total_calories} kcal. Tap to ${isExpanded ? 'collapse' : 'expand'} details.`}
+                >
+                  <View style={styles.activityCardHeaderRow}>
+                    {m.image_url ? (
+                      <TouchableOpacity
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          setPreviewImage(m.image_url);
+                        }}
+                        activeOpacity={0.8}
+                        style={styles.activityMealThumbContainer}
+                      >
+                        <Image source={{ uri: m.image_url }} style={styles.activityMealThumb} resizeMode="cover" />
+                        <View style={styles.activityMealThumbBadge}>
+                          <Text style={styles.activityMealThumbBadgeText}>🔍</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={styles.activityIconBox}>
+                        <Text style={styles.activityIcon}>{getMealIcon(m.meal_type)}</Text>
+                      </View>
+                    )}
+                    <View style={styles.activityDetails}>
+                      <View style={styles.activityTopRow}>
+                        <Text style={styles.activityTime}>{timeStr}</Text>
+                        <Text style={styles.activityChevron}>{isExpanded ? '▲' : '▼'}</Text>
+                      </View>
+                      <Text style={styles.activityName}>{m.raw_input || m.meal_type}</Text>
+                      <Text style={styles.activityMeta}>
+                        {m.total_calories} kcal eaten • P: {m.total_protein || 0}g | C: {m.total_carbs || 0}g | F: {m.total_fat || 0}g
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.activityDetails}>
-                    <Text style={styles.activityTime}>{timeStr}</Text>
-                    <Text style={styles.activityName}>{m.raw_input || m.meal_type}</Text>
-                    <Text style={styles.activityMeta}>
-                      {m.total_calories} kcal eaten • P: {m.total_protein || 0}g | C: {m.total_carbs || 0}g | F: {m.total_fat || 0}g
-                    </Text>
-                  </View>
-                </View>
+
+                  {/* Expanded Details Section */}
+                  {isExpanded && (
+                    <View style={styles.expandedDetailsContainer}>
+                      {/* Photo banner if meal image exists */}
+                      {m.image_url ? (
+                        <TouchableOpacity
+                          onPress={() => setPreviewImage(m.image_url)}
+                          activeOpacity={0.88}
+                          style={styles.expandedImageBannerContainer}
+                        >
+                          <Image source={{ uri: m.image_url }} style={styles.expandedImageBanner} resizeMode="cover" />
+                          <View style={styles.expandedImageOverlay}>
+                            <Text style={styles.expandedImageOverlayText}>📸 Tap to enlarge photo</Text>
+                          </View>
+                        </TouchableOpacity>
+                      ) : null}
+
+                      {/* Macro Breakdown Pills */}
+                      <View style={styles.expandedMacroRow}>
+                        <View style={[styles.expandedMacroPill, { borderColor: 'rgba(59, 130, 246, 0.4)' }]}>
+                          <Text style={styles.expandedMacroLabel}>PROTEIN</Text>
+                          <Text style={[styles.expandedMacroVal, { color: '#60A5FA' }]}>
+                            {m.total_protein || 0}g
+                          </Text>
+                        </View>
+                        <View style={[styles.expandedMacroPill, { borderColor: 'rgba(16, 185, 129, 0.4)' }]}>
+                          <Text style={styles.expandedMacroLabel}>CARBS</Text>
+                          <Text style={[styles.expandedMacroVal, { color: '#34D399' }]}>
+                            {m.total_carbs || 0}g
+                          </Text>
+                        </View>
+                        <View style={[styles.expandedMacroPill, { borderColor: 'rgba(245, 158, 11, 0.4)' }]}>
+                          <Text style={styles.expandedMacroLabel}>FAT</Text>
+                          <Text style={[styles.expandedMacroVal, { color: '#FBBF24' }]}>
+                            {m.total_fat || 0}g
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Itemized Food Breakdown */}
+                      {hasItems ? (
+                        <View style={styles.expandedFoodItemsBox}>
+                          <View style={styles.expandedFoodItemsHeader}>
+                            <Text style={styles.expandedFoodItemsTitle}>ITEMS IN THIS MEAL</Text>
+                            <Text style={styles.expandedFoodItemsCount}>
+                              {m.food_items.length} {m.food_items.length === 1 ? 'item' : 'items'}
+                            </Text>
+                          </View>
+                          {m.food_items.map((item, idx) => (
+                            <View key={item.id || idx} style={styles.expandedFoodItemRow}>
+                              <View style={styles.expandedFoodItemLeft}>
+                                <Text style={styles.expandedFoodItemName} numberOfLines={1}>
+                                  {item.quantity && item.quantity > 1 ? `${item.quantity}× ` : ''}
+                                  {item.name}
+                                </Text>
+                                <Text style={styles.expandedFoodItemMacros}>
+                                  P: {item.protein || 0}g · C: {item.carbs || 0}g · F: {item.fat || 0}g
+                                </Text>
+                              </View>
+                              <Text style={styles.expandedFoodItemCals}>{item.calories} kcal</Text>
+                            </View>
+                          ))}
+                        </View>
+                      ) : (
+                        <View style={styles.singleItemNote}>
+                          <Text style={styles.singleItemNoteText}>Logged description: &ldquo;{m.raw_input}&rdquo;</Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+                </TouchableOpacity>
               );
             })
           )}
@@ -1072,6 +1298,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
           >
             {renderStatsBanner(dayStats)}
             {renderDayChart()}
+            {renderDayMacroBreakdown()}
             {renderDayActivities()}
           </ScrollView>
         </View>
@@ -1103,6 +1330,30 @@ export default function ActivityDetailScreen({ navigation, route }) {
         </View>
       </ScrollView>
 
+      {/* Full Screen Image Preview Modal */}
+      <Modal
+        visible={!!previewImage}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setPreviewImage(null)}
+      >
+        <View style={styles.imageModalBg}>
+          <TouchableOpacity
+            style={styles.imageModalClose}
+            onPress={() => setPreviewImage(null)}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Text style={styles.imageModalCloseText}>✕ Close</Text>
+          </TouchableOpacity>
+          {previewImage && (
+            <Image
+              source={{ uri: previewImage }}
+              style={styles.imageModalImg}
+              resizeMode="contain"
+            />
+          )}
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1519,14 +1770,204 @@ const styles = StyleSheet.create({
     color: '#F4ECDD',
   },
   activityCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: '#1E1914',
     borderRadius: 12,
     padding: 12,
     marginBottom: 10,
     borderWidth: 1,
     borderColor: '#2D241B',
+  },
+  activityCardExpanded: {
+    borderColor: '#E8A020',
+    backgroundColor: '#231D16',
+  },
+  activityCardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  activityTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  activityChevron: {
+    color: '#E8A020',
+    fontSize: 10,
+    fontWeight: '700',
+    marginLeft: 6,
+  },
+  activityMealThumbContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#282119',
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#3A3128',
+    position: 'relative',
+  },
+  activityMealThumb: {
+    width: '100%',
+    height: '100%',
+  },
+  activityMealThumbBadge: {
+    position: 'absolute',
+    bottom: 1,
+    right: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    borderRadius: 4,
+    paddingHorizontal: 2,
+  },
+  activityMealThumbBadgeText: {
+    fontSize: 8,
+  },
+  expandedDetailsContainer: {
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#2C2319',
+  },
+  expandedImageBannerContainer: {
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#282119',
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#3A3128',
+    position: 'relative',
+  },
+  expandedImageBanner: {
+    width: '100%',
+    height: 140,
+  },
+  expandedImageOverlay: {
+    position: 'absolute',
+    bottom: 6,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  expandedImageOverlayText: {
+    color: '#F4ECDD',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  expandedMacroRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 10,
+  },
+  expandedMacroPill: {
+    flex: 1,
+    backgroundColor: '#282119',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  expandedMacroLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#8A7E72',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  expandedMacroVal: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  expandedFoodItemsBox: {
+    backgroundColor: '#251F18',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#332A20',
+  },
+  expandedFoodItemsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  expandedFoodItemsTitle: {
+    color: '#A89B8B',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+  },
+  expandedFoodItemsCount: {
+    color: '#E8A020',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  expandedFoodItemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  expandedFoodItemLeft: {
+    flex: 1,
+    marginRight: 8,
+  },
+  expandedFoodItemName: {
+    color: '#F4ECDD',
+    fontSize: 12.5,
+    fontWeight: '600',
+  },
+  expandedFoodItemMacros: {
+    color: '#8A7E72',
+    fontSize: 10.5,
+    marginTop: 1,
+  },
+  expandedFoodItemCals: {
+    color: '#7BA05B',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  singleItemNote: {
+    backgroundColor: '#251F18',
+    borderRadius: 8,
+    padding: 8,
+  },
+  singleItemNoteText: {
+    color: '#A89B8B',
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+  imageModalBg: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  imageModalClose: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 54 : 32,
+    right: 20,
+    zIndex: 10,
+    backgroundColor: '#2C251D',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  imageModalCloseText: {
+    color: '#F4ECDD',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  imageModalImg: {
+    width: '100%',
+    height: '80%',
+    borderRadius: 12,
   },
   activityIconBox: {
     width: 40,
@@ -1575,5 +2016,103 @@ const styles = StyleSheet.create({
   emptyMealText: {
     fontSize: 13,
     color: '#8A7E72',
+  },
+  macroBreakdownCard: {
+    backgroundColor: '#1E1914',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#2D241B',
+  },
+  macroCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  macroCardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#F4ECDD',
+  },
+  macroCardSubTitle: {
+    fontSize: 11,
+    color: '#8A7E72',
+    marginTop: 2,
+  },
+  macroRatioBadge: {
+    backgroundColor: '#282119',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#3A3128',
+  },
+  macroRatioBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#E8A020',
+  },
+  stackedMacroBar: {
+    height: 8,
+    borderRadius: 4,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    backgroundColor: '#282119',
+    marginBottom: 14,
+  },
+  stackedMacroSegment: {
+    height: '100%',
+  },
+  macroRowsContainer: {
+    gap: 10,
+  },
+  macroDetailRow: {
+    marginBottom: 2,
+  },
+  macroDetailHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  macroLabelWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  macroDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  macroDetailName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#F4ECDD',
+  },
+  macroDetailCalSub: {
+    fontSize: 11,
+    color: '#8A7E72',
+  },
+  macroDetailValues: {
+    fontSize: 12,
+  },
+  macroDetailCurrent: {
+    fontWeight: '700',
+  },
+  macroDetailGoal: {
+    color: '#8A7E72',
+  },
+  macroBarTrack: {
+    height: 6,
+    backgroundColor: '#282119',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  macroBarFill: {
+    height: '100%',
+    borderRadius: 3,
   },
 });

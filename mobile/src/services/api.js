@@ -248,6 +248,63 @@ export async function selectMealPlan(mealPlan) {
   });
 }
 
+/**
+ * Swap two meal slots in the active meal plan without triggering 24h AI cooldown.
+ * Supports:
+ *   - swapMealPlan(sourceIdx, targetIdx, optionalMealPlan)
+ *   - swapMealPlan(sourceMealType, targetMealType, optionalMealPlan)
+ *
+ * @param {number|string} source - Source slot index or meal_type string
+ * @param {number|string} target - Target slot index or meal_type string
+ * @param {object|null} mealPlan - Optional full updated meal plan object
+ * @returns {Promise<object>} Updated SettingsResponse
+ */
+export async function swapMealPlan(source, target, mealPlan = null) {
+  let sourceMealType = typeof source === 'string' ? source : null;
+  let targetMealType = typeof target === 'string' ? target : null;
+  let plan = mealPlan;
+
+  if ((!sourceMealType || !targetMealType) && typeof source === 'number' && typeof target === 'number') {
+    if (plan && Array.isArray(plan.meals)) {
+      sourceMealType = plan.meals[source]?.meal_type;
+      targetMealType = plan.meals[target]?.meal_type;
+    } else {
+      try {
+        const settings = await getSettings();
+        const loadedPlan = typeof settings?.selected_meal_plan === 'string'
+          ? JSON.parse(settings.selected_meal_plan)
+          : settings?.selected_meal_plan;
+        if (loadedPlan && Array.isArray(loadedPlan.meals)) {
+          sourceMealType = loadedPlan.meals[source]?.meal_type;
+          targetMealType = loadedPlan.meals[target]?.meal_type;
+          if (!plan) plan = loadedPlan;
+        }
+      } catch (err) {
+        console.warn('Failed to resolve meal types from settings in swapMealPlan:', err);
+      }
+    }
+  }
+
+  const body = {};
+  if (sourceMealType && targetMealType) {
+    body.source_meal_type = sourceMealType;
+    body.target_meal_type = targetMealType;
+  }
+  if (plan) {
+    body.meal_plan = plan;
+  }
+
+  if (!body.source_meal_type && !body.meal_plan) {
+    body.source_meal_type = String(source);
+    body.target_meal_type = String(target);
+  }
+
+  return request('/settings/meal-plan/swap', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
 export async function updateSubscriptionTier(tier) {
   return request('/settings/subscription', {
     method: 'PUT',

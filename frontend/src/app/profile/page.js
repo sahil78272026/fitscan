@@ -64,7 +64,6 @@ export default function ProfilePage() {
 
   const fetchSettings = useCallback(async () => {
     try {
-      setLoading(true);
       const settings = await getSettings();
       setUserSettings(settings);
     } catch (err) {
@@ -75,11 +74,29 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchSettings();
-      fetchWeightHistory(timeframe);
+    if (!isAuthenticated) return;
+    let ignore = false;
+    async function loadProfile() {
+      try {
+        const [settings, weightData] = await Promise.all([
+          getSettings(),
+          getWeightHistory(timeframe),
+        ]);
+        if (!ignore) {
+          setUserSettings(settings);
+          setWeightHistory(weightData);
+        }
+      } catch (err) {
+        showToast("Failed to load profile settings", "error");
+      } finally {
+        if (!ignore) setLoading(false);
+      }
     }
-  }, [isAuthenticated, fetchSettings, fetchWeightHistory, timeframe]);
+    loadProfile();
+    return () => {
+      ignore = true;
+    };
+  }, [isAuthenticated, timeframe]);
 
   // Handle Wizard Complete -> Save goals & generate meal plans
   const handleWizardComplete = async (goalData) => {

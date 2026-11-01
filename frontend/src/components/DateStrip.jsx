@@ -84,11 +84,13 @@ export default function DateStrip({
   };
 
   // Update week when selectedDate changes externally (from calendar grid)
-  useEffect(() => {
+  const [prevSelectedDate, setPrevSelectedDate] = useState(selectedDate);
+  if (selectedDate !== prevSelectedDate) {
+    setPrevSelectedDate(selectedDate);
     if (selectedDate) {
       setWeekRef(selectedDate);
     }
-  }, [selectedDate]);
+  }
 
   const isToday = isSameDay(selectedDate || today, today);
 

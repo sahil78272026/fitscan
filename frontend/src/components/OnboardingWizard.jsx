@@ -62,7 +62,9 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
   const [heightUnit, setHeightUnit] = useState("cm");
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
+  const [prevSettings, setPrevSettings] = useState(initialSettings);
+  if (initialSettings !== prevSettings) {
+    setPrevSettings(initialSettings);
     if (initialSettings) {
       if (initialSettings.goal_type) setGoalType(initialSettings.goal_type);
       if (initialSettings.diet_type) setDietType(initialSettings.diet_type);
@@ -73,7 +75,7 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
       if (initialSettings.gender) setGender(initialSettings.gender);
       if (initialSettings.activity_level) setActivityLevel(initialSettings.activity_level);
     }
-  }, [initialSettings]);
+  }
 
   const handleSelectGoal = (id) => {
     setGoalType(id);

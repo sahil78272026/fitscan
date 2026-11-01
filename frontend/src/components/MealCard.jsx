@@ -37,9 +37,33 @@ export default function MealCard({ meal, onDelete }) {
     hour12: true,
   });
 
+  const getMealPriority = (m) => {
+    const type = (m.meal_type || "").toLowerCase();
+    const protein = Number(m.total_protein) || 0;
+    const calories = Number(m.total_calories) || 0;
+    if (type === "dinner" || protein >= 35 || calories >= 550) return "high";
+    if (type === "snack" || calories < 300) return "low";
+    return "medium";
+  };
+
+  const priority = getMealPriority(meal);
+  const priorityClass =
+    priority === "high"
+      ? styles.cardPriorityHigh
+      : priority === "low"
+      ? styles.cardPriorityLow
+      : styles.cardPriorityMedium;
+
+  const priorityBadge =
+    priority === "high"
+      ? "⚡ Recovery Anchor"
+      : priority === "low"
+      ? "☕ Snack"
+      : "🌾 Balanced";
+
   return (
     <div
-      className={`${styles.card} ${expanded ? styles.expanded : ""} ${deleting ? styles.deleting : ""}`}
+      className={`${styles.card} ${priorityClass} ${expanded ? styles.expanded : ""} ${deleting ? styles.deleting : ""}`}
       onClick={() => setExpanded(!expanded)}
     >
       <div className={styles.header}>
@@ -55,7 +79,13 @@ export default function MealCard({ meal, onDelete }) {
             <span className={styles.icon}>{MEAL_ICONS[meal.meal_type] || "🍽️"}</span>
           )}
           <div className={styles.info}>
-            <span className={styles.mealType}>{meal.meal_type}</span>
+            <div className={styles.typeRow}>
+              <span className={styles.mealType}>{meal.meal_type}</span>
+              <span className={styles.priorityBadge}>{priorityBadge}</span>
+            </div>
+            <div className={styles.glanceableMacros}>
+              P: {meal.total_protein || 0}g • C: {meal.total_carbs || 0}g • F: {meal.total_fat || 0}g
+            </div>
             <span className={styles.time}>{timeStr}</span>
           </div>
         </div>

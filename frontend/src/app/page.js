@@ -162,6 +162,7 @@ export default function Home() {
       const todayKey = formatDateStr(new Date());
       const dismissedDate = localStorage.getItem("corecontrol_briefing_dismissed_date");
       if (dismissedDate === todayKey) {
+        await Promise.resolve();
         setBriefingDismissed(true);
         return;
       }
@@ -225,10 +226,10 @@ export default function Home() {
 
   // Initial load: Fetch summary, stats, settings, and calendar once upon authentication
   useEffect(() => {
-    if (isAuthenticated && !initialLoadedRef.current) {
-      initialLoadedRef.current = true;
-      setLoading(true);
+    if (!isAuthenticated || initialLoadedRef.current) return;
+    initialLoadedRef.current = true;
 
+    async function initDashboard() {
       const d = selectedDate || today;
       const day = d.getDay();
       const monday = new Date(d);
@@ -256,9 +257,12 @@ export default function Home() {
         promises.push(fetchCalendar(sunYear, sunMonth));
       }
 
-      Promise.all(promises).finally(() => setLoading(false));
+      await Promise.all(promises);
+      setLoading(false);
     }
-  }, [isAuthenticated, selectedDate, today, calendarYear, calendarMonth, fetchSummary, fetchStats, fetchSettings, fetchCalendar]);
+
+    initDashboard();
+  }, [isAuthenticated, selectedDate, today, calendarYear, calendarMonth, fetchSummary, fetchStats, fetchSettings, fetchBriefing, fetchCalendar]);
 
   // When selectedDate changes: ONLY fetch daily summary (avoids calling 4 APIs & keeps DOM mounted)
   useEffect(() => {

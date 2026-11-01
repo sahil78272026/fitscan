@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-import { getSettings } from "@/lib/api";
+import { getSettings, selectMealPlan, swapMealPlan } from "@/lib/api";
 import styles from "./page.module.css";
 
 const MEAL_TYPE_ICONS = {
@@ -21,7 +21,22 @@ export default function MealPlanPage() {
   const [userSettings, setUserSettings] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Drag-and-Drop and Swapping State
+  const [draggedMealIndex, setDraggedMealIndex] = useState(null);
+  const [dropTargetIndex, setDropTargetIndex] = useState(null);
+  const [swapMenuOpenIndex, setSwapMenuOpenIndex] = useState(null);
+  const [isSwapping, setIsSwapping] = useState(false);
+  const [expandedRecipes, setExpandedRecipes] = useState(new Set());
+  const [toast, setToast] = useState(null);
+
   const selectedPlan = userSettings?.selected_meal_plan;
+
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast(null);
+    }, 3200);
+  };
 
   // Auth Protection
   useEffect(() => {
@@ -32,7 +47,6 @@ export default function MealPlanPage() {
 
   const fetchSettings = useCallback(async () => {
     try {
-      setLoading(true);
       const settings = await getSettings();
       setUserSettings(settings);
     } catch (err) {
@@ -43,10 +57,161 @@ export default function MealPlanPage() {
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchSettings();
+    if (!isAuthenticated) return;
+    let ignore = false;
+    async function load() {
+      try {
+        const settings = await getSettings();
+        if (!ignore) setUserSettings(settings);
+      } catch (err) {
+        // Fail silently
+      } finally {
+        if (!ignore) setLoading(false);
+      }
     }
-  }, [isAuthenticated, fetchSettings]);
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, [isAuthenticated]);
+
+  // Determine meal priority tier for differentiated visual hierarchy
+  const getMealPriority = (meal) => {
+    if (meal.priority) {
+      const p = String(meal.priority).toLowerCase();
+      if (p === "high" || p === "recovery") return "high";
+      if (p === "low" || p === "snack") return "low";
+      return "medium";
+    }
+
+    const type = (meal.meal_type || "").toLowerCase();
+    const protein = Number(meal.protein) || 0;
+    const calories = Number(meal.calories) || 0;
+
+    // High Priority: Main recovery / high protein anchor (Dinner, protein >= 35g, or calories >= 550)
+    if (type === "dinner" || protein >= 35 || calories >= 550) {
+      return "high";
+    }
+
+    // Low Priority: Light snacks or mini-fuel
+    if (type === "snack" || calories < 300) {
+      return "low";
+    }
+
+    // Medium Priority: Balanced staples (e.g. Breakfast, Lunch)
+    return "medium";
+  };
+
+  // Execute meal slot swapping (persisting to React state immediately and backend)
+  const executeSwap = async (sourceIndex, targetIndex) => {
+    if (!selectedPlan?.meals || !selectedPlan.meals[sourceIndex] || !selectedPlan.meals[targetIndex]) return;
+    if (sourceIndex === targetIndex) {
+      setSwapMenuOpenIndex(null);
+      return;
+    }
+
+    const currentMeals = selectedPlan.meals;
+    const sourceMeal = currentMeals[sourceIndex];
+    const targetMeal = currentMeals[targetIndex];
+
+    const sourceMealType = sourceMeal.meal_type;
+    const targetMealType = targetMeal.meal_type;
+
+    // Build swapped meals: the dishes exchange slots, adopting the destination slot's meal_type
+    const updatedMeals = [...currentMeals];
+    updatedMeals[sourceIndex] = {
+      ...targetMeal,
+      meal_type: sourceMealType,
+    };
+    updatedMeals[targetIndex] = {
+      ...sourceMeal,
+      meal_type: targetMealType,
+    };
+
+    const updatedPlan = {
+      ...selectedPlan,
+      meals: updatedMeals,
+    };
+
+    // Optimistically update React state immediately
+    const prevSettings = userSettings;
+    setUserSettings((prev) => ({
+      ...prev,
+      selected_meal_plan: updatedPlan,
+    }));
+
+    showToast(`Swapped ${sourceMealType} with ${targetMealType}! 🔄`);
+    setIsSwapping(true);
+    setSwapMenuOpenIndex(null);
+
+    try {
+      // Sync to backend via dedicated swap endpoint or select fallback
+      try {
+        await swapMealPlan(sourceMealType, targetMealType, updatedPlan);
+      } catch (err) {
+        await selectMealPlan(updatedPlan);
+      }
+    } catch (err) {
+      // Revert if remote persistence failed
+      setUserSettings(prevSettings);
+      showToast(err.message || "Failed to persist meal swap", "error");
+    } finally {
+      setIsSwapping(false);
+    }
+  };
+
+  // Drag and drop event handlers
+  const handleDragStart = (e, index) => {
+    setDraggedMealIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", index.toString());
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dropTargetIndex !== index) {
+      setDropTargetIndex(index);
+    }
+  };
+
+  const handleDragLeave = (e, index) => {
+    if (dropTargetIndex === index) {
+      setDropTargetIndex(null);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedMealIndex(null);
+    setDropTargetIndex(null);
+  };
+
+  const handleDrop = async (e, targetIndex) => {
+    e.preventDefault();
+    const sourceIndex =
+      draggedMealIndex !== null
+        ? draggedMealIndex
+        : parseInt(e.dataTransfer.getData("text/plain"), 10);
+
+    setDraggedMealIndex(null);
+    setDropTargetIndex(null);
+
+    if (isNaN(sourceIndex) || sourceIndex === targetIndex) return;
+    await executeSwap(sourceIndex, targetIndex);
+  };
+
+  // Toggle collapsible recipe details
+  const toggleRecipe = (index) => {
+    setExpandedRecipes((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
 
   const handleDownloadMealPlan = () => {
     if (!selectedPlan) return;
@@ -63,7 +228,7 @@ export default function MealPlanPage() {
     const fat = selectedPlan.fat_g || userSettings?.fat_goal || 65;
 
     let content = `========================================\n`;
-    content += ` CORECONTROL - DAILY MEAL PLAN\n`;
+    content += ` CORECONTROL - MASTER NUTRITION BLUEPRINT\n`;
     content += `========================================\n\n`;
     content += `Plan Title: ${selectedPlan.title || "Custom AI Plan"}\n`;
     content += `Goal: ${goal} | Diet: ${diet}\n`;
@@ -90,13 +255,13 @@ export default function MealPlanPage() {
     });
 
     content += `========================================\n`;
-    content += `Generated with CoreControl • www.corecontrol.fit\n`;
+    content += `Generated with FitScan • www.fitscan.ai\n`;
 
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `CoreControl-MealPlan-${selectedPlan.title ? selectedPlan.title.replace(/\s+/g, "_") : "Daily"}.txt`;
+    link.download = `FitScan-MasterBlueprint-${selectedPlan.title ? selectedPlan.title.replace(/\s+/g, "_") : "Daily"}.txt`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -108,7 +273,7 @@ export default function MealPlanPage() {
       <main className={styles.main}>
         <div className={styles.loader}>
           <div className={styles.loaderSpinner} />
-          <span>Loading Meal Plan...</span>
+          <span>Loading Nutrition Blueprint...</span>
         </div>
       </main>
     );
@@ -117,9 +282,25 @@ export default function MealPlanPage() {
   return (
     <main className={styles.main}>
       <div className={styles.container}>
+        {/* Floating Toast Notification */}
+        {toast && (
+          <div
+            className={`${styles.toast} ${
+              toast.type === "error" ? styles.toastError : styles.toastSuccess
+            }`}
+          >
+            {toast.message}
+          </div>
+        )}
+
         {/* Header */}
         <header className={styles.header}>
-          <h1 className={styles.pageTitle}>AI Meal Plan</h1>
+          <div>
+            <h1 className={styles.pageTitle}>Meal Schedule</h1>
+            <p className={styles.pageSubtitle}>
+              Interactive nutrition blueprint with drag-and-drop slot swapping
+            </p>
+          </div>
         </header>
 
         {!selectedPlan ? (
@@ -136,80 +317,126 @@ export default function MealPlanPage() {
           </div>
         ) : (
           <>
-            {/* Hero Card */}
-            <section className={styles.heroCard}>
-              <div className={styles.badgeRow}>
-                <span className={styles.planBadge}>
-                  ✨ Active Plan
-                </span>
-                {userSettings?.can_change_plan === false && (
-                  <span
-                    className={styles.planBadge}
-                    style={{
-                      background: "rgba(234, 88, 12, 0.15)",
-                      color: "#fb923c",
-                      borderColor: "rgba(234, 88, 12, 0.35)",
-                    }}
-                  >
-                    ⏳ Next change in {userSettings.hours_until_next_plan_change || 1}h
+            {/* MASTER BLUEPRINT CONTAINER (Distinct from individual meal cards below) */}
+            <section className={styles.blueprintContainer}>
+              <div className={styles.blueprintHeaderRow}>
+                <div className={styles.blueprintBadgeGroup}>
+                  <span className={styles.blueprintArchitectBadge}>
+                    📐 MASTER NUTRITION BLUEPRINT
                   </span>
-                )}
-                <span className={styles.planBadge}>
-                  {(userSettings?.goal_type || "fat_loss").replace("_", " ").toUpperCase()}
-                </span>
-                <span className={styles.planBadge}>
-                  {(userSettings?.diet_type || "veg").toUpperCase()}
-                </span>
-                <span className={styles.planBadge}>
-                  {(userSettings?.budget_tier || "moderate").replace("_", " ").toUpperCase()}
-                </span>
-                {selectedPlan.estimated_cost && (
-                  <span className={`${styles.planBadge} ${styles.costBadge}`}>
-                    💰 {selectedPlan.estimated_cost}
+                  <span className={styles.activePlanBadge}>
+                    ✨ Active Plan
                   </span>
-                )}
+                  {userSettings?.can_change_plan === false && (
+                    <span className={styles.cooldownBadge}>
+                      ⏳ Next change in {userSettings.hours_until_next_plan_change || 1}h
+                    </span>
+                  )}
+                </div>
+
+                <div className={styles.blueprintMetaPills}>
+                  <span className={styles.metaPill}>
+                    {(userSettings?.goal_type || "fat_loss").replace("_", " ").toUpperCase()}
+                  </span>
+                  <span className={styles.metaPill}>
+                    {(userSettings?.diet_type || "veg").toUpperCase()}
+                  </span>
+                  <span className={styles.metaPill}>
+                    {(userSettings?.budget_tier || "moderate").replace("_", " ").toUpperCase()}
+                  </span>
+                  {selectedPlan.estimated_cost && (
+                    <span className={`${styles.metaPill} ${styles.costMetaPill}`}>
+                      💰 {selectedPlan.estimated_cost}
+                    </span>
+                  )}
+                </div>
               </div>
 
-              <div>
-                <h2 className={styles.planTitle}>{selectedPlan.title || "Personalized AI Meal Plan"}</h2>
-                <p className={styles.planTagline}>{selectedPlan.tagline || "Tailored specifically to hit your daily macro targets."}</p>
+              <div className={styles.blueprintTitleArea}>
+                <h2 className={styles.blueprintTitle}>
+                  {selectedPlan.title || "Personalized AI Nutrition Blueprint"}
+                </h2>
+                <p className={styles.blueprintTagline}>
+                  {selectedPlan.tagline || "Architected specifically to hit your target calories and macro ratios."}
+                </p>
               </div>
 
-              {/* Macro Distribution Cards */}
-              <div className={styles.macroGrid}>
-                <div className={styles.macroCard}>
-                  <span className={styles.macroLabel}>Daily Calories</span>
-                  <span className={`${styles.macroVal} ${styles.caloriesVal}`}>
-                    {selectedPlan.daily_calories || userSettings?.calorie_goal} kcal
+              {/* Master Telemetry Grid: Target Specifications */}
+              <div className={styles.telemetryGrid}>
+                <div className={`${styles.telemetryCard} ${styles.caloriesTelemetry}`}>
+                  <div className={styles.telemetryTop}>
+                    <span className={styles.telemetryLabel}>Daily Calories</span>
+                    <span className={styles.telemetryIcon}>🔥</span>
+                  </div>
+                  <span className={styles.telemetryValue}>
+                    {selectedPlan.daily_calories || userSettings?.calorie_goal} <small>kcal</small>
                   </span>
+                  <div className={styles.telemetryBar}>
+                    <div className={styles.telemetryFillCalories} style={{ width: "100%" }} />
+                  </div>
                 </div>
-                <div className={styles.macroCard}>
-                  <span className={styles.macroLabel}>Protein</span>
-                  <span className={`${styles.macroVal} ${styles.proteinVal}`}>
-                    {selectedPlan.protein_g || userSettings?.protein_goal}g
+
+                <div className={`${styles.telemetryCard} ${styles.proteinTelemetry}`}>
+                  <div className={styles.telemetryTop}>
+                    <span className={styles.telemetryLabel}>Target Protein</span>
+                    <span className={styles.telemetryIcon}>⚡</span>
+                  </div>
+                  <span className={styles.telemetryValue}>
+                    {selectedPlan.protein_g || userSettings?.protein_goal} <small>g</small>
                   </span>
+                  <div className={styles.telemetryBar}>
+                    <div className={styles.telemetryFillProtein} style={{ width: "100%" }} />
+                  </div>
                 </div>
-                <div className={styles.macroCard}>
-                  <span className={styles.macroLabel}>Carbs</span>
-                  <span className={`${styles.macroVal} ${styles.carbsVal}`}>
-                    {selectedPlan.carbs_g || userSettings?.carbs_goal}g
+
+                <div className={`${styles.telemetryCard} ${styles.carbsTelemetry}`}>
+                  <div className={styles.telemetryTop}>
+                    <span className={styles.telemetryLabel}>Target Carbs</span>
+                    <span className={styles.telemetryIcon}>🌾</span>
+                  </div>
+                  <span className={styles.telemetryValue}>
+                    {selectedPlan.carbs_g || userSettings?.carbs_goal} <small>g</small>
                   </span>
+                  <div className={styles.telemetryBar}>
+                    <div className={styles.telemetryFillCarbs} style={{ width: "100%" }} />
+                  </div>
                 </div>
-                <div className={styles.macroCard}>
-                  <span className={styles.macroLabel}>Fat</span>
-                  <span className={`${styles.macroVal} ${styles.fatVal}`}>
-                    {selectedPlan.fat_g || userSettings?.fat_goal}g
+
+                <div className={`${styles.telemetryCard} ${styles.fatTelemetry}`}>
+                  <div className={styles.telemetryTop}>
+                    <span className={styles.telemetryLabel}>Target Fat</span>
+                    <span className={styles.telemetryIcon}>🥑</span>
+                  </div>
+                  <span className={styles.telemetryValue}>
+                    {selectedPlan.fat_g || userSettings?.fat_goal} <small>g</small>
                   </span>
+                  <div className={styles.telemetryBar}>
+                    <div className={styles.telemetryFillFat} style={{ width: "100%" }} />
+                  </div>
                 </div>
+              </div>
+
+              {/* Pro-Tip Reorder & Swap Banner */}
+              <div className={styles.swapHintBanner}>
+                <span className={styles.swapHintIcon}>💡</span>
+                <span className={styles.swapHintText}>
+                  <strong>Drag & Drop to Swap Slots:</strong> Grab any meal card by the <code>⠿</code> handle to swap its slot (e.g. Breakfast ⇄ Lunch), or tap <strong>⇄ Swap Slot</strong> for 1-click reordering.
+                </span>
               </div>
             </section>
 
-            {/* Daily Meal Schedule */}
-            <section>
+            {/* DAILY MEAL SCHEDULE SECTION: INDIVIDUAL MEAL CARDS */}
+            <section className={styles.scheduleSection}>
               <div className={styles.scheduleHeader}>
-                <h3 className={styles.scheduleTitle}>
-                  Daily Meal Schedule & Recipes
-                </h3>
+                <div className={styles.scheduleTitleGroup}>
+                  <h3 className={styles.scheduleTitle}>
+                    Scheduled Meal Courses
+                  </h3>
+                  <span className={styles.courseCountBadge}>
+                    {selectedPlan.meals?.length || 0} Slots Configured
+                  </span>
+                </div>
+
                 <div className={styles.downloadButtonGroup}>
                   <button
                     type="button"
@@ -217,7 +444,7 @@ export default function MealPlanPage() {
                     onClick={handleDownloadMealPlan}
                     title="Print or Save as PDF"
                   >
-                    📥 Save / Print PDF
+                    📥 Export Blueprint PDF
                   </button>
                   <button
                     type="button"
@@ -225,51 +452,200 @@ export default function MealPlanPage() {
                     onClick={handleDownloadTextPlan}
                     title="Download as clean text file"
                   >
-                    📄 Text
+                    📄 Text Plan
                   </button>
                 </div>
               </div>
 
+              {/* Meal Cards Container */}
               <div className={styles.mealsContainer}>
                 {selectedPlan.meals && selectedPlan.meals.length > 0 ? (
                   selectedPlan.meals.map((meal, idx) => {
                     const icon = MEAL_TYPE_ICONS[meal.meal_type] || "🍱";
+                    const priority = getMealPriority(meal);
+                    const isDragging = draggedMealIndex === idx;
+                    const isDropTarget = dropTargetIndex === idx && draggedMealIndex !== idx;
+                    const isExpanded = expandedRecipes.has(idx);
+                    const isSwapMenuOpen = swapMenuOpenIndex === idx;
+
+                    // Compute priority-specific visual elements
+                    let priorityBadgeText = "🌾 Balanced Staple";
+                    let priorityClass = styles.cardPriorityMedium;
+
+                    if (priority === "high") {
+                      priorityBadgeText = "⚡ Main Recovery Anchor";
+                      priorityClass = styles.cardPriorityHigh;
+                    } else if (priority === "low") {
+                      priorityBadgeText = "☕ Light Fuel / Snack";
+                      priorityClass = styles.cardPriorityLow;
+                    }
+
                     return (
-                      <div key={idx} className={styles.mealCard}>
-                        <div className={styles.mealHeader}>
-                          <span className={styles.mealTypeTag}>
-                            {icon} {meal.meal_type}
-                          </span>
-                          <span className={styles.mealCalsPill}>
-                            {meal.calories} kcal
-                          </span>
+                      <div
+                        key={idx}
+                        className={`${styles.mealCard} ${priorityClass} ${
+                          isDragging ? styles.isDragging : ""
+                        } ${isDropTarget ? styles.dropTargetActive : ""}`}
+                        draggable={true}
+                        onDragStart={(e) => handleDragStart(e, idx)}
+                        onDragOver={(e) => handleDragOver(e, idx)}
+                        onDragLeave={(e) => handleDragLeave(e, idx)}
+                        onDragEnd={handleDragEnd}
+                        onDrop={(e) => handleDrop(e, idx)}
+                      >
+                        {/* Dropzone Overlay Highlight */}
+                        {isDropTarget && (
+                          <div className={styles.dropzoneOverlay}>
+                            <span>⇣ Drop here to swap with {meal.meal_type}</span>
+                          </div>
+                        )}
+
+                        {/* Top Meta Bar: Drag Handle, Meal Type, Priority Badge, Swap Action, Calorie Pill */}
+                        <div className={styles.cardTopBar}>
+                          <div className={styles.cardTopLeft}>
+                            <div
+                              className={styles.dragHandle}
+                              title="Click and drag to swap meal slot"
+                              aria-label="Drag handle"
+                            >
+                              ⠿
+                            </div>
+                            <span className={styles.mealTypeTag}>
+                              {icon} {meal.meal_type}
+                            </span>
+                            <span className={styles.priorityBadge}>
+                              {priorityBadgeText}
+                            </span>
+                          </div>
+
+                          <div className={styles.cardTopRight}>
+                            {/* Accessible Swap Button & Dropdown Fallback */}
+                            <div className={styles.accessibleSwapWrapper}>
+                              <button
+                                type="button"
+                                className={styles.swapSlotBtn}
+                                onClick={() =>
+                                  setSwapMenuOpenIndex(isSwapMenuOpen ? null : idx)
+                                }
+                                disabled={isSwapping}
+                                title={`Swap ${meal.meal_type} with another meal slot`}
+                              >
+                                ⇄ Swap
+                              </button>
+
+                              {isSwapMenuOpen && (
+                                <div className={styles.swapDropdownMenu}>
+                                  <div className={styles.swapDropdownHeader}>
+                                    Swap {meal.meal_type} with:
+                                  </div>
+                                  {selectedPlan.meals.map((targetM, targetIdx) => {
+                                    if (targetIdx === idx) return null;
+                                    return (
+                                      <button
+                                        key={targetIdx}
+                                        type="button"
+                                        className={styles.swapDropdownItem}
+                                        onClick={() => executeSwap(idx, targetIdx)}
+                                      >
+                                        <span className={styles.swapDropdownIcon}>
+                                          {MEAL_TYPE_ICONS[targetM.meal_type] || "🍱"}
+                                        </span>
+                                        <span className={styles.swapDropdownText}>
+                                          <strong>{targetM.meal_type}</strong>: {targetM.dish_name}
+                                        </span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+
+                            <span className={styles.mealCalsPill}>
+                              {meal.calories} kcal
+                            </span>
+                          </div>
                         </div>
 
-                        <div>
-                          <h4 className={styles.dishName}>{meal.dish_name}</h4>
-                          {meal.ingredients && meal.ingredients.length > 0 ? (
-                            <ul className={styles.ingredientsList}>
-                              {meal.ingredients.map((ing, iIdx) => (
-                                <li key={iIdx} className={styles.ingredientItem}>
-                                  • {ing}
-                                </li>
+                        {/* Concise Dish Summary & Glanceable Layout */}
+                        <div className={styles.cardBody}>
+                          <div className={styles.dishHeaderRow}>
+                            <h4 className={styles.dishName}>{meal.dish_name}</h4>
+                            {priority === "high" && (
+                              <span className={styles.prominentProteinPill}>
+                                🔥 {meal.protein}g Protein Anchor
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Compact Key Ingredients Pills (Glanceable preview) */}
+                          {meal.ingredients && meal.ingredients.length > 0 && (
+                            <div className={styles.ingredientsPillsRow}>
+                              {meal.ingredients.slice(0, 3).map((ing, iIdx) => (
+                                <span key={iIdx} className={styles.ingredientPill}>
+                                  {ing.split("(")[0].trim()}
+                                </span>
                               ))}
-                            </ul>
-                          ) : meal.description ? (
-                            <p className={styles.dishDescription}>{meal.description}</p>
-                          ) : null}
-                        </div>
+                              {meal.ingredients.length > 3 && (
+                                <span className={styles.ingredientMoreCount}>
+                                  +{meal.ingredients.length - 3} more
+                                </span>
+                              )}
+                            </div>
+                          )}
 
-                        <div className={styles.mealMacroRow}>
-                          <div className={styles.mealMacroItem}>
-                            Protein: <strong>{meal.protein}g</strong>
+                          {/* Concise Macro Pills Row */}
+                          <div className={styles.compactMacroRow}>
+                            <div className={styles.macroPill}>
+                              <span className={styles.macroPillLabel}>P:</span>
+                              <strong>{meal.protein}g</strong>
+                            </div>
+                            <span className={styles.macroDivider}>•</span>
+                            <div className={styles.macroPill}>
+                              <span className={styles.macroPillLabel}>C:</span>
+                              <strong>{meal.carbs}g</strong>
+                            </div>
+                            <span className={styles.macroDivider}>•</span>
+                            <div className={styles.macroPill}>
+                              <span className={styles.macroPillLabel}>F:</span>
+                              <strong>{meal.fat}g</strong>
+                            </div>
+
+                            {/* Collapsible Recipe & Ingredient Details Toggle Button */}
+                            <button
+                              type="button"
+                              className={styles.toggleRecipeBtn}
+                              onClick={() => toggleRecipe(idx)}
+                              aria-expanded={isExpanded}
+                            >
+                              {isExpanded ? "Collapse Recipe ▴" : "View Recipe & Ingredients ▾"}
+                            </button>
                           </div>
-                          <div className={styles.mealMacroItem}>
-                            Carbs: <strong>{meal.carbs}g</strong>
-                          </div>
-                          <div className={styles.mealMacroItem}>
-                            Fat: <strong>{meal.fat}g</strong>
-                          </div>
+
+                          {/* Expandable Recipe & Complete Ingredient Details Drawer */}
+                          {isExpanded && (
+                            <div className={styles.expandedRecipeDrawer}>
+                              {meal.description && (
+                                <p className={styles.dishDescription}>
+                                  {meal.description}
+                                </p>
+                              )}
+
+                              {meal.ingredients && meal.ingredients.length > 0 && (
+                                <div className={styles.detailedIngredientsBlock}>
+                                  <span className={styles.ingredientsSectionTitle}>
+                                    Itemized Ingredients & Portions:
+                                  </span>
+                                  <ul className={styles.detailedIngredientsList}>
+                                    {meal.ingredients.map((ing, iIdx) => (
+                                      <li key={iIdx} className={styles.detailedIngredientItem}>
+                                        • {ing}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -280,17 +656,17 @@ export default function MealPlanPage() {
               </div>
             </section>
 
-            {/* Action Bar */}
+            {/* Bottom Action Row */}
             <section className={styles.actionRow}>
               <button
                 type="button"
                 className={styles.secondaryBtn}
                 onClick={handleDownloadMealPlan}
               >
-                📥 Download Meal Plan
+                📥 Export Complete Plan
               </button>
               <Link href="/profile" className={styles.primaryBtn}>
-                Change Meal Plan
+                Change Plan in Profile
               </Link>
             </section>
           </>

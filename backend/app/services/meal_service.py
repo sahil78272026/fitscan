@@ -6,6 +6,7 @@ from sqlalchemy import select, func, distinct, desc
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from fastapi import HTTPException
 
 from app.models.meal import Meal, FoodItem
 from app.models.settings import UserSettings
@@ -117,6 +118,93 @@ async def delete_meal(db: AsyncSession, user_id: int, meal_id: int) -> bool:
         logger.warning(f"Cache invalidation on delete_meal failed: {exc}")
 
     return True
+
+
+async def update_meal(
+    db: AsyncSession,
+    user_id: int,
+    meal_id: int,
+    meal_type: str | None = None,
+    raw_input: str | None = None,
+    meal_date: date | None = None,
+    image_url: str | None = None,
+) -> Meal | None:
+    """
+    Update / reclassify a logged meal's meal_type, raw_input, meal_date, or image_url.
+    Eagerly loads food_items to satisfy MealResponse schema serialization.
+    Invalidates Redis summary, recent items, calendar, and adherence caches across all affected dates.
+    Returns the updated Meal instance, or None if not found or unauthorized.
+    """
+    result = await db.execute(
+        select(Meal)
+        .where(Meal.id == meal_id, Meal.user_id == user_id)
+        .options(selectinload(Meal.food_items))
+    )
+    meal = result.scalar_one_or_none()
+    if not meal:
+        return None
+
+    old_date = meal.meal_date
+
+    if meal_type is not None:
+        meal.meal_type = meal_type
+    if raw_input is not None:
+        cleaned_raw = raw_input.strip()
+        if not cleaned_raw:
+            raise ValueError("raw_input cannot be empty")
+        if cleaned_raw != meal.raw_input:
+            meal.raw_input = cleaned_raw
+            analysis = await analyze_food(raw_input=meal.raw_input)
+            meal.total_calories = int(analysis.get("total_calories", 0))
+            meal.total_protein = round(float(analysis.get("total_protein", 0.0)), 1)
+            meal.total_carbs = round(float(analysis.get("total_carbs", 0.0)), 1)
+            meal.total_fat = round(float(analysis.get("total_fat", 0.0)), 1)
+
+            meal.food_items.clear()
+            for item_data in analysis.get("items", []):
+                food_item = FoodItem(
+                    meal_id=meal.id,
+                    name=item_data["name"],
+                    quantity=float(item_data.get("quantity", 1.0)),
+                    unit=item_data.get("unit", "serving"),
+                    calories=int(item_data.get("calories", 0)),
+                    protein=float(item_data.get("protein", 0.0)),
+                    carbs=float(item_data.get("carbs", 0.0)),
+                    fat=float(item_data.get("fat", 0.0)),
+                )
+                meal.food_items.append(food_item)
+                db.add(food_item)
+    if meal_date is not None:
+        meal.meal_date = meal_date
+    if image_url is not None:
+        meal.image_url = image_url
+
+    await db.commit()
+    await db.refresh(meal, attribute_names=["food_items"])
+
+    logger.info(
+        f"Updated meal #{meal.id} for user #{user_id}: "
+        f"type={meal.meal_type}, date={meal.meal_date}, raw_input={meal.raw_input}"
+    )
+
+    # Invalidate Redis cache for user daily summary, calendar, and adherence
+    try:
+        keys_to_delete = [
+            f"user:{user_id}:daily_summary:{old_date.isoformat()}",
+            f"user:{user_id}:recent_items",
+            f"user:{user_id}:calendar:{old_date.year}:{old_date.month}",
+            f"user:{user_id}:stats:adherence",
+        ]
+        if meal.meal_date != old_date:
+            keys_to_delete.extend([
+                f"user:{user_id}:daily_summary:{meal.meal_date.isoformat()}",
+                f"user:{user_id}:calendar:{meal.meal_date.year}:{meal.meal_date.month}",
+            ])
+        await cache_delete(*keys_to_delete)
+    except Exception as exc:
+        logger.warning(f"Cache invalidation on update_meal failed: {exc}")
+
+    return meal
 
 
 async def get_recent_food_items(db: AsyncSession, user_id: int, limit: int = 15) -> list[dict]:
@@ -339,6 +427,15 @@ def parse_settings_response_dict(settings: UserSettings) -> dict:
         elif isinstance(settings.selected_meal_plan, dict):
             selected_plan = settings.selected_meal_plan
 
+        if isinstance(selected_plan, dict) and "meals" in selected_plan:
+            for meal in selected_plan.get("meals", []):
+                if isinstance(meal, dict):
+                    m_type = str(meal.get("meal_type", "")).strip().lower()
+                    if not meal.get("priority"):
+                        meal["priority"] = "low" if m_type == "snack" else "medium"
+                    if not meal.get("timing_badge"):
+                        meal["timing_badge"] = "Pre-Workout Fuel" if m_type == "snack" else "Sustained Energy"
+
     can_change, hours_left, days_left = get_plan_change_availability(settings)
 
     return {
@@ -415,44 +512,69 @@ def calculate_user_goals(
 ) -> tuple[int, int, int, int]:
     """
     Dynamically calculate daily calorie and macro goals (Protein, Carbs, Fat)
-    based on BMR, TDEE, activity level, and goal profile.
+    based on Mifflin-St Jeor BMR, TDEE, activity level, and goal profile.
+    Safely handles extreme weights, null gender, missing activity level, and ensures macro congruency.
     Returns: (calorie_goal, protein_goal, carbs_goal, fat_goal)
     """
-    w = weight_kg or 70.0
-    h = height_cm or 170.0
-    a = age or 25
-    g = gender or "male"
-    act = activity_level or "moderate"
+    # 1. Biological Boundary Clamping
+    try:
+        w = max(30.0, min(float(weight_kg), 250.0)) if weight_kg is not None else 70.0
+    except (ValueError, TypeError):
+        w = 70.0
 
-    # Mifflin-St Jeor Equation for BMR
-    if g and g.lower() == "female":
-        bmr = 10 * w + 6.25 * h - 5 * a - 161
+    try:
+        h = max(100.0, min(float(height_cm), 250.0)) if height_cm is not None else 170.0
+    except (ValueError, TypeError):
+        h = 170.0
+
+    try:
+        a = max(12, min(int(age), 100)) if age is not None else 25
+    except (ValueError, TypeError):
+        a = 25
+
+    # 2. Gender Neutrality & Mifflin-St Jeor
+    g_clean = str(gender).strip().lower() if gender else "neutral"
+    if g_clean in ("female", "woman", "f"):
+        gender_offset = -161
+    elif g_clean in ("male", "man", "m"):
+        gender_offset = 5
     else:
-        bmr = 10 * w + 6.25 * h - 5 * a + 5
+        # Non-binary, other, or unspecified: neutral midpoint between male (+5) and female (-161)
+        gender_offset = -78
 
-    # Dynamic activity multiplier lookup
-    act_multiplier = ACTIVITY_MULTIPLIERS.get(act, DEFAULT_ACTIVITY_MULTIPLIER)
+    bmr = 10 * w + 6.25 * h - 5 * a + gender_offset
+
+    # 3. Dynamic Activity Multiplier
+    act_clean = str(activity_level).strip().lower() if activity_level else "moderate"
+    act_multiplier = ACTIVITY_MULTIPLIERS.get(act_clean, DEFAULT_ACTIVITY_MULTIPLIER)
     tdee = bmr * act_multiplier
 
-    # Dynamic goal profile lookup
-    profile = GOAL_PROFILES.get(goal_type, DEFAULT_GOAL_PROFILE)
+    # 4. Dynamic Goal Profile Lookup
+    goal_clean = str(goal_type).strip().lower() if goal_type else "fat_loss"
+    profile = GOAL_PROFILES.get(goal_clean, DEFAULT_GOAL_PROFILE)
 
-    # Calculate caloric target
-    target_calories = int(tdee * profile["calorie_multiplier"])
+    # 5. Caloric Target with Safe Floors
+    raw_target_calories = int(tdee * profile["calorie_multiplier"])
+    target_calories = max(1200, min(raw_target_calories, 5500))
 
-    # Calculate protein target (g = weight_kg * protein_g_per_kg)
-    protein_g = int(w * profile["protein_g_per_kg"])
+    # 6. Protein Target (Capped to prevent inverted ratios in high BMI)
+    raw_protein = w * profile["protein_g_per_kg"]
+    max_protein_from_calories = int((target_calories * 0.40) / 4)
+    protein_g = max(45, min(int(raw_protein), 240, max_protein_from_calories))
     protein_cals = protein_g * 4
 
-    # Calculate fat target (g = (target_calories * fat_pct_calories) / 9)
-    fat_g = int((target_calories * profile["fat_pct_calories"]) / 9)
+    # 7. Fat Target
+    fat_g = max(30, int((target_calories * profile["fat_pct_calories"]) / 9))
     fat_cals = fat_g * 9
 
-    # Calculate carbohydrate target from remaining energy balance
+    # 8. Carbohydrates & Macro Balance
     remaining_cals = target_calories - (protein_cals + fat_cals)
     carbs_g = max(30, int(remaining_cals / 4))
 
-    return (target_calories, protein_g, carbs_g, fat_g)
+    # 9. Energy Congruency Synchronization
+    final_calories = protein_g * 4 + fat_g * 9 + carbs_g * 4
+
+    return (final_calories, protein_g, carbs_g, fat_g)
 
 
 async def update_user_goals(
@@ -532,5 +654,98 @@ async def save_selected_meal_plan(db: AsyncSession, user_id: int, meal_plan: dic
     await db.commit()
     await db.refresh(settings)
     logger.info(f"Saved selected meal plan for user #{user_id}: {meal_plan.get('title')}")
+    return settings
+
+
+async def swap_meal_plan_slots(
+    db: AsyncSession,
+    user_id: int,
+    source_meal_type: str,
+    target_meal_type: str,
+) -> UserSettings:
+    """
+    Swap two meal slots in the user's active meal plan.
+    Exchanges items between slots and updates their meal_type keys.
+    CRITICAL: Does NOT touch `settings.last_plan_change_at`, preserving the 24h AI cooldown.
+    """
+    settings = await get_or_create_settings(db, user_id)
+    if not settings.selected_meal_plan:
+        raise HTTPException(
+            status_code=400,
+            detail="No active meal plan selected. Please generate and select a meal plan first."
+        )
+
+    try:
+        plan_data = (
+            json.loads(settings.selected_meal_plan)
+            if isinstance(settings.selected_meal_plan, str)
+            else settings.selected_meal_plan
+        )
+    except Exception as exc:
+        logger.error(f"Failed to parse selected_meal_plan for user #{user_id}: {exc}")
+        raise HTTPException(status_code=500, detail="Corrupted meal plan data. Please re-select a plan.")
+
+    meals = plan_data.get("meals", [])
+    if not isinstance(meals, list) or len(meals) < 2:
+        raise HTTPException(
+            status_code=400,
+            detail="Active meal plan does not contain sufficient meal slots to swap."
+        )
+
+    src_lower = source_meal_type.strip().lower()
+    tgt_lower = target_meal_type.strip().lower()
+
+    src_idx = None
+    tgt_idx = None
+    for idx, meal in enumerate(meals):
+        m_type = str(meal.get("meal_type", "")).strip().lower()
+        if m_type == src_lower:
+            src_idx = idx
+        elif m_type == tgt_lower:
+            tgt_idx = idx
+
+    if src_idx is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Source meal type '{source_meal_type}' was not found in active meal plan."
+        )
+    if tgt_idx is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Target meal type '{target_meal_type}' was not found in active meal plan."
+        )
+
+    # Capture original slot display labels (e.g. "Breakfast", "Lunch")
+    src_label = meals[src_idx].get("meal_type", source_meal_type)
+    tgt_label = meals[tgt_idx].get("meal_type", target_meal_type)
+
+    # Swap meal contents
+    meals[src_idx], meals[tgt_idx] = meals[tgt_idx], meals[src_idx]
+
+    # Update meal_type attributes so each item reflects its new slot
+    meals[src_idx]["meal_type"] = src_label
+    meals[tgt_idx]["meal_type"] = tgt_label
+
+    # Save without modifying last_plan_change_at
+    settings.selected_meal_plan = json.dumps(plan_data)
+    await db.commit()
+    await db.refresh(settings)
+
+    logger.info(f"User #{user_id} swapped meal slots '{source_meal_type}' <-> '{target_meal_type}' without cooldown penalty")
+    return settings
+
+
+async def save_meal_plan_reorder(
+    db: AsyncSession,
+    user_id: int,
+    meal_plan: dict,
+) -> UserSettings:
+    """
+    Save client-synchronized reordered meal plan without touching last_plan_change_at.
+    """
+    settings = await get_or_create_settings(db, user_id)
+    settings.selected_meal_plan = json.dumps(meal_plan)
+    await db.commit()
+    await db.refresh(settings)
     return settings
 

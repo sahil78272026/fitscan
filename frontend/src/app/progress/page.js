@@ -48,13 +48,29 @@ export default function ProgressPage() {
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      setLoading(true);
-      Promise.all([fetchStats(), fetchWeight(weightTimeframe)]).finally(() =>
-        setLoading(false)
-      );
+    if (!isAuthenticated) return;
+    let ignore = false;
+    async function loadProgress() {
+      try {
+        const [stats, history] = await Promise.all([
+          getAdherenceStats(),
+          getWeightHistory(weightTimeframe),
+        ]);
+        if (!ignore) {
+          setAdherenceStats(stats);
+          setWeightHistory(history);
+        }
+      } catch (err) {
+        // Fail silently
+      } finally {
+        if (!ignore) setLoading(false);
+      }
     }
-  }, [isAuthenticated, fetchStats, fetchWeight, weightTimeframe]);
+    loadProgress();
+    return () => {
+      ignore = true;
+    };
+  }, [isAuthenticated, weightTimeframe]);
 
   const handleLogWeight = async (weightKg) => {
     if (!weightKg || weightKg < 25 || weightKg > 300) return;

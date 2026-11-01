@@ -2,28 +2,31 @@ import base64
 import logging
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
-from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import date
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.meal import MealCreate, MealResponse, MealRecommendationResponse
-from app.services.meal_service import create_meal, get_meals_by_date, delete_meal, get_or_create_settings
+from app.schemas.meal import (
+    MealCreate,
+    MealUpdate,
+    MealResponse,
+    MealRecommendationResponse,
+    ScanImageBase64Request,
+)
+from app.services.meal_service import (
+    create_meal,
+    update_meal,
+    get_meals_by_date,
+    delete_meal,
+    get_or_create_settings,
+)
 from app.services.gemini_service import recommend_curated_meals
 from app.middleware.auth import get_current_user
-from datetime import date
 
 logger = logging.getLogger("corecontrol.routers.meals")
 
 router = APIRouter(prefix="/api/meals", tags=["Meals"])
-
-
-class ScanImageBase64Request(BaseModel):
-    photo_base64: str
-    raw_input: Optional[str] = None
-    meal_type: str = "lunch"
-    meal_date: Optional[str] = None
-    image_url: Optional[str] = None
 
 
 @router.post("", response_model=MealResponse, status_code=201)
@@ -56,13 +59,30 @@ async def scan_meal_image_base64(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Log a meal using Base64 encoded food image JSON payload."""
+    """Log a meal using Base64 encoded food image JSON payload supporting JPEG, PNG, WebP, GIF, and HEIC."""
     try:
-        b64_str = payload.photo_base64
-        if "," in b64_str:
+        b64_str = payload.photo_base64.strip()
+        mime_type = "image/jpeg"
+
+        # Extract MIME type from data URI if provided (e.g., data:image/png;base64,...)
+        if b64_str.startswith("data:") and ";base64," in b64_str:
+            header, b64_str = b64_str.split(";base64,", 1)
+            extracted_mime = header.replace("data:", "").strip().lower()
+            if extracted_mime in ("image/jpg", "image/pjpeg"):
+                mime_type = "image/jpeg"
+            elif extracted_mime.startswith("image/"):
+                mime_type = extracted_mime
+        elif "," in b64_str:
             b64_str = b64_str.split(",", 1)[1]
 
-        image_bytes = base64.b64decode(b64_str)
+        try:
+            image_bytes = base64.b64decode(b64_str)
+        except Exception as decode_err:
+            raise HTTPException(status_code=422, detail=f"Invalid base64 image encoding: {decode_err}")
+
+        if not image_bytes or len(image_bytes) == 0:
+            raise HTTPException(status_code=422, detail="Decoded image data is empty")
+
         target_date = date.fromisoformat(payload.meal_date) if payload.meal_date else date.today()
 
         meal = await create_meal(
@@ -72,10 +92,12 @@ async def scan_meal_image_base64(
             meal_type=payload.meal_type,
             target_meal_date=target_date,
             image_bytes=image_bytes,
-            mime_type="image/jpeg",
+            mime_type=mime_type,
             image_url=payload.image_url,
         )
         return meal
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
@@ -93,10 +115,21 @@ async def scan_meal_image(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Log a meal using a food image + optional text description. Gemini Multimodal parses calories and macros."""
+    """Log a meal using multipart form upload supporting JPEG, PNG, WebP, GIF, and HEIC formats."""
+    if meal_type not in ("breakfast", "lunch", "dinner", "snack"):
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid meal_type '{meal_type}'. Must be one of: breakfast, lunch, dinner, snack",
+        )
+
     try:
         image_bytes = await image.read()
-        mime_type = image.content_type or "image/jpeg"
+        if not image_bytes or len(image_bytes) == 0:
+            raise HTTPException(status_code=422, detail="Uploaded image file is empty")
+
+        mime_type = (image.content_type or "image/jpeg").lower()
+        if mime_type in ("image/jpg", "image/pjpeg"):
+            mime_type = "image/jpeg"
 
         target_date = date.fromisoformat(meal_date) if meal_date else date.today()
 
@@ -111,6 +144,8 @@ async def scan_meal_image(
             image_url=image_url,
         )
         return meal
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
@@ -158,4 +193,32 @@ async def remove_meal(
     deleted = await delete_meal(db, current_user.id, meal_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Meal not found")
+
+
+@router.patch("/{meal_id}", response_model=MealResponse)
+async def update_meal_endpoint(
+    meal_id: int,
+    payload: MealUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Reclassify or update a logged meal's meal_type, raw_input, or meal_date.
+    Ensures user summary, recent items, and calendar caches are invalidated across affected dates.
+    """
+    try:
+        updated_meal = await update_meal(
+            db=db,
+            user_id=current_user.id,
+            meal_id=meal_id,
+            meal_type=payload.meal_type,
+            raw_input=payload.raw_input,
+            meal_date=payload.meal_date,
+            image_url=payload.image_url,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    if not updated_meal:
+        raise HTTPException(status_code=404, detail="Meal not found")
+    return updated_meal
 

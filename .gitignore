@@ -103,3 +103,4 @@ scripts/resize_*.py
 scripts/telegram_agent_bridge.py
 scripts/
 docs/
+tests/

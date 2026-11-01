@@ -34,7 +34,9 @@ export default function OnboardingModal({ isOpen, onClose, initialSettings, onSa
   const [activityLevel, setActivityLevel] = useState(initialSettings?.activity_level || "moderate");
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
+  const [prevSettings, setPrevSettings] = useState(initialSettings);
+  if (initialSettings !== prevSettings) {
+    setPrevSettings(initialSettings);
     if (initialSettings) {
       if (initialSettings.goal_type) setGoalType(initialSettings.goal_type);
       if (initialSettings.diet_type) setDietType(initialSettings.diet_type);
@@ -45,7 +47,7 @@ export default function OnboardingModal({ isOpen, onClose, initialSettings, onSa
       if (initialSettings.gender) setGender(initialSettings.gender);
       if (initialSettings.activity_level) setActivityLevel(initialSettings.activity_level);
     }
-  }, [initialSettings]);
+  }
 
   if (!isOpen) return null;
 

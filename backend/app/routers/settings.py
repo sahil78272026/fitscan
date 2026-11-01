@@ -11,6 +11,7 @@ from app.schemas.settings import (
     SettingsResponse,
     SelectMealPlanPayload,
     SubscriptionTierUpdate,
+    MealPlanSwapRequest,
 )
 from app.services.meal_service import (
     get_or_create_settings,
@@ -19,6 +20,8 @@ from app.services.meal_service import (
     parse_settings_response_dict,
     save_selected_meal_plan,
     get_plan_change_availability,
+    swap_meal_plan_slots,
+    save_meal_plan_reorder,
 )
 from app.services.gemini_service import generate_multiple_meal_plans
 from app.services.redis_service import cache_delete
@@ -123,6 +126,38 @@ async def select_meal_plan(
 ):
     """Save the user's selected meal plan and update active macro targets."""
     settings = await save_selected_meal_plan(db, current_user.id, payload.meal_plan)
+    return parse_settings_response_dict(settings)
+
+
+@router.post("/meal-plan/swap", response_model=SettingsResponse)
+async def swap_meal_plan(
+    payload: MealPlanSwapRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Swap slots in the active meal plan or sync a reordered meal plan.
+    Critical: Does NOT trigger or consume the 24-hour meal plan suggestion cooldown.
+    """
+    if payload.source_meal_type and payload.target_meal_type:
+        settings = await swap_meal_plan_slots(
+            db=db,
+            user_id=current_user.id,
+            source_meal_type=payload.source_meal_type,
+            target_meal_type=payload.target_meal_type,
+        )
+    elif payload.meal_plan:
+        settings = await save_meal_plan_reorder(
+            db=db,
+            user_id=current_user.id,
+            meal_plan=payload.meal_plan,
+        )
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Either source_meal_type & target_meal_type or meal_plan must be provided."
+        )
+
     return parse_settings_response_dict(settings)
 
 

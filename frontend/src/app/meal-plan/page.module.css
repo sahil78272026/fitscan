@@ -4,291 +4,848 @@
   background: var(--color-background);
   color: var(--color-text);
   font-family: inherit;
+  position: relative;
 }
 
 .container {
-  max-width: 800px;
+  max-width: 820px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
-/* Header & Back Buttons */
+/* Floating Toast Notification */
+.toast {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  animation: slideIn 0.25s ease-out;
+}
+
+.toastSuccess {
+  background: #064e3b;
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.toastError {
+  background: #7f1d1d;
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Page Header */
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding-bottom: 0.5rem;
-}
-
-.navRow {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.backBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  color: var(--color-text-secondary);
-  font-size: 0.9rem;
-  font-weight: 500;
-  text-decoration: none;
-  padding: 0.5rem 0.85rem;
-  border-radius: 10px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  transition: all 0.2s ease;
-}
-
-.backBtn:hover {
-  color: var(--color-text);
-  border-color: var(--color-primary);
-  transform: translateX(-2px);
+  padding-bottom: 0.25rem;
 }
 
 .pageTitle {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.65rem;
+  font-weight: 800;
   margin: 0;
   background: linear-gradient(135deg, var(--color-text) 0%, var(--color-primary) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-/* Hero Meal Plan Card */
-.heroCard {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.05) 100%);
-  border: 1px solid rgba(99, 102, 241, 0.25);
+.pageSubtitle {
+  font-size: 0.88rem;
+  color: var(--color-text-secondary);
+  margin: 0.2rem 0 0 0;
+}
+
+/* ==========================================================================
+   MASTER BLUEPRINT OVERVIEW CONTAINER (Distinct from individual meal cards)
+   ========================================================================== */
+.blueprintContainer {
+  background: linear-gradient(145deg, #0b1120 0%, #0f172a 45%, #1e1b4b 100%);
+  border: 1.5px solid rgba(99, 102, 241, 0.4);
   border-radius: 20px;
   padding: 1.75rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 14px 40px rgba(11, 17, 32, 0.55), 0 0 20px rgba(99, 102, 241, 0.15);
   position: relative;
   overflow: hidden;
+  background-image: radial-gradient(rgba(99, 102, 241, 0.12) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
-.heroCard::before {
+.blueprintContainer::after {
   content: "";
   position: absolute;
-  top: -50px;
-  right: -50px;
-  width: 150px;
-  height: 150px;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 70%);
+  top: 0;
+  right: 0;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.2) 0%, transparent 70%);
   pointer-events: none;
 }
 
-.badgeRow {
+.blueprintHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.blueprintBadgeGroup {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
 }
 
-.planBadge {
+.blueprintArchitectBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.3rem 0.65rem;
+  border-radius: 8px;
+  font-family: monospace;
+  letter-spacing: 0.75px;
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.45);
+}
+
+.activePlanBadge {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.3rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.cooldownBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.3rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(234, 88, 12, 0.18);
+  color: #fb923c;
+  border: 1px solid rgba(234, 88, 12, 0.35);
+}
+
+.blueprintMetaPills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.metaPill {
+  font-size: 0.72rem;
   font-weight: 600;
-  padding: 0.25rem 0.65rem;
-  border-radius: 20px;
-  text-transform: uppercase;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   letter-spacing: 0.5px;
-  background: var(--color-primary-light, rgba(99, 102, 241, 0.15));
-  color: var(--color-primary, #6366f1);
-  border: 1px solid rgba(99, 102, 241, 0.2);
 }
 
-.costBadge {
+.costMetaPill {
   background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.3);
 }
 
-.planTitle {
-  font-size: 1.6rem;
+.blueprintTitleArea {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.blueprintTitle {
+  font-size: 1.55rem;
   font-weight: 800;
   margin: 0;
   line-height: 1.25;
-  color: var(--color-text);
+  color: #ffffff;
 }
 
-.planTagline {
-  font-size: 0.95rem;
-  color: var(--color-text-secondary);
+.blueprintTagline {
+  font-size: 0.92rem;
+  color: #94a3b8;
   margin: 0;
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
-/* Macro Summary Bar */
-.macroGrid {
+/* Master Telemetry Grid: Macro Target Telemetry */
+.telemetryGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0.75rem;
 }
 
-.macroCard {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 14px;
+.telemetryCard {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
   padding: 0.85rem;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 0.25rem;
+  gap: 0.35rem;
+  backdrop-filter: blur(8px);
 }
 
-.macroLabel {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
+.telemetryTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.telemetryLabel {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.macroVal {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--color-text);
+.telemetryIcon {
+  font-size: 0.95rem;
 }
 
-.caloriesVal { color: var(--color-primary, #6366f1); }
-.proteinVal { color: #10b981; }
-.carbsVal { color: #f59e0b; }
-.fatVal { color: #ec4899; }
+.telemetryValue {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #f8fafc;
+}
 
-/* Meal Schedule Section */
+.telemetryValue small {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.telemetryBar {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 0.2rem;
+}
+
+.telemetryFillCalories {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #818cf8);
+}
+
+.telemetryFillProtein {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.telemetryFillCarbs {
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.telemetryFillFat {
+  height: 100%;
+  background: linear-gradient(90deg, #ec4899, #f472b6);
+}
+
+.caloriesTelemetry { border-color: rgba(99, 102, 241, 0.3); }
+.proteinTelemetry { border-color: rgba(16, 185, 129, 0.3); }
+.carbsTelemetry { border-color: rgba(245, 158, 11, 0.3); }
+.fatTelemetry { border-color: rgba(236, 72, 153, 0.3); }
+
+/* Pro-Tip Swap Banner */
+.swapHintBanner {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 10px;
+  padding: 0.65rem 0.9rem;
+}
+
+.swapHintIcon {
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+
+.swapHintText {
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+.swapHintText code {
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-weight: 700;
+  color: #a5b4fc;
+}
+
+.swapHintText strong {
+  color: #f8fafc;
+}
+
+/* ==========================================================================
+   SCHEDULE SECTION: HEADER & CONTROLS
+   ========================================================================== */
+.scheduleSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
 .scheduleHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 0.5rem;
-  margin-bottom: 0.25rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.scheduleTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
 }
 
 .scheduleTitle {
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   font-weight: 700;
   margin: 0;
+  color: var(--color-text);
+}
+
+.courseCountBadge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 20px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.downloadButtonGroup {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
+.downloadBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  color: var(--color-primary);
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.downloadBtn:hover {
+  background: rgba(99, 102, 241, 0.22);
+  transform: translateY(-1px);
+}
+
+.downloadTextBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.downloadTextBtn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+/* ==========================================================================
+   INDIVIDUAL MEAL CARDS (Priority Tiers, Drag & Drop, Concise Layout)
+   ========================================================================== */
 .mealsContainer {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.85rem;
 }
 
 .mealCard {
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 16px;
-  padding: 1.25rem;
+  border-radius: 14px;
+  padding: 0.95rem 1.15rem;
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 0.65rem;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  position: relative;
+  cursor: default;
 }
 
 .mealCard:hover {
-  border-color: rgba(99, 102, 241, 0.3);
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
 }
 
-.mealHeader {
+/* Priority Tier 1: High Priority (Main Recovery Anchor / High Protein) */
+.cardPriorityHigh {
+  border: 1.5px solid #E8A020;
+  border-left: 5px solid #E8A020;
+  box-shadow: 0 4px 18px rgba(232, 160, 32, 0.12);
+}
+
+.cardPriorityHigh .priorityBadge {
+  background: rgba(232, 160, 32, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(232, 160, 32, 0.4);
+}
+
+/* Priority Tier 2: Medium Priority (Balanced Staples) */
+.cardPriorityMedium {
+  border: 1.5px solid rgba(16, 185, 129, 0.35);
+  border-left: 5px solid #10b981;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.08);
+}
+
+.cardPriorityMedium .priorityBadge {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* Priority Tier 3: Low Priority (Compact Snacks) */
+.cardPriorityLow {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 4px solid rgba(156, 163, 175, 0.4);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 0.75rem 1rem;
+}
+
+.cardPriorityLow .priorityBadge {
+  background: rgba(156, 163, 175, 0.12);
+  color: #9ca3af;
+  border: 1px solid rgba(156, 163, 175, 0.2);
+}
+
+/* Drag & Drop Feedback States */
+.isDragging {
+  opacity: 0.45;
+  transform: scale(0.98);
+  border-style: dashed !important;
+}
+
+.dropTargetActive {
+  border: 2px dashed #6366f1 !important;
+  background: rgba(99, 102, 241, 0.1) !important;
+  transform: scale(1.02);
+  box-shadow: 0 10px 28px rgba(99, 102, 241, 0.3) !important;
+}
+
+.dropzoneOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(99, 102, 241, 0.15);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #c7d2fe;
+  pointer-events: none;
+  z-index: 10;
+  backdrop-filter: blur(2px);
+}
+
+/* Top Meta Bar */
+.cardTopBar {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.cardTopLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.dragHandle {
+  cursor: grab;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text-secondary);
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.dragHandle:hover {
+  background: rgba(99, 102, 241, 0.2);
+  color: var(--color-primary);
+}
+
+.dragHandle:active {
+  cursor: grabbing;
 }
 
 .mealTypeTag {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--color-primary);
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--color-text);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.mealCalsPill {
-  font-size: 0.85rem;
+.priorityBadge {
+  font-size: 0.72rem;
   font-weight: 700;
-  background: rgba(99, 102, 241, 0.1);
+  padding: 0.15rem 0.55rem;
+  border-radius: 6px;
+  letter-spacing: 0.25px;
+}
+
+.cardTopRight {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mealCalsPill {
+  font-size: 0.82rem;
+  font-weight: 700;
+  background: rgba(99, 102, 241, 0.12);
   color: var(--color-primary);
   padding: 0.2rem 0.6rem;
-  border-radius: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  white-space: nowrap;
+}
+
+/* Accessible Swap Action & Dropdown */
+.accessibleSwapWrapper {
+  position: relative;
+}
+
+.swapSlotBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.swapSlotBtn:hover {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+.swapDropdownMenu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.4rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  z-index: 50;
+  min-width: 220px;
+  animation: slideDown 0.18s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.swapDropdownHeader {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  padding: 0.2rem 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.swapDropdownItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  font-size: 0.8rem;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.swapDropdownItem:hover {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.swapDropdownIcon {
+  font-size: 1rem;
+}
+
+.swapDropdownText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Card Body & Concise Presentation */
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.dishHeaderRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .dishName {
-  font-size: 1.15rem;
+  font-size: 1.08rem;
   font-weight: 700;
   margin: 0;
   color: var(--color-text);
 }
 
-.dishDescription {
-  font-size: 0.9rem;
+.prominentProteinPill {
+  font-size: 0.75rem;
+  font-weight: 800;
+  background: rgba(232, 160, 32, 0.18);
+  color: #fbbf24;
+  border: 1px solid rgba(232, 160, 32, 0.4);
+  padding: 0.15rem 0.55rem;
+  border-radius: 6px;
+}
+
+/* Compact Glanceable Ingredients Pills */
+.ingredientsPillsRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.ingredientPill {
+  font-size: 0.74rem;
   color: var(--color-text-secondary);
-  line-height: 1.5;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.12rem 0.45rem;
+  border-radius: 6px;
+}
+
+.ingredientMoreCount {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  margin-left: 0.2rem;
+}
+
+/* Concise Single-Line Macro Row */
+.compactMacroRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed var(--color-border);
+  flex-wrap: wrap;
+}
+
+.macroPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--color-text);
+}
+
+.macroPillLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.macroDivider {
+  color: var(--color-text-secondary);
+  opacity: 0.5;
+}
+
+.toggleRecipeBtn {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--color-primary);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.toggleRecipeBtn:hover {
+  background: rgba(99, 102, 241, 0.1);
+  text-decoration: underline;
+}
+
+/* Expandable Recipe Drawer */
+.expandedRecipeDrawer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  padding: 0.65rem 0.85rem;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  animation: drawerSlide 0.2s ease-out;
+}
+
+@keyframes drawerSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dishDescription {
+  font-size: 0.84rem;
+  color: var(--color-text-secondary);
+  line-height: 1.45;
   margin: 0;
 }
 
-.ingredientsList {
-  list-style: none;
-  padding: 0;
-  margin: 0.35rem 0 0 0;
+.detailedIngredientsBlock {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
 }
 
-.ingredientItem {
-  font-size: 0.82rem;
-  color: var(--color-text-secondary);
-  line-height: 1.4;
-}
-
-.mealMacroRow {
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-  padding-top: 0.5rem;
-  border-top: 1px dashed var(--color-border);
-  font-size: 0.82rem;
-}
-
-.mealMacroItem {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  color: var(--color-text-secondary);
-}
-
-.mealMacroItem strong {
+.ingredientsSectionTitle {
+  font-size: 0.75rem;
+  font-weight: 700;
   color: var(--color-text);
-  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-/* Action Button Row */
+.detailedIngredientsList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.detailedIngredientItem {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  line-height: 1.35;
+}
+
+/* ==========================================================================
+   ACTIONS, EMPTY STATE, LOADERS
+   ========================================================================== */
 .actionRow {
   display: flex;
   align-items: center;
   gap: 1rem;
-  margin-top: 1rem;
+  margin-top: 0.5rem;
 }
 
 .primaryBtn {
@@ -337,7 +894,6 @@
   background: rgba(99, 102, 241, 0.05);
 }
 
-/* Empty State */
 .emptyCard {
   background: var(--color-surface);
   border: 1px dashed var(--color-border);
@@ -391,352 +947,66 @@
 }
 
 @media (max-width: 640px) {
-  .macroGrid {
+  .telemetryGrid {
     grid-template-columns: repeat(2, 1fr);
   }
   .actionRow {
     flex-direction: column;
   }
-  .primaryBtn, .secondaryBtn, .proActionBtn {
+  .primaryBtn, .secondaryBtn {
     width: 100%;
+  }
+  .cardTopBar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .cardTopRight {
+    width: 100%;
+    justify-content: space-between;
   }
 }
 
-.proPlanBadge {
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(99, 102, 241, 0.25));
-  border: 1px solid rgba(168, 85, 247, 0.5);
-  color: #fff;
-  font-weight: 800;
-  box-shadow: 0 0 12px rgba(168, 85, 247, 0.3);
-}
-
-.rotationBadgeReady {
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  color: #34d399;
-  font-weight: 700;
-}
-
-.rotationBadgeCooldown {
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  color: #fbbf24;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.rotationBadgeCooldown:hover {
-  background: rgba(245, 158, 11, 0.22);
-}
-
-.proActionBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  background: linear-gradient(135deg, #a855f7, #6366f1);
-  color: #fff;
-  font-weight: 700;
-  font-size: 0.95rem;
-  padding: 0.85rem 1.75rem;
-  border-radius: 12px;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 18px rgba(168, 85, 247, 0.35);
-}
-
-.proActionBtn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(168, 85, 247, 0.5);
-}
-
-/* Download Buttons */
-.downloadButtonGroup {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.downloadBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  background: rgba(232, 160, 32, 0.15);
-  border: 1px solid rgba(232, 160, 32, 0.4);
-  color: #fbbf24;
-  padding: 0.45rem 0.85rem;
-  border-radius: 8px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.downloadBtn:hover {
-  background: rgba(232, 160, 32, 0.28);
-  border-color: #fbbf24;
-  transform: translateY(-1px);
-}
-
-.downloadTextBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #a79a85;
-  padding: 0.45rem 0.75rem;
-  border-radius: 8px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.downloadTextBtn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-}
-
-/* Print Styles for Multi-Page PDF Export */
+/* Print Styles for Export */
 @page {
   size: auto;
   margin: 12mm 15mm;
 }
 
 @media print {
-  html,
-  body {
-    height: auto !important;
-    min-height: auto !important;
+  html, body {
     background: #ffffff !important;
     color: #000000 !important;
-    overflow: visible !important;
   }
-
-  .backBtn,
-  .actionRow,
-  .downloadButtonGroup,
-  .rotationBadgeReady,
-  .rotationBadgeCooldown {
+  .actionRow, .downloadButtonGroup, .swapHintBanner, .dragHandle, .swapSlotBtn, .toggleRecipeBtn {
     display: none !important;
   }
-
   .main {
-    min-height: auto !important;
-    height: auto !important;
     padding: 0 !important;
-    margin: 0 !important;
     background: transparent !important;
     color: #000000 !important;
-    overflow: visible !important;
   }
-
-  .container {
-    display: block !important;
-    max-width: 100% !important;
-    width: 100% !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    overflow: visible !important;
-  }
-
-  .header {
-    margin-bottom: 0.75rem !important;
-    padding-bottom: 0.35rem !important;
-    border-bottom: 2px solid #000000 !important;
-  }
-
-  .pageTitle {
-    color: #000000 !important;
-    font-size: 1.35rem !important;
-    font-weight: 800 !important;
-    margin: 0 !important;
-  }
-
-  .heroCard {
-    display: block !important;
-    background: #f9fafb !important;
-    border: 1px solid #d1d5db !important;
-    border-radius: 8px !important;
+  .blueprintContainer {
+    background: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
     color: #000000 !important;
     box-shadow: none !important;
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
-    overflow: visible !important;
-    margin-bottom: 1.25rem !important;
-    padding: 1rem !important;
   }
-
-  .heroCard::before {
-    display: none !important;
-  }
-
-  .badgeRow {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    gap: 0.35rem !important;
-    margin-bottom: 0.5rem !important;
-  }
-
-  .planBadge,
-  .costBadge,
-  .proPlanBadge {
-    display: inline-block !important;
-    background: #ffffff !important;
-    border: 1px solid #9ca3af !important;
-    color: #111827 !important;
-    padding: 0.2rem 0.5rem !important;
-    border-radius: 4px !important;
-    font-size: 0.75rem !important;
-    font-weight: 700 !important;
-  }
-
-  .planTitle {
+  .blueprintTitle {
     color: #000000 !important;
-    font-size: 1.3rem !important;
-    font-weight: 800 !important;
-    margin-bottom: 0.25rem !important;
   }
-
-  .planTagline {
-    color: #4b5563 !important;
-    font-size: 0.85rem !important;
-    margin-bottom: 0.75rem !important;
-  }
-
-  .macroGrid {
-    display: grid !important;
-    grid-template-columns: repeat(4, 1fr) !important;
-    gap: 0.5rem !important;
-  }
-
-  .macroCard {
+  .telemetryCard {
     background: #ffffff !important;
-    border: 1px solid #d1d5db !important;
-    border-radius: 6px !important;
-    padding: 0.5rem !important;
-    box-shadow: none !important;
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
+    border: 1px solid #cbd5e1 !important;
   }
-
-  .macroLabel {
-    color: #4b5563 !important;
-    font-size: 0.75rem !important;
-  }
-
-  .macroVal,
-  .caloriesVal,
-  .proteinVal,
-  .carbsVal,
-  .fatVal {
-    color: #111827 !important;
-    font-size: 1.05rem !important;
-    font-weight: 700 !important;
-  }
-
-  .scheduleHeader {
-    display: block !important;
-    margin-top: 1rem !important;
-    margin-bottom: 0.75rem !important;
-  }
-
-  .scheduleTitle {
+  .telemetryValue {
     color: #000000 !important;
-    font-size: 1.15rem !important;
-    font-weight: 700 !important;
-    margin: 0 !important;
   }
-
-  .mealsContainer {
-    display: block !important;
-    height: auto !important;
-    overflow: visible !important;
-  }
-
   .mealCard {
-    display: block !important;
     background: #ffffff !important;
-    border: 1px solid #d1d5db !important;
-    border-radius: 8px !important;
-    color: #000000 !important;
+    border: 1px solid #cbd5e1 !important;
     box-shadow: none !important;
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
-    margin-bottom: 0.85rem !important;
-    padding: 0.85rem 1rem !important;
-    overflow: visible !important;
   }
-
-  .mealHeader {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    margin-bottom: 0.4rem !important;
-  }
-
-  .mealTypeTag {
-    color: #111827 !important;
-    font-weight: 800 !important;
-    font-size: 0.85rem !important;
-    letter-spacing: 0.5px !important;
-  }
-
-  .mealCalsPill {
-    background: #f3f4f6 !important;
-    border: 1px solid #9ca3af !important;
-    color: #111827 !important;
-    font-weight: 700 !important;
-    font-size: 0.8rem !important;
-    padding: 0.15rem 0.5rem !important;
-    border-radius: 4px !important;
-  }
-
   .dishName {
     color: #000000 !important;
-    font-size: 1.05rem !important;
-    font-weight: 700 !important;
-    margin-bottom: 0.35rem !important;
-  }
-
-  .ingredientsList {
-    list-style: none !important;
-    padding: 0 !important;
-    margin: 0.35rem 0 !important;
-    display: block !important;
-  }
-
-  .ingredientItem {
-    color: #374151 !important;
-    font-size: 0.85rem !important;
-    line-height: 1.4 !important;
-  }
-
-  .dishDescription {
-    color: #374151 !important;
-    font-size: 0.85rem !important;
-    line-height: 1.4 !important;
-  }
-
-  .mealMacroRow {
-    display: flex !important;
-    gap: 1.5rem !important;
-    border-top: 1px dashed #d1d5db !important;
-    padding-top: 0.4rem !important;
-    margin-top: 0.5rem !important;
-    font-size: 0.8rem !important;
-  }
-
-  .mealMacroItem {
-    color: #4b5563 !important;
-  }
-
-  .mealMacroItem strong {
-    color: #000000 !important;
-    font-weight: 700 !important;
   }
 }
-

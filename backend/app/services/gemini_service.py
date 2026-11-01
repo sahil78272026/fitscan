@@ -120,15 +120,18 @@ def extract_raw_image_bytes(data: bytes) -> bytes:
 
 def detect_image_mime_type(data: bytes, fallback_mime: str = "image/jpeg") -> str:
     if not data or len(data) < 8:
-        return "image/jpeg"
+        return fallback_mime if fallback_mime and fallback_mime.startswith("image/") else "image/jpeg"
     if data.startswith(b"\xff\xd8\xff"):
         return "image/jpeg"
     if data.startswith(b"\x89PNG\r\n\x1a\n"):
         return "image/png"
-    if data.startswith(b"RIFF") and data[8:12] == b"WEBP":
+    if data.startswith(b"RIFF") and len(data) >= 12 and data[8:12] == b"WEBP":
         return "image/webp"
     if data.startswith(b"\x47\x49\x46\x38"):
         return "image/gif"
+    # HEIC / HEIF format detection: ftyp box containing heic/heix/hevc/mif1/msf1
+    if len(data) >= 12 and data[4:8] == b"ftyp" and data[8:12] in (b"heic", b"heix", b"hevc", b"mif1", b"msf1"):
+        return "image/heic"
     if fallback_mime and fallback_mime.startswith("image/"):
         return fallback_mime
     return "image/jpeg"
@@ -168,7 +171,7 @@ async def analyze_food(raw_input: str, image_bytes: bytes | None = None, mime_ty
         duration = time.perf_counter() - start_time
         logger.info(f"Gemini API call (analyze_food) completed in {duration:.2f}s ({duration * 1000:.0f}ms)")
 
-        result = json.loads(response.text)
+        result = _parse_json_from_text(response.text)
 
         # Ensure defaults if keys are missing
         if "items" not in result:
@@ -286,6 +289,18 @@ LANGUAGE & BREVITY RULES (CRITICAL):
 - ingredients: Array of 3 to 5 bullet items. Each item MUST include its exact quantity, food item name, and individual calorie & macronutrient breakdown in brackets formatted exactly as: "<Quantity> <Item name> (<calories> kcal • P: <protein>g, C: <carbs>g, F: <fat>g)" (e.g. ["100g low-fat paneer (170 kcal • P: 18g, C: 3g, F: 4g)", "2 whole wheat rotis (160 kcal • P: 6g, C: 30g, F: 1g)", "1 tsp olive oil (45 kcal • F: 5g)"]).
 - description: Single short prep sentence under 12 words (e.g. "Sauté paneer with spices and serve warm with rotis.").
 
+CARD PRIORITIZATION & TIMING BADGE RULES (CRITICAL):
+1. priority: Every meal item MUST include a "priority" field with one of:
+   - "high": Assigned to primary recovery/anchor meals (e.g. post-workout meal with highest protein density or main anchor meal).
+   - "medium": Assigned to balanced everyday staples (e.g. standard wholesome lunch or dinner providing steady energy).
+   - "low": Assigned to snacks or light supplementary meals.
+2. timing_badge: Every meal item MUST include a concise 2 to 3 word badge:
+   - Post-workout recovery meals: "Post-Workout Recovery"
+   - Pre-workout meals or snacks: "Pre-Workout Fuel"
+   - Daytime energy meals: "Sustained Energy"
+   - Light evening replenishment: "Overnight Repair"
+   - Circadian breakfast: "Morning Kickstart"
+
 Return ONLY a valid JSON object matching this exact structure (do NOT include markdown codeblocks or extra text):
 {{
   "plans": [
@@ -306,6 +321,8 @@ Return ONLY a valid JSON object matching this exact structure (do NOT include ma
           "protein": 30.0,
           "carbs": 45.0,
           "fat": 12.0,
+          "priority": "high",
+          "timing_badge": "Post-Workout Recovery",
           "ingredients": [
             "100g low-fat paneer (170 kcal • P: 18g, C: 3g, F: 4g)",
             "2 brown bread slices (150 kcal • P: 8g, C: 28g, F: 2g)",
@@ -320,6 +337,8 @@ Return ONLY a valid JSON object matching this exact structure (do NOT include ma
           "protein": 45.0,
           "carbs": 65.0,
           "fat": 18.0,
+          "priority": "medium",
+          "timing_badge": "Sustained Energy",
           "ingredients": [
             "1 bowl toor dal (180 kcal • P: 14g, C: 28g, F: 2g)",
             "1 cup cooked rice (210 kcal • P: 4g, C: 45g, F: 1g)",
@@ -334,6 +353,8 @@ Return ONLY a valid JSON object matching this exact structure (do NOT include ma
           "protein": 15.0,
           "carbs": 30.0,
           "fat": 8.0,
+          "priority": "low",
+          "timing_badge": "Pre-Workout Fuel",
           "ingredients": [
             "1 cup boiled sprouts (150 kcal • P: 14g, C: 24g, F: 1g)",
             "15g roasted peanuts (85 kcal • P: 4g, C: 3g, F: 7g)",
@@ -348,6 +369,8 @@ Return ONLY a valid JSON object matching this exact structure (do NOT include ma
           "protein": 40.0,
           "carbs": 45.0,
           "fat": 15.0,
+          "priority": "medium",
+          "timing_badge": "Overnight Repair",
           "ingredients": [
             "40g soya chunks (140 kcal • P: 21g, C: 13g, F: 0.5g)",
             "2 wheat rotis (160 kcal • P: 6g, C: 30g, F: 1g)",
@@ -518,6 +541,29 @@ async def generate_multiple_meal_plans(
                     plan["tagline"] = goal_fallback_taglines[goal_type]
             elif not tagline:
                 plan["tagline"] = goal_fallback_taglines.get(goal_type, "Tailored specifically to hit your daily macro targets.")
+
+            # Ensure every meal in the plan has priority and timing_badge
+            for m in plan.get("meals", []):
+                m_type = str(m.get("meal_type", "")).strip().lower()
+                if not m.get("priority"):
+                    if m_type == "snack":
+                        m["priority"] = "low"
+                    elif (workout_time == "morning" and m_type == "breakfast") or \
+                         (workout_time == "afternoon" and m_type == "lunch") or \
+                         (workout_time == "evening" and m_type == "dinner"):
+                        m["priority"] = "high"
+                    else:
+                        m["priority"] = "medium"
+
+                if not m.get("timing_badge"):
+                    if m_type == "snack":
+                        m["timing_badge"] = "Pre-Workout Fuel" if workout_time == "evening" else "Metabolic Snack"
+                    elif (workout_time == "morning" and m_type == "breakfast") or \
+                         (workout_time == "afternoon" and m_type == "lunch") or \
+                         (workout_time == "evening" and m_type == "dinner"):
+                        m["timing_badge"] = "Post-Workout Recovery"
+                    else:
+                        m["timing_badge"] = "Sustained Energy"
 
         return data
     except Exception as e:

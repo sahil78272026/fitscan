@@ -27,6 +27,7 @@ async function request(endpoint, options = {}, requireAuth = true) {
     if (typeof window !== "undefined") {
       localStorage.removeItem("fitscan_token");
       localStorage.removeItem("fitscan_user");
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.href = "/login";
     }
     throw new Error("Session expired. Please log in again.");
@@ -60,6 +61,7 @@ async function requestForm(endpoint, formData) {
     if (typeof window !== "undefined") {
       localStorage.removeItem("fitscan_token");
       localStorage.removeItem("fitscan_user");
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.href = "/login";
     }
     throw new Error("Session expired. Please log in again.");
@@ -196,6 +198,21 @@ export async function selectMealPlan(mealPlan) {
   return request("/settings/meal-plan/select", {
     method: "PUT",
     body: JSON.stringify({ meal_plan: mealPlan }),
+  });
+}
+
+export async function swapMealPlan(sourceMealType, targetMealType, mealPlan = null) {
+  const body = {};
+  if (sourceMealType && targetMealType) {
+    body.source_meal_type = sourceMealType;
+    body.target_meal_type = targetMealType;
+  }
+  if (mealPlan) {
+    body.meal_plan = mealPlan;
+  }
+  return request("/settings/meal-plan/swap", {
+    method: "POST",
+    body: JSON.stringify(body),
   });
 }
 

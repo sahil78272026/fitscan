@@ -10,14 +10,21 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing token on mount
-    const savedToken = localStorage.getItem("fitscan_token");
-    const savedUser = localStorage.getItem("fitscan_user");
-    if (savedToken && savedUser) {
-      setToken(savedToken);
-      setUser(JSON.parse(savedUser));
-    }
-    setLoading(false);
+    // Check for existing token on mount asynchronously
+    const timer = setTimeout(() => {
+      const savedToken = localStorage.getItem("fitscan_token");
+      const savedUser = localStorage.getItem("fitscan_user");
+      if (savedToken && savedUser) {
+        setToken(savedToken);
+        try {
+          setUser(JSON.parse(savedUser));
+        } catch {
+          // ignore malformed local storage
+        }
+      }
+      setLoading(false);
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const login = useCallback((authResponse) => {

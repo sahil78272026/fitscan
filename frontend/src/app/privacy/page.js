@@ -35,7 +35,7 @@ export default function PrivacyPage() {
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>1. Introduction</h2>
             <p className={styles.paragraph}>
-              Welcome to <strong>CoreControl</strong> ("we", "our", or "us"). CoreControl provides an AI-powered calorie counter, step tracking, body weight log, and meal planning service accessible via our website and mobile application (package name: <code>com.fitscan.wellness</code>).
+              Welcome to <strong>CoreControl</strong> (&ldquo;we&rdquo;, &ldquo;our&rdquo;, or &ldquo;us&rdquo;). CoreControl provides an AI-powered calorie counter, step tracking, body weight log, and meal planning service accessible via our website and mobile application (package name: <code>com.fitscan.wellness</code>).
             </p>
             <p className={styles.paragraph}>
               We respect your privacy and are committed to protecting the personal information you share with us. This Privacy Policy explains how we collect, use, disclose, and safeguard your data, including how and why we access specific device permissions on your mobile device.
@@ -103,7 +103,7 @@ export default function PrivacyPage() {
               <li className={styles.listItem}>
                 <strong>Physical Activity & Step Tracking (<code>android.permission.ACTIVITY_RECOGNITION</code> / <code>NSMotionUsageDescription</code>):</strong>
                 <br />
-                <em>Why needed:</em> Required on Android and iOS to access your device's built-in pedometer and motion sensors to track your daily steps and active calorie expenditure.
+                <em>Why needed:</em> Required on Android and iOS to access your device&apos;s built-in pedometer and motion sensors to track your daily steps and active calorie expenditure.
                 <br />
                 <em>Data handling:</em> Step data is used exclusively to display your daily activity progress and adherence streaks inside the app. We do not track your GPS location or real-time travel movements.
               </li>
