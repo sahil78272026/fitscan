@@ -13,4 +13,6 @@ PyJWT==2.10.1
 firebase-admin>=7.7.0
 cryptography>=42.0.0
 python-multipart>=0.0.9
+slowapi>=0.1.9
+
 

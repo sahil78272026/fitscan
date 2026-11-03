@@ -1,10 +1,14 @@
 import logging
 from datetime import date
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.user import User
+from app.models.meal import Meal
+from app.models.weight import WeightLog
+from app.models.step import StepLog
 from app.schemas.settings import (
     CalorieGoalUpdate,
     UserGoalUpdate,
@@ -12,6 +16,8 @@ from app.schemas.settings import (
     SelectMealPlanPayload,
     SubscriptionTierUpdate,
     MealPlanSwapRequest,
+    ResetDataPayload,
+    ResetDataResponse,
 )
 from app.services.meal_service import (
     get_or_create_settings,
@@ -174,5 +180,47 @@ async def update_subscription_tier(
     await db.refresh(settings)
     logger.info(f"User #{current_user.id} subscription tier updated to '{payload.tier}'")
     return parse_settings_response_dict(settings)
+
+
+@router.post("/reset-data", response_model=ResetDataResponse)
+async def reset_user_data(
+    payload: ResetDataPayload,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Safely reset personal log history for the current user without deleting their account.
+    Requires explicit confirmation == 'RESET'.
+    Scope options: 'all_logs', 'meals', 'weights', 'steps'.
+    """
+    cleared_count = 0
+
+    if payload.scope in ("all_logs", "meals"):
+        res = await db.execute(delete(Meal).where(Meal.user_id == current_user.id))
+        cleared_count += res.rowcount or 0
+
+    if payload.scope in ("all_logs", "weights"):
+        res = await db.execute(delete(WeightLog).where(WeightLog.user_id == current_user.id))
+        cleared_count += res.rowcount or 0
+
+    if payload.scope in ("all_logs", "steps"):
+        res = await db.execute(delete(StepLog).where(StepLog.user_id == current_user.id))
+        cleared_count += res.rowcount or 0
+
+    await db.commit()
+
+    try:
+        await cache_delete(f"user:{current_user.id}:daily_summary:{date.today().isoformat()}")
+    except Exception:
+        pass
+
+    logger.info(f"User #{current_user.id} reset scope '{payload.scope}' ({cleared_count} records cleared).")
+
+    return ResetDataResponse(
+        message=f"Successfully reset {payload.scope} records.",
+        scope=payload.scope,
+        records_cleared=cleared_count,
+    )
+
 
 

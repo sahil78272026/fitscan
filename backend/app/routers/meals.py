@@ -1,7 +1,9 @@
+import asyncio
 import base64
 import logging
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import date
 
@@ -21,8 +23,9 @@ from app.services.meal_service import (
     delete_meal,
     get_or_create_settings,
 )
-from app.services.gemini_service import recommend_curated_meals
+from app.services.gemini_service import recommend_curated_meals, _get_fallback_meal_recommendations
 from app.middleware.auth import get_current_user
+from app.main import limiter
 
 logger = logging.getLogger("corecontrol.routers.meals")
 
@@ -30,7 +33,9 @@ router = APIRouter(prefix="/api/meals", tags=["Meals"])
 
 
 @router.post("", response_model=MealResponse, status_code=201)
+@limiter.limit("20/minute")
 async def log_meal(
+    request: Request,
     payload: MealCreate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -46,15 +51,36 @@ async def log_meal(
             image_url=payload.image_url,
         )
         return meal
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
+    except (asyncio.TimeoutError, TimeoutError) as e:
+        logger.error(f"AI food analysis timed out in log_meal: {e}")
+        return JSONResponse(
+            status_code=504,
+            content={
+                "detail": "AI food scanning service timed out. Please enter meal details manually.",
+                "error_code": "AI_SERVICE_UNAVAILABLE",
+                "fallback_to_manual": True,
+            },
+        )
     except Exception as e:
         logger.error(f"Failed to log meal: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to analyze food: {str(e)}")
+        return JSONResponse(
+            status_code=503,
+            content={
+                "detail": "AI food scanning service timed out. Please enter meal details manually.",
+                "error_code": "AI_SERVICE_UNAVAILABLE",
+                "fallback_to_manual": True,
+            },
+        )
 
 
 @router.post("/scan-image-base64", response_model=MealResponse, status_code=201)
+@limiter.limit("10/minute")
 async def scan_meal_image_base64(
+    request: Request,
     payload: ScanImageBase64Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -100,13 +126,32 @@ async def scan_meal_image_base64(
         raise
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
+    except (asyncio.TimeoutError, TimeoutError) as e:
+        logger.error(f"AI image scanning timed out (base64): {e}")
+        return JSONResponse(
+            status_code=504,
+            content={
+                "detail": "AI food scanning service timed out. Please enter meal details manually.",
+                "error_code": "AI_SERVICE_UNAVAILABLE",
+                "fallback_to_manual": True,
+            },
+        )
     except Exception as e:
         logger.error(f"Failed to scan base64 meal image: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to analyze image: {str(e)}")
+        return JSONResponse(
+            status_code=503,
+            content={
+                "detail": "AI food scanning service timed out. Please enter meal details manually.",
+                "error_code": "AI_SERVICE_UNAVAILABLE",
+                "fallback_to_manual": True,
+            },
+        )
 
 
 @router.post("/scan-image", response_model=MealResponse, status_code=201)
+@limiter.limit("10/minute")
 async def scan_meal_image(
+    request: Request,
     image: UploadFile = File(...),
     raw_input: Optional[str] = Form(None),
     meal_type: str = Form("lunch"),
@@ -148,13 +193,32 @@ async def scan_meal_image(
         raise
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
+    except (asyncio.TimeoutError, TimeoutError) as e:
+        logger.error(f"AI image scanning timed out (multipart): {e}")
+        return JSONResponse(
+            status_code=504,
+            content={
+                "detail": "AI food scanning service timed out. Please enter meal details manually.",
+                "error_code": "AI_SERVICE_UNAVAILABLE",
+                "fallback_to_manual": True,
+            },
+        )
     except Exception as e:
         logger.error(f"Failed to scan meal image: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to analyze image: {str(e)}")
+        return JSONResponse(
+            status_code=503,
+            content={
+                "detail": "AI food scanning service timed out. Please enter meal details manually.",
+                "error_code": "AI_SERVICE_UNAVAILABLE",
+                "fallback_to_manual": True,
+            },
+        )
 
 
 @router.get("/recommendations", response_model=MealRecommendationResponse)
+@limiter.limit("5/minute")
 async def get_meal_recommendations(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -169,8 +233,13 @@ async def get_meal_recommendations(
         )
         return recs
     except Exception as e:
-        logger.error(f"Failed to fetch meal recommendations: {e}")
-        raise HTTPException(status_code=500, detail=f"Could not generate recommendations: {str(e)}")
+        logger.error(f"Failed to fetch meal recommendations: {e}. Returning fallback options.")
+        return _get_fallback_meal_recommendations(
+            goal_type=settings.goal_type or "fat_loss",
+            diet_type=settings.diet_type or "veg",
+            budget_tier=settings.budget_tier or "moderate",
+            calorie_goal=settings.calorie_goal or 2000,
+        )
 
 
 @router.get("/today", response_model=list[MealResponse])

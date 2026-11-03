@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 import logging
@@ -159,14 +160,17 @@ async def analyze_food(raw_input: str, image_bytes: bytes | None = None, mime_ty
 
     start_time = time.perf_counter()
     try:
-        response = await client.aio.models.generate_content(
-            model=settings.GEMINI_MODEL,
-            contents=contents,
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-                response_mime_type="application/json",
-                temperature=0.1,
+        response = await asyncio.wait_for(
+            client.aio.models.generate_content(
+                model=settings.GEMINI_MODEL,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=SYSTEM_PROMPT,
+                    response_mime_type="application/json",
+                    temperature=0.1,
+                ),
             ),
+            timeout=10.0,
         )
         duration = time.perf_counter() - start_time
         logger.info(f"Gemini API call (analyze_food) completed in {duration:.2f}s ({duration * 1000:.0f}ms)")
@@ -201,6 +205,10 @@ async def analyze_food(raw_input: str, image_bytes: bytes | None = None, mime_ty
         logger.info(f"Gemini analyzed food -> {result['total_calories']} kcal (P: {result['total_protein']}g, C: {result['total_carbs']}g, F: {result['total_fat']}g)")
         return result
 
+    except (asyncio.TimeoutError, TimeoutError) as e:
+        duration = time.perf_counter() - start_time
+        logger.error(f"Gemini API call (analyze_food) timed out after {duration:.2f}s: {e}")
+        raise TimeoutError("AI food scanning service timed out after 10.0s")
     except json.JSONDecodeError as e:
         duration = time.perf_counter() - start_time
         logger.error(f"Failed to parse Gemini response as JSON after {duration:.2f}s: {e}")
@@ -385,6 +393,97 @@ Return ONLY a valid JSON object matching this exact structure (do NOT include ma
 """
 
 
+def _get_fallback_meal_recommendations(
+    goal_type: str = "fat_loss",
+    diet_type: str = "veg",
+    budget_tier: str = "moderate",
+    calorie_goal: int = 2000,
+) -> dict:
+    """Generate balanced static fallback meal recommendations if Gemini fails or times out."""
+    is_non_veg = diet_type in ("non_veg", "eggetarian")
+    is_vegan = diet_type == "vegan"
+
+    b_dish = (
+        "Spiced Tofu Scramble with Oats"
+        if is_vegan
+        else ("Egg Bhurji & Multigrain Toast" if is_non_veg else "Paneer Bhurji & Multigrain Toast")
+    )
+    l_dish = (
+        "Chickpea & Steamed Brown Rice Bowl"
+        if is_vegan
+        else (
+            "Grilled Chicken Breast & Quinoa Thali"
+            if diet_type == "non_veg"
+            else "High-Protein Chana Dal & Brown Rice Thali"
+        )
+    )
+    s_dish = (
+        "Roasted Chana & Mixed Seeds"
+        if is_vegan
+        else ("Boiled Eggs & Roasted Chana" if is_non_veg else "Greek Yogurt / Hung Curd & Roasted Almonds")
+    )
+    d_dish = (
+        "Yellow Dal Tadka & Steamed Vegetables"
+        if is_vegan
+        else (
+            "Grilled Fish / Chicken with Sauteed Veggies"
+            if diet_type == "non_veg"
+            else "Low-Oil Paneer Tikka with Sautéed Veggies & Phulka"
+        )
+    )
+
+    return {
+        "budget_tier": budget_tier,
+        "diet_type": diet_type,
+        "recommendations": [
+            {
+                "dish_name": b_dish,
+                "meal_type": "Breakfast",
+                "estimated_cost": "Budget Friendly (~₹50-70 per serving)",
+                "calories": round(calorie_goal * 0.25),
+                "protein": 22.0,
+                "carbs": 35.0,
+                "fat": 8.0,
+                "description": f"High-protein balanced breakfast matched to your {diet_type} diet.",
+                "recipe_summary": "Cook in a non-stick pan with 1 tsp oil/ghee. Add turmeric, onions, and green chilies. Serve warm.",
+            },
+            {
+                "dish_name": l_dish,
+                "meal_type": "Lunch",
+                "estimated_cost": "Moderate (~₹70-100 per serving)",
+                "calories": round(calorie_goal * 0.35),
+                "protein": 32.0,
+                "carbs": 60.0,
+                "fat": 10.0,
+                "description": "Wholesome midday meal packed with complex carbs and lean protein.",
+                "recipe_summary": "Steam grains and simmer protein curry with minimal oil tadka and fresh coriander.",
+            },
+            {
+                "dish_name": s_dish,
+                "meal_type": "Snack",
+                "estimated_cost": "Pocket Friendly (~₹30-40 per serving)",
+                "calories": round(calorie_goal * 0.15),
+                "protein": 14.0,
+                "carbs": 20.0,
+                "fat": 5.0,
+                "description": "Quick clean protein snack to sustain afternoon energy.",
+                "recipe_summary": "Dry roast in pan or consume fresh with light rock salt seasoning.",
+            },
+            {
+                "dish_name": d_dish,
+                "meal_type": "Dinner",
+                "estimated_cost": "Moderate (~₹60-90 per serving)",
+                "calories": round(calorie_goal * 0.25),
+                "protein": 26.0,
+                "carbs": 40.0,
+                "fat": 7.0,
+                "description": "Light, easily digestible recovery dinner with lean protein.",
+                "recipe_summary": "Grill or lightly sauté with seasonal vegetables and mild spices.",
+            },
+        ],
+    }
+
+
 async def recommend_curated_meals(
     goal_type: str = "fat_loss",
     diet_type: str = "veg",
@@ -407,17 +506,24 @@ async def recommend_curated_meals(
     # First attempt: Try standard structured output prompt without search tool (fast & reliable)
     t_start = time.perf_counter()
     try:
-        response = await client.aio.models.generate_content(
-            model=settings.GEMINI_MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.3,
+        response = await asyncio.wait_for(
+            client.aio.models.generate_content(
+                model=settings.GEMINI_MODEL,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=0.3,
+                ),
             ),
+            timeout=10.0,
         )
         duration = time.perf_counter() - t_start
         logger.info(f"Gemini API call (recommend_curated_meals) completed in {duration:.2f}s ({duration * 1000:.0f}ms)")
         return _parse_json_from_text(response.text)
+    except (asyncio.TimeoutError, TimeoutError) as e:
+        duration = time.perf_counter() - t_start
+        logger.warning(f"Standard JSON meal generation timed out after {duration:.2f}s, returning static fallback: {e}")
+        return _get_fallback_meal_recommendations(goal_type, diet_type, budget_tier, calorie_goal)
     except Exception as e:
         duration = time.perf_counter() - t_start
         logger.warning(f"Standard JSON meal generation failed after {duration:.2f}s, attempting grounded search: {e}")
@@ -426,21 +532,172 @@ async def recommend_curated_meals(
     t_search_start = time.perf_counter()
     try:
         search_tool = types.Tool(google_search=types.GoogleSearch())
-        response = await client.aio.models.generate_content(
-            model=settings.GEMINI_MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                tools=[search_tool],
-                temperature=0.4,
+        response = await asyncio.wait_for(
+            client.aio.models.generate_content(
+                model=settings.GEMINI_MODEL,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    tools=[search_tool],
+                    temperature=0.4,
+                ),
             ),
+            timeout=10.0,
         )
         duration = time.perf_counter() - t_search_start
         logger.info(f"Gemini API call with search (recommend_curated_meals) completed in {duration:.2f}s ({duration * 1000:.0f}ms)")
         return _parse_json_from_text(response.text)
     except Exception as err:
         duration = time.perf_counter() - t_search_start
-        logger.error(f"Failed to generate meal recommendations after {duration:.2f}s: {err}")
-        raise ValueError("Unable to generate meal recommendations. Please try again.")
+        logger.error(f"Failed to generate meal recommendations after {duration:.2f}s: {err}. Returning static fallback.")
+        return _get_fallback_meal_recommendations(goal_type, diet_type, budget_tier, calorie_goal)
+
+
+def _get_fallback_meal_plans(
+    goal_type: str = "fat_loss",
+    diet_type: str = "veg",
+    budget_tier: str = "moderate",
+    workout_time: str = "evening",
+    calorie_goal: int = 2000,
+    protein_goal: int = 150,
+    carbs_goal: int = 200,
+    fat_goal: int = 65,
+) -> dict:
+    """Generate balanced static fallback meal plan options if Gemini fails or times out."""
+    budget_cost_map = {
+        "low_budget": "₹100-140/day",
+        "moderate": "₹180-250/day",
+        "flexible": "₹300+/day",
+    }
+    cost = budget_cost_map.get(budget_tier, "₹180-250/day")
+
+    goal_taglines = {
+        "muscle_building": "High-protein surplus plan designed for muscle building and lean hypertrophy.",
+        "fat_loss": "Protein-dense deficit plan designed for fat loss and muscle retention.",
+        "weight_loss": "Calorie-controlled plan designed for steady and healthy weight loss.",
+        "muscle_maintain": "Balanced nutrition plan designed for muscle maintenance and steady energy.",
+    }
+    tagline = goal_taglines.get(goal_type, "Balanced macro plan designed for your fitness goal.")
+
+    is_non_veg = diet_type in ("non_veg", "eggetarian")
+    is_vegan = diet_type == "vegan"
+
+    b_dish = (
+        "Spiced Tofu Scramble with Oats"
+        if is_vegan
+        else ("Classic Egg Bhurji & Multigrain Toast" if is_non_veg else "Paneer Bhurji & Multigrain Phulkas")
+    )
+    l_dish = (
+        "Chickpea Curry & Steamed Brown Rice"
+        if is_vegan
+        else (
+            "Grilled Chicken Breast & Dal Khichdi"
+            if diet_type == "non_veg"
+            else "High-Protein Dal Tadka & Jeera Rice Thali"
+        )
+    )
+    s_dish = (
+        "Roasted Chana & Mixed Pumpkin Seeds"
+        if is_vegan
+        else ("Boiled Eggs with Himalayan Pink Salt" if is_non_veg else "Sprouted Moong Salad with Lemon")
+    )
+    d_dish = (
+        "Soya Chunks & Vegetable Stir-Fry"
+        if is_vegan
+        else (
+            "Tandoori Chicken / Fish with Steamed Veggies"
+            if diet_type == "non_veg"
+            else "Low-Fat Paneer Curry with 2 Wheat Rotis"
+        )
+    )
+
+    meals_plan_1 = [
+        {
+            "meal_type": "Breakfast",
+            "dish_name": b_dish,
+            "calories": round(calorie_goal * 0.25),
+            "protein": round(protein_goal * 0.25, 1),
+            "carbs": round(carbs_goal * 0.25, 1),
+            "fat": round(fat_goal * 0.25, 1),
+            "priority": "high" if workout_time == "morning" else "medium",
+            "timing_badge": "Post-Workout Recovery" if workout_time == "morning" else "Sustained Energy",
+            "ingredients": ["Clean wholesome protein source", "Whole grains", "Light seasoning"],
+            "description": "High-protein morning meal to kickstart metabolism and muscle synthesis.",
+        },
+        {
+            "meal_type": "Lunch",
+            "dish_name": l_dish,
+            "calories": round(calorie_goal * 0.35),
+            "protein": round(protein_goal * 0.35, 1),
+            "carbs": round(carbs_goal * 0.35, 1),
+            "fat": round(fat_goal * 0.35, 1),
+            "priority": "high" if workout_time == "afternoon" else "medium",
+            "timing_badge": "Post-Workout Recovery" if workout_time == "afternoon" else "Sustained Energy",
+            "ingredients": ["Lentils/Legumes or Lean meat", "Complex carbohydrates", "Fresh green salad"],
+            "description": "Nutrient-dense lunch delivering steady sustained glucose and amino acids.",
+        },
+        {
+            "meal_type": "Snack",
+            "dish_name": s_dish,
+            "calories": round(calorie_goal * 0.15),
+            "protein": round(protein_goal * 0.15, 1),
+            "carbs": round(carbs_goal * 0.15, 1),
+            "fat": round(fat_goal * 0.15, 1),
+            "priority": "low",
+            "timing_badge": "Pre-Workout Fuel" if workout_time == "evening" else "Metabolic Snack",
+            "ingredients": ["Nutrient-rich whole snack", "Minimal seasoning"],
+            "description": "Quick clean protein booster to prevent afternoon energy dips.",
+        },
+        {
+            "meal_type": "Dinner",
+            "dish_name": d_dish,
+            "calories": round(calorie_goal * 0.25),
+            "protein": round(protein_goal * 0.25, 1),
+            "carbs": round(carbs_goal * 0.25, 1),
+            "fat": round(fat_goal * 0.25, 1),
+            "priority": "high" if workout_time == "evening" else "medium",
+            "timing_badge": "Post-Workout Recovery" if workout_time == "evening" else "Overnight Repair",
+            "ingredients": ["Clean lean protein", "Fiber-rich vegetables", "Light healthy fats"],
+            "description": "Easy to digest, recovery-focused dinner supporting overnight muscle repair.",
+        },
+    ]
+
+    plan_1 = {
+        "plan_id": "essential-balanced-1",
+        "plan_name": "Core Balanced Protocol",
+        "tagline": tagline,
+        "estimated_cost": cost,
+        "total_calories": calorie_goal,
+        "total_protein": float(protein_goal),
+        "total_carbs": float(carbs_goal),
+        "total_fat": float(fat_goal),
+        "meals": meals_plan_1,
+    }
+
+    plan_2 = {
+        "plan_id": "performance-density-2",
+        "plan_name": "High-Efficiency Recovery",
+        "tagline": f"Targeted macro distribution for {goal_type.replace('_', ' ')}.",
+        "estimated_cost": cost,
+        "total_calories": calorie_goal,
+        "total_protein": float(protein_goal),
+        "total_carbs": float(carbs_goal),
+        "total_fat": float(fat_goal),
+        "meals": meals_plan_1,
+    }
+
+    plan_3 = {
+        "plan_id": "quick-prep-staples-3",
+        "plan_name": "Simple Kitchen Staples",
+        "tagline": "Simple everyday ingredients requiring under 20 minutes prep time.",
+        "estimated_cost": cost,
+        "total_calories": calorie_goal,
+        "total_protein": float(protein_goal),
+        "total_carbs": float(carbs_goal),
+        "total_fat": float(fat_goal),
+        "meals": meals_plan_1,
+    }
+
+    return {"plans": [plan_1, plan_2, plan_3]}
 
 
 async def generate_multiple_meal_plans(
@@ -500,14 +757,17 @@ async def generate_multiple_meal_plans(
 
     t_start = time.perf_counter()
     try:
-        response = await client.aio.models.generate_content(
-            model=settings.GEMINI_MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.4,
-                thinking_config=types.ThinkingConfig(thinking_budget=0),
+        response = await asyncio.wait_for(
+            client.aio.models.generate_content(
+                model=settings.GEMINI_MODEL,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=0.4,
+                    thinking_config=types.ThinkingConfig(thinking_budget=0),
+                ),
             ),
+            timeout=10.0,
         )
         duration = time.perf_counter() - t_start
         logger.info(f"Gemini API call (generate_multiple_meal_plans) completed in {duration:.2f}s ({duration * 1000:.0f}ms)")
@@ -568,8 +828,17 @@ async def generate_multiple_meal_plans(
         return data
     except Exception as e:
         duration = time.perf_counter() - t_start
-        logger.error(f"Failed to generate multiple meal plans after {duration:.2f}s: {e}")
-        raise ValueError("Unable to generate candidate meal plans. Please try again.")
+        logger.error(f"Failed to generate multiple meal plans after {duration:.2f}s: {e}. Returning static fallback plans.")
+        return _get_fallback_meal_plans(
+            goal_type=goal_type,
+            diet_type=diet_type,
+            budget_tier=budget_tier,
+            workout_time=workout_time,
+            calorie_goal=calorie_goal,
+            protein_goal=protein_goal,
+            carbs_goal=carbs_goal,
+            fat_goal=fat_goal,
+        )
 
 
 MORNING_BRIEFING_PROMPT = """You are a direct, supportive personal fitness coach.
@@ -610,18 +879,18 @@ Return ONLY valid JSON matching this schema:
 
 async def generate_morning_briefing(
     user_name: str,
-    goal_type: str,
-    diet_type: str,
-    calorie_goal: int,
-    protein_goal: int,
-    carbs_goal: int,
-    fat_goal: int,
-    yesterday_calories: int,
-    yesterday_protein: float,
-    yesterday_carbs: float,
-    yesterday_fat: float,
-    yesterday_meal_count: int,
-    yesterday_meals: list[dict]
+    goal_type: str = "fat_loss",
+    diet_type: str = "veg",
+    calorie_goal: int = 2000,
+    protein_goal: int = 150,
+    carbs_goal: int = 200,
+    fat_goal: int = 65,
+    yesterday_calories: int = 0,
+    yesterday_protein: float = 0.0,
+    yesterday_carbs: float = 0.0,
+    yesterday_fat: float = 0.0,
+    yesterday_meal_count: int = 0,
+    yesterday_meals: list[dict] | None = None,
 ) -> dict:
     """
     Generate an intelligent AI morning welcome, feedback, and daily improvement briefing.
@@ -667,13 +936,16 @@ async def generate_morning_briefing(
 
     t_start = time.perf_counter()
     try:
-        response = await client.aio.models.generate_content(
-            model=settings.GEMINI_MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.3,
+        response = await asyncio.wait_for(
+            client.aio.models.generate_content(
+                model=settings.GEMINI_MODEL,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=0.3,
+                ),
             ),
+            timeout=10.0,
         )
         duration = time.perf_counter() - t_start
         logger.info(f"Gemini API call (generate_morning_briefing) completed in {duration:.2f}s")

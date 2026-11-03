@@ -193,11 +193,12 @@ export default function ProgressScreen() {
           </View>
         </Card>
 
-        {/* Visual Weight Trend Bar Chart */}
+        {/* Visual Weight Trend Curve Chart */}
         <WeightTrendChart
           logs={logs}
           currentTimeframe={timeframe}
           onTimeframeChange={handleTimeframeChange}
+          targetWeight={userSettings?.target_weight}
         />
 
         {/* Quick Log Weight Form */}

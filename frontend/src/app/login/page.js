@@ -44,6 +44,10 @@ export default function LoginPage() {
         login(res);
         router.push("/");
       } else {
+        if (process.env.NODE_ENV === "production") {
+          setError("Authentication service is unavailable. Please check your internet connection or app configuration.");
+          return;
+        }
         // Local dev fallback
         const res = await loginWithEmail("demo@corecontrol.app", "CoreControl User");
         login(res);
@@ -81,6 +85,10 @@ export default function LoginPage() {
         login(res);
         router.push("/");
       } else {
+        if (process.env.NODE_ENV === "production") {
+          setError("Authentication service is unavailable. Please check your internet connection or app configuration.");
+          return;
+        }
         // Local dev fallback
         const res = await loginWithEmail(
           email.trim(),

@@ -19,6 +19,10 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { colors, typography, spacing, radius, shadows } from '../theme';
 import { Card, Button, Badge } from '../components/ui';
 import MealDetailModal from '../components/MealDetailModal';
+import MealCard from '../components/MealCard';
+import DynamicGreetingHeader from '../components/DynamicGreetingHeader';
+import ContextualMilestoneCard from '../components/ContextualMilestoneCard';
+import GoalInsightsCard from '../components/GoalInsightsCard';
 import { estimateMealCost } from '../utils/mealCostEstimator';
 import {
   getDailySummary,
@@ -29,6 +33,7 @@ import {
   deleteMeal,
   getSettings,
   logWeight,
+  getWeightHistory,
 } from '../services/api';
 import RecentMealsChips from '../components/RecentMealsChips';
 import AdherenceCard from '../components/AdherenceCard';
@@ -65,6 +70,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [summary, setSummary] = useState(null);
+  const [loadError, setLoadError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [rawInput, setRawInput] = useState('');
@@ -73,6 +79,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
   const [submitting, setSubmitting] = useState(false);
   const [newWeight, setNewWeight] = useState('');
   const [previewImage, setPreviewImage] = useState(null);
+  const [weightData, setWeightData] = useState(null);
 
   // Planned Meals State
   const [loggingPlannedMeal, setLoggingPlannedMeal] = useState(null);
@@ -209,6 +216,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       const dateStr = formatDateStr(selectedDate);
       const sumData = await getDailySummary(dateStr);
       setSummary(sumData);
@@ -218,11 +226,13 @@ export default function HomeScreen({ navigation, user, onLogout }) {
       setCalendarYear(selYear);
       setCalendarMonth(selMonth);
 
-      // Fetch calendar, adherence streak stats, and check onboarding status
+      // Fetch calendar, adherence streak stats, weight history, and check onboarding status
       const promises = [
         fetchCalendar(selYear, selMonth),
         getAdherenceStats().then(setAdherenceStats).catch(() => null),
+        getWeightHistory(30).then(setWeightData).catch(() => null),
         getSettings().then((settings) => {
+
           setUserSettings(settings);
           // Until a user fixes their metrics, it reappears:
           if (!settings?.height_cm || !settings?.weight_kg) {
@@ -257,12 +267,15 @@ export default function HomeScreen({ navigation, user, onLogout }) {
 
       await Promise.all(promises);
     } catch (err) {
-      console.warn('Dashboard load error:', err);
+      if (__DEV__) {
+        console.warn('Dashboard load error:', err);
+      }
+      setLoadError(err.message || 'Unable to connect to server. Please check your internet connection.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedDate, fetchCalendar]);
+  }, [selectedDate, fetchCalendar, isToday]);
 
   const handleWizardComplete = (updatedSettings) => {
     setUserSettings(updatedSettings);
@@ -430,6 +443,47 @@ export default function HomeScreen({ navigation, user, onLogout }) {
         scrollEventThrottle={16}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor="#E8A020" />}
       >
+        {/* Offline / Connection Error Banner with Tap to Retry */}
+        {loadError && (
+          <View style={styles.errorBannerContainer}>
+            <View style={styles.errorBannerLeft}>
+              <Text style={styles.errorBannerIcon}>⚠️</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.errorBannerTitle}>Connection Error</Text>
+                <Text style={styles.errorBannerSubtitle} numberOfLines={2}>
+                  {loadError}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={() => loadData()}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Tap to Retry"
+            >
+              <Text style={styles.retryButtonText}>Tap to Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Dynamic Personalized Greeting Header */}
+        <DynamicGreetingHeader
+          user={user}
+          userSettings={userSettings}
+          summary={summary}
+          navigation={navigation}
+          adherenceStats={adherenceStats}
+        />
+
+        {/* Contextual Milestones (Celebration & Upcoming) */}
+        <ContextualMilestoneCard
+          adherenceStats={adherenceStats}
+          weightData={weightData}
+          summary={summary}
+          userSettings={userSettings}
+          navigation={navigation}
+        />
 
         {/* Compact Streak Banner matching Web (stable, non-jerking) */}
         <TouchableOpacity
@@ -545,6 +599,70 @@ export default function HomeScreen({ navigation, user, onLogout }) {
             </View>
           </View>
 
+          {/* Mini Macro Distribution Progress Bars */}
+          <View style={styles.miniMacroTracksContainer}>
+            <View style={styles.miniMacroTrackItem}>
+              <View style={styles.miniMacroTrackHeader}>
+                <Text style={[styles.miniMacroTrackName, { color: colors.protein }]}>Protein</Text>
+                <Text style={styles.miniMacroTrackPct}>
+                  {Math.round(((summary?.total_protein || 0) / (summary?.protein_goal || 150)) * 100)}%
+                </Text>
+              </View>
+              <View style={styles.miniMacroTrackBg}>
+                <View
+                  style={[
+                    styles.miniMacroTrackFill,
+                    {
+                      width: `${Math.min(((summary?.total_protein || 0) / (summary?.protein_goal || 150)) * 100, 100)}%`,
+                      backgroundColor: colors.protein,
+                    },
+                  ]}
+                />
+              </View>
+            </View>
+
+            <View style={styles.miniMacroTrackItem}>
+              <View style={styles.miniMacroTrackHeader}>
+                <Text style={[styles.miniMacroTrackName, { color: colors.carbs }]}>Carbs</Text>
+                <Text style={styles.miniMacroTrackPct}>
+                  {Math.round(((summary?.total_carbs || 0) / (summary?.carbs_goal || 200)) * 100)}%
+                </Text>
+              </View>
+              <View style={styles.miniMacroTrackBg}>
+                <View
+                  style={[
+                    styles.miniMacroTrackFill,
+                    {
+                      width: `${Math.min(((summary?.total_carbs || 0) / (summary?.carbs_goal || 200)) * 100, 100)}%`,
+                      backgroundColor: colors.carbs,
+                    },
+                  ]}
+                />
+              </View>
+            </View>
+
+            <View style={styles.miniMacroTrackItem}>
+              <View style={styles.miniMacroTrackHeader}>
+                <Text style={[styles.miniMacroTrackName, { color: colors.fatText || '#E57453' }]}>Fat</Text>
+                <Text style={styles.miniMacroTrackPct}>
+                  {Math.round(((summary?.total_fat || 0) / (summary?.fat_goal || 65)) * 100)}%
+                </Text>
+              </View>
+              <View style={styles.miniMacroTrackBg}>
+                <View
+                  style={[
+                    styles.miniMacroTrackFill,
+                    {
+                      width: `${Math.min(((summary?.total_fat || 0) / (summary?.fat_goal || 65)) * 100, 100)}%`,
+                      backgroundColor: colors.fat,
+                    },
+                  ]}
+                />
+              </View>
+            </View>
+          </View>
+
+
           {/* Quick Nutrition Insights Footer */}
           <TouchableOpacity
             style={styles.nutritionCardFooter}
@@ -613,6 +731,15 @@ export default function HomeScreen({ navigation, user, onLogout }) {
             </View>
           </View>
         </View>
+
+        {/* Goal Insights & Adaptive Suggestions */}
+        <GoalInsightsCard
+          summary={summary}
+          userSettings={userSettings}
+          onSelectSuggestion={(item) => {
+            setRawInput(item.name);
+          }}
+        />
 
         {/* Today's Planned Meals Quick-Access Widget */}
         {isToday && activePlan?.meals?.length > 0 && (
@@ -892,109 +1019,15 @@ export default function HomeScreen({ navigation, user, onLogout }) {
               <Text style={styles.emptyText}>No meals logged for this date</Text>
             </View>
           ) : (
-            summary?.meals?.map((m) => {
-              const dateVal = m.logged_at || m.created_at;
-              let mealTimeStr = '';
-              if (dateVal) {
-                const d = new Date(dateVal);
-                if (!isNaN(d.getTime())) {
-                  mealTimeStr = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
-                }
-              }
-
-              return (
-                <View key={m.id} style={styles.mealItem}>
-                  <View style={styles.mealContentRow}>
-                    {m.image_url ? (
-                      <TouchableOpacity
-                        onPress={() => setPreviewImage(m.image_url)}
-                        activeOpacity={0.8}
-                        style={styles.mealThumbContainer}
-                        accessibilityRole="button"
-                        accessibilityLabel="View full meal photo"
-                      >
-                        <Image source={{ uri: m.image_url }} style={styles.mealThumb} resizeMode="cover" />
-                        <View style={styles.mealThumbZoomBadge}>
-                          <Text style={styles.mealThumbZoomIcon}>🔍</Text>
-                        </View>
-                      </TouchableOpacity>
-                    ) : (
-                      <View style={styles.mealIconPlaceholder}>
-                        <Text style={styles.mealIconPlaceholderText}>{MEAL_TYPE_ICONS[m.meal_type] || '🍽️'}</Text>
-                      </View>
-                    )}
-                    <View style={styles.mealTextCol}>
-                      <View style={styles.mealItemHeader}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Badge label={m.meal_type.toUpperCase()} variant="primary" size="sm" />
-                          {mealTimeStr ? <Text style={styles.mealTimeText}>• {mealTimeStr}</Text> : null}
-                        </View>
-                        <View style={styles.mealHeaderRight}>
-                          <Text style={styles.mealCals}>{m.total_calories} kcal</Text>
-                          {isToday && (
-                            <TouchableOpacity
-                              onPress={() => handleDeleteMeal(m.id)}
-                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                              accessibilityRole="button"
-                              accessibilityLabel={`Delete ${m.raw_input}`}
-                              style={styles.deleteHeaderBtn}
-                            >
-                              <Text style={styles.deleteHeaderBtnText}>✕</Text>
-                            </TouchableOpacity>
-                          )}
-                        </View>
-                      </View>
-                      <Text style={styles.mealInputText}>{m.raw_input}</Text>
-                      <Text style={styles.mealMacroSub}>
-                        P: {m.total_protein}g | C: {m.total_carbs}g | F: {m.total_fat}g
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Prominent Meal Image Banner if photo exists */}
-                  {m.image_url ? (
-                    <TouchableOpacity
-                      onPress={() => setPreviewImage(m.image_url)}
-                      activeOpacity={0.88}
-                      style={styles.mealImageBannerContainer}
-                      accessibilityRole="button"
-                      accessibilityLabel="View enlarged meal photo"
-                    >
-                      <Image source={{ uri: m.image_url }} style={styles.mealImageBanner} resizeMode="cover" />
-                      <View style={styles.mealImageBannerOverlay}>
-                        <Text style={styles.mealImageBannerText}>📸 Tap to enlarge photo</Text>
-                      </View>
-                    </TouchableOpacity>
-                  ) : null}
-
-                  {/* Itemized Food Items Breakdown (Matches Web MealCard) */}
-                  {Array.isArray(m.food_items) && m.food_items.length > 0 && (
-                    <View style={styles.mealFoodItemsBox}>
-                      <View style={styles.mealFoodItemsHeader}>
-                        <Text style={styles.mealFoodItemsHeaderTitle}>ITEMS EATEN</Text>
-                        <Text style={styles.mealFoodItemsCount}>
-                          {m.food_items.length} {m.food_items.length === 1 ? 'item' : 'items'}
-                        </Text>
-                      </View>
-                      {m.food_items.map((item, idx) => (
-                        <View key={item.id || idx} style={styles.mealFoodItemRow}>
-                          <View style={styles.mealFoodItemLeft}>
-                            <Text style={styles.mealFoodItemName} numberOfLines={1}>
-                              {item.quantity && item.quantity > 1 ? `${item.quantity}× ` : ''}
-                              {item.name}
-                            </Text>
-                            <Text style={styles.mealFoodItemMacros}>
-                              P: {item.protein || 0}g · C: {item.carbs || 0}g · F: {item.fat || 0}g
-                            </Text>
-                          </View>
-                          <Text style={styles.mealFoodItemCals}>{item.calories} kcal</Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              );
-            })
+            summary?.meals?.map((m) => (
+              <MealCard
+                key={m.id}
+                meal={m}
+                isToday={isToday}
+                onDelete={handleDeleteMeal}
+                onPreviewImage={setPreviewImage}
+              />
+            ))
           )}
         </View>
       </Animated.ScrollView>
@@ -1462,6 +1495,40 @@ const styles = StyleSheet.create({
     height: 22,
     backgroundColor: '#2E251B',
   },
+  miniMacroTracksContainer: {
+    paddingTop: 8,
+    paddingBottom: 4,
+    gap: 6,
+  },
+  miniMacroTrackItem: {
+    marginBottom: 4,
+  },
+  miniMacroTrackHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 3,
+  },
+  miniMacroTrackName: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  miniMacroTrackPct: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textSecondary || '#A79A85',
+  },
+  miniMacroTrackBg: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.surfaceElevated || '#2C251D',
+    overflow: 'hidden',
+  },
+  miniMacroTrackFill: {
+    height: 4,
+    borderRadius: 2,
+  },
+
   fitFooterLeft: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1990,6 +2057,50 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '80%',
     borderRadius: 12,
+  },
+  errorBannerContainer: {
+    backgroundColor: '#2A1C16',
+    borderWidth: 1,
+    borderColor: '#E57453',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  errorBannerLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  errorBannerIcon: {
+    fontSize: 20,
+  },
+  errorBannerTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#F4ECDD',
+    marginBottom: 2,
+  },
+  errorBannerSubtitle: {
+    fontSize: 12,
+    color: '#E57453',
+    lineHeight: 16,
+  },
+  retryButton: {
+    backgroundColor: '#E8A020',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    alignSelf: 'center',
+  },
+  retryButtonText: {
+    color: '#181410',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });
 

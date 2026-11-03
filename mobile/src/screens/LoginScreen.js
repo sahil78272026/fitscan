@@ -70,6 +70,13 @@ export default function LoginScreen({ onLoginSuccess }) {
         await AsyncStorage.setItem('fitscan_user', JSON.stringify(res.user));
         onLoginSuccess(res.user);
       } else {
+        if (!__DEV__) {
+          Alert.alert(
+            "Authentication Unavailable",
+            "Authentication service is unavailable. Please check your internet connection or app configuration."
+          );
+          return;
+        }
         const res = await verifyFirebaseToken(
           idToken,
           googleUser?.email,
@@ -101,6 +108,13 @@ export default function LoginScreen({ onLoginSuccess }) {
     }
 
     if (!isFirebaseConfigured() || !auth) {
+      if (!__DEV__) {
+        Alert.alert(
+          "Authentication Unavailable",
+          "Authentication service is unavailable. Please check your internet connection or app configuration."
+        );
+        return;
+      }
       Alert.alert(
         'Dev Mode',
         'Password reset is simulated in dev mode. You can sign in directly.'
@@ -175,6 +189,13 @@ export default function LoginScreen({ onLoginSuccess }) {
         await AsyncStorage.setItem('fitscan_user', JSON.stringify(res.user));
         onLoginSuccess(res.user);
       } else {
+        if (!__DEV__) {
+          Alert.alert(
+            "Authentication Unavailable",
+            "Authentication service is unavailable. Please check your internet connection or app configuration."
+          );
+          return;
+        }
         // Local dev fallback
         const res = await loginWithEmail(
           cleanEmail,

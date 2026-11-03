@@ -31,8 +31,6 @@
       "versionCode": 7,
       "permissions": [
         "ACTIVITY_RECOGNITION",
-        "android.permission.health.READ_STEPS",
-        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
@@ -47,7 +45,6 @@
       "expo-asset",
       "expo-web-browser",
       "@react-native-google-signin/google-signin",
-      "react-native-health-connect",
       [
         "expo-splash-screen",
         {
@@ -65,7 +62,9 @@
         "expo-build-properties",
         {
           "android": {
-            "minSdkVersion": 26
+            "minSdkVersion": 26,
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35
           }
         }
       ]

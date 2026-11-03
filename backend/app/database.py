@@ -21,9 +21,14 @@ engine_kwargs = {
 
 if is_sqlite:
     engine_kwargs["connect_args"] = {"check_same_thread": False}
+    engine_kwargs["pool_pre_ping"] = True
+    engine_kwargs["pool_recycle"] = 300
 else:
     engine_kwargs["pool_size"] = 5
     engine_kwargs["max_overflow"] = 10
+    engine_kwargs["pool_pre_ping"] = True
+    engine_kwargs["pool_recycle"] = 300
+    engine_kwargs["pool_timeout"] = 30
 
 engine = create_async_engine(db_url, **engine_kwargs)
 

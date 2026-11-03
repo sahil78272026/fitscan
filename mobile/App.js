@@ -32,6 +32,7 @@ import ProfileScreen from './src/screens/ProfileScreen';
 import ScanMealScreen from './src/screens/ScanMealScreen';
 import ActivityDetailScreen from './src/screens/ActivityDetailScreen';
 import StreakScreen from './src/screens/StreakScreen';
+import ErrorBoundary from './src/components/ErrorBoundary';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -178,32 +179,34 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
-      <NavigationContainer>
-        <StatusBar style="light" />
-        <Stack.Navigator
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: '#181410' },
-          }}
-        >
-          {!user ? (
-            <Stack.Screen name="Login">
-              {(props) => <LoginScreen {...props} onLoginSuccess={setUser} />}
-            </Stack.Screen>
-          ) : (
-            <>
-              <Stack.Screen name="MainApp">
-                {(props) => <MainTabs {...props} user={user} onLogout={handleLogout} />}
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <NavigationContainer>
+          <StatusBar style="light" />
+          <Stack.Navigator
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: '#181410' },
+            }}
+          >
+            {!user ? (
+              <Stack.Screen name="Login">
+                {(props) => <LoginScreen {...props} onLoginSuccess={setUser} />}
               </Stack.Screen>
-              <Stack.Screen name="Scan" component={ScanMealScreen} />
-              <Stack.Screen name="ActivityDetail" component={ActivityDetailScreen} />
-              <Stack.Screen name="Streak" component={StreakScreen} />
-            </>
-          )}
-        </Stack.Navigator>
-      </NavigationContainer>
-    </SafeAreaProvider>
+            ) : (
+              <>
+                <Stack.Screen name="MainApp">
+                  {(props) => <MainTabs {...props} user={user} onLogout={handleLogout} />}
+                </Stack.Screen>
+                <Stack.Screen name="Scan" component={ScanMealScreen} />
+                <Stack.Screen name="ActivityDetail" component={ActivityDetailScreen} />
+                <Stack.Screen name="Streak" component={StreakScreen} />
+              </>
+            )}
+          </Stack.Navigator>
+        </NavigationContainer>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }
 

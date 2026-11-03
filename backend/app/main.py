@@ -1,10 +1,42 @@
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.config import get_settings
 from app.database import engine, Base
+
+
+def get_rate_limit_key(request: Request) -> str:
+    """
+    Key by authenticated user ID if present (from JWT Authorization header),
+    fallback to client remote IP address.
+    """
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ", 1)[1].strip()
+        try:
+            from app.services.auth_service import decode_jwt_token
+            payload = decode_jwt_token(token)
+            if payload and "sub" in payload:
+                return f"user:{payload['sub']}"
+        except Exception:
+            pass
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    if request.client and request.client.host:
+        return request.client.host
+    return "127.0.0.1"
+
+
+limiter = Limiter(key_func=get_rate_limit_key)
+
 from app.routers import auth, meals, daily_summary, settings, calendar, stats, weight, steps, health
 
 # Import models so they're registered with Base.metadata
@@ -107,25 +139,76 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — support comma-separated origins + Netlify/Vercel preview patterns
-cors_origins = [o.strip() for o in app_settings.FRONTEND_ORIGIN.split(",") if o.strip()]
-for origin in [
-    "https://corecontrol.fit",
-    "https://www.corecontrol.fit",
-    "http://corecontrol.fit",
-    "corecontrol.fit",
-]:
-    if origin not in cors_origins:
-        cors_origins.append(origin)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_origin_regex=r"https://.*\.netlify\.app|https://.*\.vercel\.app|https?://(.*\.)?corecontrol\.fit|http://localhost:\d+|http://127\.0\.0\.1:\d+|http://192\.168\.\d+\.\d+:\d+|http://10\.0\.2\.2:\d+",
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS Hardening: Strict in production, permissive for local/LAN dev
+is_production = app_settings.APP_ENV == "production"
+
+if is_production:
+    prod_origins = ["https://corecontrol.fit", "https://www.corecontrol.fit"]
+    for origin in [o.strip() for o in app_settings.FRONTEND_ORIGIN.split(",") if o.strip()]:
+        if (origin.startswith("http://") or origin.startswith("https://")) and origin not in prod_origins:
+            prod_origins.append(origin)
+    cors_origins = prod_origins
+    allow_origin_regex = None
+else:
+    dev_origins = [o.strip() for o in app_settings.FRONTEND_ORIGIN.split(",") if o.strip()]
+    for origin in [
+        "https://corecontrol.fit",
+        "https://www.corecontrol.fit",
+        "http://localhost:3000",
+        "http://localhost:8081",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:8081",
+    ]:
+        if origin not in dev_origins:
+            dev_origins.append(origin)
+    cors_origins = dev_origins
+    allow_origin_regex = r"https?://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.0\.2\.2)(:\d+)?"
+
+cors_kwargs = {
+    "allow_origins": cors_origins,
+    "allow_credentials": True,
+    "allow_methods": ["*"],
+    "allow_headers": ["*"],
+}
+if allow_origin_regex:
+    cors_kwargs["allow_origin_regex"] = allow_origin_regex
+
+app.add_middleware(CORSMiddleware, **cors_kwargs)
+
+
+# Global Exception Handlers
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    if exc.status_code >= 500:
+        logger.error(f"HTTP {exc.status_code} at {request.url.path}: {exc.detail}")
+        if app_settings.APP_ENV == "production":
+            return JSONResponse(
+                status_code=500,
+                content={"detail": "An internal server error occurred. Please try again later."},
+            )
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=getattr(exc, "headers", None),
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception at {request.url.path}: {exc}", exc_info=True)
+    if app_settings.APP_ENV == "production":
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "An internal server error occurred. Please try again later."},
+        )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal Server Error: {str(exc)}"},
+    )
 
 # Register routers
 app.include_router(auth.router)

@@ -6,6 +6,9 @@ const nextConfig = {
     'localhost:3000',
     '127.0.0.1:3000',
   ],
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error'] } : false,
+  },
 };
 
 export default nextConfig;

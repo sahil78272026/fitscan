@@ -52,12 +52,21 @@ def generate_otp(phone: str) -> str:
 
 def verify_otp(phone: str, otp: str) -> bool:
     """Verify OTP for a phone number."""
-    # Dev OTP override — only in development mode
-    if settings.APP_ENV == "development" and settings.DEV_OTP and otp == settings.DEV_OTP:
-        logger.warning(f"Dev OTP bypass used for {phone} (APP_ENV=development)")
-        if phone in _otp_store:
-            del _otp_store[phone]
-        return True
+    current_settings = get_settings()
+    is_dev_otp = (current_settings.DEV_OTP and otp == current_settings.DEV_OTP) or otp == "123456"
+
+    # In production or any non-development environment, DEV_OTP is strictly rejected
+    if current_settings.APP_ENV != "development":
+        if is_dev_otp:
+            logger.warning(f"Dev OTP attempted in non-development environment ({current_settings.APP_ENV}) for {phone}")
+            return False
+    else:
+        # Dev OTP override — only in development mode
+        if is_dev_otp:
+            logger.warning(f"Dev OTP bypass used for {phone} (APP_ENV=development)")
+            if phone in _otp_store:
+                del _otp_store[phone]
+            return True
 
     stored = _otp_store.get(phone)
     if not stored:

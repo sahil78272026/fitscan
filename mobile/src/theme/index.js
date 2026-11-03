@@ -8,10 +8,11 @@ import { typography } from './typography';
 import { spacing } from './spacing';
 import { radius } from './radius';
 import { shadows } from './shadows';
+import { gradients } from './gradients';
 
 // 1. Named exports for destructured consumers:
-//    import { colors, spacing, typography } from '../theme';
-export { colors, typography, spacing, radius, shadows };
+//    import { colors, spacing, typography, gradients } from '../theme';
+export { colors, typography, spacing, radius, shadows, gradients };
 
 // 2. Composite theme object:
 export const theme = {
@@ -20,8 +21,10 @@ export const theme = {
   spacing,
   radius,
   shadows,
+  gradients,
 };
 
 // 3. Default export for theme object consumers:
 //    import theme from '../theme';
 export default theme;
+

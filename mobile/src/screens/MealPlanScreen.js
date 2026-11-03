@@ -33,6 +33,7 @@ const MEAL_TYPE_ICONS = {
 
 export default function MealPlanScreen({ navigation }) {
   const [userSettings, setUserSettings] = useState(null);
+  const [loadError, setLoadError] = useState(null);
   const [todayMeals, setTodayMeals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loggingMealType, setLoggingMealType] = useState(null);
@@ -57,8 +58,9 @@ export default function MealPlanScreen({ navigation }) {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       const [settings, summary] = await Promise.all([
-        getSettings().catch(() => null),
+        getSettings(),
         getDailySummary(todayStr).catch(() => null),
       ]);
       setUserSettings(settings);
@@ -66,7 +68,10 @@ export default function MealPlanScreen({ navigation }) {
         setTodayMeals(summary.meals);
       }
     } catch (err) {
-      console.warn('Error fetching meal plan:', err);
+      if (__DEV__) {
+        console.warn('Error fetching meal plan:', err);
+      }
+      setLoadError(err.message || 'Unable to connect to server. Please check your internet connection.');
     } finally {
       setLoading(false);
     }
@@ -312,9 +317,14 @@ export default function MealPlanScreen({ navigation }) {
     const mealsList = selectedPlan?.meals || [];
     return mealsList.map((_, idx) =>
       PanResponder.create({
-        onStartShouldSetPanResponder: () => !isSwapping && mealsList.length > 1,
+        // Allow inner TouchableOpacity (recipe modal, swap button, log button) to receive initial touch
+        onStartShouldSetPanResponder: () => false,
+        onStartShouldSetPanResponderCapture: () => false,
+        // Claim responder as soon as intentional drag gesture is detected (> 6px)
         onMoveShouldSetPanResponder: (_, gestureState) =>
-          !isSwapping && mealsList.length > 1 && Math.abs(gestureState.dy) > 3,
+          !isSwapping && mealsList.length > 1 && (Math.abs(gestureState.dy) > 6 || Math.abs(gestureState.dx) > 6),
+        onMoveShouldSetPanResponderCapture: (_, gestureState) =>
+          !isSwapping && mealsList.length > 1 && (Math.abs(gestureState.dy) > 6 || Math.abs(gestureState.dx) > 6),
         onPanResponderGrant: () => {
           if (isSwapping || mealsList.length <= 1) return;
           draggingIndexRef.current = idx;
@@ -390,7 +400,22 @@ export default function MealPlanScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         scrollEnabled={scrollEnabled}
       >
-        {!selectedPlan ? (
+        {loadError ? (
+          <Card variant="default" style={styles.emptyCard}>
+            <Text style={styles.emptyIcon}>⚠️</Text>
+            <Text style={styles.emptyTitle}>Failed to Load Meal Plan</Text>
+            <Text style={styles.emptySubtext}>
+              {loadError}
+            </Text>
+            <Button
+              variant="primary"
+              size="md"
+              title="Tap to Retry"
+              onPress={loadData}
+              fullWidth
+            />
+          </Card>
+        ) : !selectedPlan ? (
           <Card variant="default" style={styles.emptyCard}>
             <Text style={styles.emptyIcon}>📋</Text>
             <Text style={styles.emptyTitle}>No Active Meal Plan Selected</Text>
@@ -539,6 +564,7 @@ export default function MealPlanScreen({ navigation }) {
                 return (
                   <Animated.View
                     key={idx}
+                    {...panResponders[idx]?.panHandlers}
                     onLayout={(e) => {
                       itemLayoutsRef.current[idx] = e.nativeEvent.layout;
                     }}
@@ -613,14 +639,13 @@ export default function MealPlanScreen({ navigation }) {
 
                           {/* Dedicated Drag Grip Handle */}
                           <View
-                            {...panResponders[idx]?.panHandlers}
                             style={[
                               styles.dragHandleGrip,
                               isDragging && styles.dragHandleGripActive,
                             ]}
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                             accessibilityRole="button"
-                            accessibilityLabel={`Drag handle for ${m.dish_name}. Drag up or down to reorder.`}
+                            accessibilityLabel={`Drag handle for ${m.dish_name}. Drag anywhere on the card to reorder.`}
                           >
                             <Text style={[styles.dragHandleIcon, isDragging && styles.dragHandleIconActive]}>
                               ⠿
@@ -1095,6 +1120,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flexShrink: 1,
   },
   mealSlotPill: {
     backgroundColor: colors.surfaceElevated || '#2C251D',
@@ -1145,6 +1171,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flexShrink: 0,
   },
   loggedPill: {
     backgroundColor: 'rgba(123, 160, 91, 0.18)',
@@ -1166,6 +1193,9 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderWidth: 1,
     borderColor: '#3A3128',
+    height: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   conciseCalText: {
     fontSize: 11,
@@ -1423,31 +1453,37 @@ const styles = StyleSheet.create({
   dragHandleGrip: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#272018',
     borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     borderWidth: 1,
     borderColor: '#3A3128',
-    gap: 4,
+    gap: 3,
+    height: 22,
   },
   dragHandleGripActive: {
     backgroundColor: 'rgba(232, 160, 32, 0.25)',
     borderColor: colors.primary || '#E8A020',
   },
   dragHandleIcon: {
-    fontSize: 13,
+    fontSize: 12,
+    lineHeight: 14,
     color: colors.textSecondary || '#A79A85',
     fontWeight: '800',
+    includeFontPadding: false,
   },
   dragHandleIconActive: {
     color: colors.primary || '#E8A020',
   },
   dragHandleLabel: {
     fontSize: 9,
-    fontWeight: '800',
+    lineHeight: 12,
+    fontWeight: '700',
     color: colors.textSecondary || '#A79A85',
     letterSpacing: 0.5,
+    includeFontPadding: false,
   },
   dragHandleLabelActive: {
     color: colors.primary || '#E8A020',

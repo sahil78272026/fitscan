@@ -50,7 +50,7 @@ export const colors = {
   danger: '#C7502F',
   dangerSubtle: 'rgba(199, 80, 47, 0.18)',
   dangerText: '#E57453',
-  info: '#4285F4',             // Health Connect / Google Blue - 5.1:1 on bg, 4.7:1 on surface (WCAG AA)
+  info: '#4285F4',             // Google Blue / Informational - 5.1:1 on bg, 4.7:1 on surface (WCAG AA)
   infoSubtle: 'rgba(66, 133, 244, 0.18)',
   neutral: '#A79A85',
   neutralSubtle: 'rgba(167, 154, 133, 0.15)',

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 import { deleteAccount, requestPublicDataDeletion } from "@/lib/api";
 import { auth } from "@/lib/firebase";
@@ -82,7 +83,7 @@ export default function DeleteAccountPage() {
             ← Back to App
           </Link>
           <div className={styles.brand}>
-            <img src="/corecontrol_logo.png" alt="CoreControl Logo" className={styles.logoImage} />
+            <Image src="/corecontrol_logo.png" alt="CoreControl Logo" width={28} height={28} className={styles.logoImage} />
             <span className={styles.logoText}>CoreControl</span>
           </div>
         </header>

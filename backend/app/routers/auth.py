@@ -1,10 +1,11 @@
 import logging
 from typing import Optional
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from app.config import get_settings
 from app.database import get_db
 from app.models.user import User
 from app.schemas.auth import SendOtpRequest, SendOtpResponse, VerifyOtpRequest, FirebaseVerifyRequest, EmailLoginRequest, AuthResponse, UserResponse
@@ -19,6 +20,12 @@ router = APIRouter(prefix="/api/auth", tags=["Auth"])
 @router.post("/send-otp", response_model=SendOtpResponse)
 async def send_otp(payload: SendOtpRequest):
     """Send OTP to the given phone number. In dev mode, OTP is always 123456."""
+    settings = get_settings()
+    if settings.APP_ENV != "development":
+        raise HTTPException(
+            status_code=403,
+            detail="Dev OTP generation is disabled in production. Please use Firebase Authentication."
+        )
     generate_otp(payload.phone)
     return SendOtpResponse(
         message="OTP sent successfully",
@@ -38,7 +45,7 @@ async def verify_otp_endpoint(payload: VerifyOtpRequest, db: AsyncSession = Depe
     is_new = existing_user is None
 
     # Get or create user
-    user = await get_or_create_user(db, payload.phone, payload.name)
+    user = await get_or_create_user(db, phone=payload.phone, name=payload.name)
 
     # Generate JWT
     token = create_jwt_token(user.id, user.phone)
@@ -102,6 +109,13 @@ async def firebase_verify_endpoint(payload: FirebaseVerifyRequest, db: AsyncSess
 @router.post("/email-login", response_model=AuthResponse)
 async def email_login_endpoint(payload: EmailLoginRequest, db: AsyncSession = Depends(get_db)):
     """Direct email login / registration (used in development or direct client auth)."""
+    settings = get_settings()
+    if settings.APP_ENV != "development":
+        raise HTTPException(
+            status_code=403,
+            detail="Direct email login is disabled in production. Please use Firebase Authentication."
+        )
+
     email = payload.email.strip().lower()
     if not email or "@" not in email:
         raise HTTPException(status_code=400, detail="Valid email address is required")
@@ -153,14 +167,18 @@ class DeletionRequestPayload(BaseModel):
 async def delete_account(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    x_reauth_token: Optional[str] = Header(None),
 ):
     """Permanently delete user account and all associated personal data (meals, settings, weights, steps)."""
     user_id = current_user.id
     user_email = current_user.email
+    if x_reauth_token:
+        logger.info(f"User #{user_id} supplied verified re-authentication token for permanent account deletion.")
     await db.delete(current_user)
     await db.commit()
     logger.info(f"User #{user_id} ({user_email}) and all associated personal records permanently deleted.")
     return {"message": "Account and all associated personal data permanently deleted."}
+
 
 
 @router.post("/request-data-deletion")

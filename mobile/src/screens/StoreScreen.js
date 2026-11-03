@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -11,7 +11,11 @@ import {
   ActivityIndicator,
   Platform,
   RefreshControl,
+  PanResponder,
+  Animated,
+  Dimensions,
 } from 'react-native';
+
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -243,14 +247,14 @@ const PRODUCTS = [
   {
     id: 'p7',
     name: 'Smart Bluetooth Body Composition Scale',
-    brand: 'FitScan Pro',
+    brand: 'CoreControl Pro',
     category: 'equipment',
     price: 1899,
     originalPrice: 2499,
     rating: 4.8,
     reviewsCount: 1420,
     icon: '⚖️',
-    badgeText: 'FitScan Sync',
+    badgeText: 'CoreControl Sync',
     badgeVariant: 'success',
     goalTypes: ['weight_loss', 'fat_loss', 'muscle_maintain'],
     shortDesc: 'High-precision ITO glass sensors measuring weight, body fat %, skeletal muscle, BMI, and visceral fat.',
@@ -258,7 +262,7 @@ const PRODUCTS = [
       servings: 'Scale + 4x AAA Batteries included',
       flavor: 'Tempered ITO Glass',
       benefits: [
-        'Direct Bluetooth sync with FitScan and Health Connect',
+        'Direct Bluetooth sync with CoreControl',
         'Measures 13 comprehensive physical health metrics',
         'Multi-user auto detection for up to 8 family members',
       ],
@@ -361,6 +365,7 @@ const PRODUCTS = [
 ];
 
 const CART_STORAGE_KEY = 'fitscan_store_cart';
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 export default function StoreScreen({ navigation, user }) {
   const insets = useSafeAreaInsets();
@@ -375,6 +380,90 @@ export default function StoreScreen({ navigation, user }) {
   const [cart, setCart] = useState({});
   const [cartModalVisible, setCartModalVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+
+  // Swipe-to-dismiss animation and gesture state for product detail modal
+  const modalPanY = useRef(new Animated.Value(0)).current;
+  const modalScrollOffset = useRef(0);
+
+  const closeModal = useCallback(() => {
+    Animated.timing(modalPanY, {
+      toValue: SCREEN_HEIGHT,
+      duration: 220,
+      useNativeDriver: true,
+    }).start(() => {
+      setSelectedProduct(null);
+      modalPanY.setValue(0);
+    });
+  }, [modalPanY]);
+
+  const handleOpenProduct = useCallback((product) => {
+    modalPanY.setValue(0);
+    modalScrollOffset.current = 0;
+    setSelectedProduct(product);
+  }, [modalPanY]);
+
+  // Dedicated Header PanResponder for 100% reliable drag handle interaction
+  const headerPanResponder = useMemo(() => {
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => gestureState.dy > 4,
+      onPanResponderGrant: () => {
+        modalPanY.setOffset(0);
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) {
+          modalPanY.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > 120 || (gestureState.dy > 40 && gestureState.vy > 0.5)) {
+          closeModal();
+        } else {
+          Animated.spring(modalPanY, {
+            toValue: 0,
+            bounciness: 4,
+            speed: 14,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    });
+  }, [modalPanY, closeModal]);
+
+  // Content PanResponder: only activates downward drag when scroll view is at top
+  const sheetPanResponder = useMemo(() => {
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return (
+          gestureState.dy > 8 &&
+          modalScrollOffset.current <= 0 &&
+          Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.2
+        );
+      },
+      onPanResponderGrant: () => {
+        modalPanY.setOffset(0);
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) {
+          modalPanY.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > 120 || (gestureState.dy > 40 && gestureState.vy > 0.5)) {
+          closeModal();
+        } else {
+          Animated.spring(modalPanY, {
+            toValue: 0,
+            bounciness: 4,
+            speed: 14,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    });
+  }, [modalPanY, closeModal]);
+
 
   // Restore cart & fetch latest user settings on focus
   const loadCart = useCallback(async () => {
@@ -512,7 +601,7 @@ export default function StoreScreen({ navigation, user }) {
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       {/* Universal Screen Header */}
       <ScreenHeader
-        title="FitScan Store 🛍️"
+        title="CoreControl Store 🛍️"
         subtitle="Supplements & Fitness Gear"
         rightAction={
           <TouchableOpacity
@@ -650,7 +739,7 @@ export default function StoreScreen({ navigation, user }) {
                     title="View"
                     size="sm"
                     variant="outline"
-                    onPress={() => setSelectedProduct(recommendedProduct)}
+                    onPress={() => handleOpenProduct(recommendedProduct)}
                   />
                 </View>
               )}
@@ -699,7 +788,7 @@ export default function StoreScreen({ navigation, user }) {
                   key={product.id}
                   variant="default"
                   style={styles.productCard}
-                  onPress={() => setSelectedProduct(product)}
+                  onPress={() => handleOpenProduct(product)}
                   accessibilityLabel={`${product.name}, ${product.brand}, ₹${product.price}`}
                 >
                   <View style={styles.cardHeader}>
@@ -756,7 +845,7 @@ export default function StoreScreen({ navigation, user }) {
                         title="Details"
                         size="sm"
                         variant="secondary"
-                        onPress={() => setSelectedProduct(product)}
+                        onPress={() => handleOpenProduct(product)}
                         style={styles.detailsBtn}
                       />
                       <Button
@@ -776,20 +865,60 @@ export default function StoreScreen({ navigation, user }) {
         </View>
       </ScrollView>
 
-      {/* Product Detail Modal */}
+      {/* Product Detail Modal with Swipe-to-Dismiss */}
       <Modal
         visible={Boolean(selectedProduct)}
-        animationType="slide"
+        animationType="none"
         transparent={true}
-        onRequestClose={() => setSelectedProduct(null)}
+        onRequestClose={closeModal}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalSheet}>
-            <View style={styles.modalHeaderRow}>
-              <View style={styles.dragIndicator} />
+        <View style={styles.modalOverlayContainer}>
+          {/* Animated Backdrop with tap-to-dismiss */}
+          <Animated.View
+            style={[
+              styles.modalBackdrop,
+              {
+                opacity: modalPanY.interpolate({
+                  inputRange: [0, 300],
+                  outputRange: [1, 0],
+                  extrapolate: 'clamp',
+                }),
+              },
+            ]}
+          >
+            <TouchableOpacity
+              style={StyleSheet.absoluteFill}
+              onPress={closeModal}
+              activeOpacity={1}
+              accessibilityLabel="Close product details backdrop"
+            />
+          </Animated.View>
+
+          {/* Animated Modal Bottom Sheet with dual-zone drag */}
+          <Animated.View
+            style={[
+              styles.modalSheet,
+              {
+                transform: [
+                  {
+                    translateY: modalPanY.interpolate({
+                      inputRange: [-50, 0, SCREEN_HEIGHT],
+                      outputRange: [0, 0, SCREEN_HEIGHT],
+                    }),
+                  },
+                ],
+              },
+            ]}
+            {...sheetPanResponder.panHandlers}
+          >
+            {/* Draggable Header Handle Zone */}
+            <View style={styles.modalHeaderRow} {...headerPanResponder.panHandlers}>
+              <View style={styles.dragIndicatorWrapper}>
+                <View style={styles.dragIndicator} />
+              </View>
               <TouchableOpacity
                 style={styles.modalCloseBtn}
-                onPress={() => setSelectedProduct(null)}
+                onPress={closeModal}
                 accessibilityRole="button"
                 accessibilityLabel="Close product details"
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -803,6 +932,10 @@ export default function StoreScreen({ navigation, user }) {
                 style={styles.modalScrollView}
                 contentContainerStyle={styles.modalScrollContent}
                 showsVerticalScrollIndicator={false}
+                onScroll={(e) => {
+                  modalScrollOffset.current = e.nativeEvent.contentOffset.y;
+                }}
+                scrollEventThrottle={16}
               >
                 <View style={styles.modalTopRow}>
                   <View style={styles.modalIconBox}>
@@ -887,13 +1020,13 @@ export default function StoreScreen({ navigation, user }) {
                     fullWidth
                     onPress={() => {
                       handleAddToCart(selectedProduct);
-                      setSelectedProduct(null);
+                      closeModal();
                     }}
                   />
                 </View>
               </ScrollView>
             )}
-          </View>
+          </Animated.View>
         </View>
       </Modal>
 
@@ -1365,6 +1498,14 @@ const styles = StyleSheet.create({
   },
 
   // Modal Overlay & Sheet
+  modalOverlayContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.surfaceOverlay || 'rgba(0, 0, 0, 0.80)',
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: colors.surfaceOverlay || 'rgba(0, 0, 0, 0.80)',
@@ -1376,22 +1517,30 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius.xl || 20,
     maxHeight: '90%',
     paddingBottom: 24,
+    borderWidth: 1,
+    borderColor: colors.border || '#3A3128',
+    ...(shadows.lg || {}),
   },
   modalHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingTop: 8,
     paddingBottom: 8,
   },
+  dragIndicatorWrapper: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingLeft: 32, // balances close button on right
+  },
   dragIndicator: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
+    width: 44,
+    height: 5,
+    borderRadius: 2.5,
     backgroundColor: colors.borderHover || '#4A3F34',
     alignSelf: 'center',
-    marginLeft: 32, // balances close button
   },
   modalCloseBtn: {
     minWidth: 44,

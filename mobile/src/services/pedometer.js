@@ -1,55 +1,62 @@
-import { logSteps } from './api';
-import {
-  checkHealthConnectAvailable,
-  requestHealthConnectPermissions,
-  checkHealthConnectPermissionsGranted,
-  getHealthConnectDailyMetrics,
-  getHealthConnectHourlySteps,
-  getHealthConnectRangeMetrics,
-} from './healthConnect';
+import { logSteps, getDailySteps } from './api';
 
-export {
-  checkHealthConnectAvailable,
-  requestHealthConnectPermissions,
-  checkHealthConnectPermissionsGranted,
-  getHealthConnectDailyMetrics,
-  getHealthConnectHourlySteps,
-  getHealthConnectRangeMetrics,
-};
+// Safe backwards-compatible stubs for legacy imports
+export async function checkHealthConnectAvailable() {
+  return false;
+}
+export async function requestHealthConnectPermissions() {
+  return false;
+}
+export async function checkHealthConnectPermissionsGranted() {
+  return false;
+}
+export async function getHealthConnectDailyMetrics() {
+  return null;
+}
+export async function getHealthConnectHourlySteps() {
+  return null;
+}
+export async function getHealthConnectRangeMetrics() {
+  return {};
+}
 
+/**
+ * Upload step counts and burned calories to the backend.
+ */
 export async function syncStepsToBackend(steps, calories = null, loggedDate = null) {
   if (!steps || steps <= 0) return;
   try {
     const validCalories = typeof calories === 'number' && !isNaN(calories) && calories > 0 ? calories : null;
     if (__DEV__) {
-      console.log(`☁️ [HealthConnect -> Backend Sync] Uploading ${steps.toLocaleString()} steps (${validCalories ?? 0} kcal) for ${loggedDate || 'today'}`);
+      console.log(`☁️ [Steps -> Backend Sync] Uploading ${steps.toLocaleString()} steps (${validCalories ?? 0} kcal) for ${loggedDate || 'today'}`);
     }
     await logSteps(steps, loggedDate, validCalories);
   } catch (error) {
-    // Gracefully handle backend errors / auth state without breaking the UI
-    console.warn('Steps sync notice:', error?.message || error);
+    if (__DEV__) {
+      console.warn('Steps sync notice:', error?.message || error);
+    }
   }
 }
 
 /**
- * Health Connect Step Fetcher:
- * Reads daily step counts and active metrics from Google Health Connect
+ * Unified Step Fetcher:
+ * Reads daily step counts and active metrics directly from the backend API.
  */
 export async function getUnifiedDailySteps(date = new Date()) {
   try {
-    const hcGranted = await checkHealthConnectPermissionsGranted();
-    if (hcGranted) {
-      const hcData = await getHealthConnectDailyMetrics(date);
-      if (hcData && typeof hcData.steps === 'number') {
-        return {
-          steps: hcData.steps,
-          calories: hcData.calories,
-          source: 'health_connect',
-        };
-      }
+    const dateKey = typeof date === 'string' ? (date.includes('T') ? date.split('T')[0] : date) : date.toISOString().split('T')[0];
+    const res = await getDailySteps(dateKey);
+    if (res && typeof res.step_count === 'number') {
+      return {
+        steps: res.step_count,
+        calories: res.calories_burned,
+        source: 'backend',
+      };
     }
   } catch (err) {
-    console.warn('Health Connect step fetch failed:', err);
+    if (__DEV__) {
+      console.warn('Backend step fetch notice:', err?.message || err);
+    }
   }
 
   return null;

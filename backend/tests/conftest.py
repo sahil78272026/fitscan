@@ -9,3 +9,6 @@ if BACKEND_DIR not in sys.path:
 # Set test defaults for settings
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 os.environ.setdefault("GEMINI_API_KEY", "test_dummy_gemini_key")
+os.environ["UPSTASH_REDIS_REST_URL"] = ""
+os.environ["UPSTASH_REDIS_REST_TOKEN"] = ""
+os.environ["DEV_OTP"] = ""

@@ -29,45 +29,59 @@ export default function ScanMealScreen({ navigation, route }) {
   const mealDate = route?.params?.mealDate || null;
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'Camera roll access is needed to upload meal photos.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.5,
-      base64: true,
-    });
-
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const asset = result.assets[0];
-      setImageUri(asset.uri);
-      if (asset.base64) {
-        setPhotoBase64(asset.base64);
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Camera roll access is needed to upload meal photos.');
+        return;
       }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.5,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        setImageUri(asset.uri);
+        if (asset.base64) {
+          setPhotoBase64(asset.base64);
+        }
+      }
+    } catch (err) {
+      if (__DEV__) {
+        console.warn('Image picker error:', err);
+      }
+      Alert.alert('Error', err.message || 'Unable to select image. Please try again.');
     }
   };
 
   const takePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'Camera access is needed to take meal photos.');
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      quality: 0.5,
-      base64: true,
-    });
-
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const asset = result.assets[0];
-      setImageUri(asset.uri);
-      if (asset.base64) {
-        setPhotoBase64(asset.base64);
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Camera access is needed to take meal photos.');
+        return;
       }
+
+      const result = await ImagePicker.launchCameraAsync({
+        quality: 0.5,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        setImageUri(asset.uri);
+        if (asset.base64) {
+          setPhotoBase64(asset.base64);
+        }
+      }
+    } catch (err) {
+      if (__DEV__) {
+        console.warn('Camera capture error:', err);
+      }
+      Alert.alert('Error', err.message || 'Unable to take photo. Please try again.');
     }
   };
 

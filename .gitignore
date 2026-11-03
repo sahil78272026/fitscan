@@ -14,7 +14,10 @@ AGENTS.md
 
 # ─── Secrets & Credentials (never commit these) ───────────
 .env
+.env*
 .env.*
+!.env.example
+!*.env.example
 *.pem
 *.key
 *.p12
@@ -45,6 +48,7 @@ env/
 pytest.ini
 .coverage
 htmlcov/
+.env*
 
 # ─── Node / JS ────────────────────────────────────────────
 node_modules/

@@ -16,6 +16,63 @@ const getInitialApiUrl = () => {
 
 let API_BASE_URL = getInitialApiUrl();
 
+export const ENABLE_API_LOGGING = __DEV__;
+const REQUEST_TIMEOUT_MS = 15000;
+
+export function createNetworkError(originalError) {
+  const error = new Error('Unable to connect to server. Please check your internet connection.');
+  error.name = 'NetworkError';
+  error.netErr = true;
+  error.originalError = originalError;
+  return error;
+}
+
+export function isNetworkError(err) {
+  if (!err) return false;
+  if (err.name === 'AbortError' || err.netErr) return true;
+  const msg = err.message || '';
+  return (
+    err instanceof TypeError ||
+    msg.includes('Failed to fetch') ||
+    msg.includes('Network request failed') ||
+    msg.includes('network error') ||
+    msg.includes('aborted')
+  );
+}
+
+export async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  if (options.signal) {
+    options.signal.addEventListener('abort', () => controller.abort());
+  }
+
+  try {
+    if (ENABLE_API_LOGGING) {
+      console.log(`[Mobile API Request] ${options.method || 'GET'} ${url}`);
+    }
+    const res = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    if (ENABLE_API_LOGGING) {
+      console.log(`[Mobile API Response] ${res.status} ${url}`);
+    }
+    return res;
+  } catch (err) {
+    if (ENABLE_API_LOGGING) {
+      console.error(`[Mobile API Error] ${options.method || 'GET'} ${url}:`, err);
+    }
+    if (isNetworkError(err)) {
+      throw createNetworkError(err);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export const setApiBaseUrl = (url) => {
   if (url) API_BASE_URL = url;
 };
@@ -44,7 +101,7 @@ async function request(endpoint, options = {}, requireAuth = true) {
     }
   }
 
-  const res = await fetch(url, { ...options, headers });
+  const res = await fetchWithTimeout(url, { ...options, headers });
 
   if (res.status === 401) {
     await AsyncStorage.removeItem('fitscan_token');
@@ -104,11 +161,29 @@ export async function getMe() {
   return request('/auth/me');
 }
 
-export async function deleteAccount() {
+export async function deleteAccount(reauthToken = null) {
+  const headers = {};
+  if (reauthToken) {
+    headers['X-Reauth-Token'] = reauthToken;
+  }
   return request('/auth/me', {
     method: 'DELETE',
+    headers,
   });
 }
+
+export async function resetUserData(scope = 'all_logs', confirmation = 'RESET', reauthToken = null) {
+  const headers = {};
+  if (reauthToken) {
+    headers['X-Reauth-Token'] = reauthToken;
+  }
+  return request('/settings/reset-data', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ scope, confirmation }),
+  });
+}
+
 
 // --- Daily Summary & Calendar ---
 export async function getDailySummary(date = null) {
@@ -192,7 +267,7 @@ export async function scanMealImage(imageUri, rawInput = '', mealType = 'lunch',
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     method: 'POST',
     headers,
     body: formData,
@@ -216,7 +291,12 @@ export async function deleteMeal(mealId) {
   return request(`/meals/${mealId}`, { method: 'DELETE' });
 }
 
+export async function getMealRecommendations() {
+  return request('/meals/recommendations');
+}
+
 // --- Settings ---
+
 export async function getSettings() {
   return request('/settings');
 }

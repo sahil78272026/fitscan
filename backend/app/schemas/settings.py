@@ -1,6 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel, Field, ConfigDict, model_validator
-from typing import Optional, Any, Dict
+from typing import Optional, Any, Dict, Literal
 
 class UserGoalUpdate(BaseModel):
     goal_type: str = Field("fat_loss", pattern="^(fat_loss|weight_loss|muscle_building|muscle_maintain)$")
@@ -109,4 +109,28 @@ class SettingsResponse(BaseModel):
     morning_briefing_frequency: str = "daily"
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ResetDataPayload(BaseModel):
+    scope: Literal["all_logs", "meals", "weights", "steps"] = Field(
+        "all_logs",
+        description="Scope of data to reset: all_logs, meals, weights, or steps"
+    )
+    confirmation: str = Field(
+        ...,
+        description="Explicit confirmation keyword; must be 'RESET'"
+    )
+
+    @model_validator(mode="after")
+    def validate_confirmation(self) -> "ResetDataPayload":
+        if self.confirmation.strip() != "RESET":
+            raise ValueError("Invalid confirmation. Must type 'RESET' to confirm data reset.")
+        return self
+
+
+class ResetDataResponse(BaseModel):
+    message: str
+    scope: str
+    records_cleared: int
+
 

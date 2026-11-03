@@ -15,12 +15,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, typography, spacing, radius, shadows } from '../theme';
 import { ScreenHeader, Card, Button, Badge } from '../components/ui';
-import { getSettings, updateMorningBriefingPreferences, deleteAccount } from '../services/api';
-import { auth } from '../services/firebase';
-import { deleteUser } from 'firebase/auth';
+import { getSettings, updateMorningBriefingPreferences, deleteAccount, resetUserData } from '../services/api';
+import { auth, EmailAuthProvider, reauthenticateWithCredential, deleteUser } from '../services/firebase';
 import OnboardingModal from '../components/OnboardingModal';
 import MealPlanSelectorModal from '../components/MealPlanSelectorModal';
 import ConfirmPlanChangeModal from '../components/ConfirmPlanChangeModal';
+import SafeActionModal from '../components/SafeActionModal';
 
 export default function ProfileScreen({ navigation, user, onLogout }) {
   const [userSettings, setUserSettings] = useState(null);
@@ -29,6 +29,11 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
   const [planSelectorOpen, setPlanSelectorOpen] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [deleteAccountModalOpen, setDeleteAccountModalOpen] = useState(false);
+  const [resetDataModalOpen, setResetDataModalOpen] = useState(false);
+  const [resetScope, setResetScope] = useState('all_logs');
+
 
   const fetchSettings = async () => {
     try {
@@ -79,44 +84,99 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
     setPlanSelectorOpen(false);
   };
 
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      'Delete Account & Data',
-      'Are you sure you want to permanently delete your account? All your personal logs, meals, weights, step counts, and settings will be permanently erased. This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Permanently Delete',
-          style: 'destructive',
-          onPress: async () => {
-            setDeleting(true);
-            try {
-              // 1. Delete all personal logs and profile from PostgreSQL backend
-              await deleteAccount();
+  const handleConfirmDeleteAccount = async ({ confirmation, password }) => {
+    if (confirmation !== 'DELETE') {
+      throw new Error('Confirmation string must be "DELETE" in capital letters.');
+    }
 
-              // 2. Delete user authentication identity from Firebase Auth
-              if (auth && auth.currentUser) {
-                try {
-                  await deleteUser(auth.currentUser);
-                } catch (fbErr) {
-                  console.warn('Firebase user deletion error:', fbErr);
-                }
-              }
+    setDeleting(true);
+    try {
+      let freshToken = null;
+      // Re-authenticate with Firebase if currentUser exists and password provided
+      if (auth && auth.currentUser) {
+        if (password && auth.currentUser.email) {
+          try {
+            const credential = EmailAuthProvider.credential(auth.currentUser.email, password);
+            await reauthenticateWithCredential(auth.currentUser, credential);
+          } catch (reauthErr) {
+            console.warn('Firebase reauthentication failed:', reauthErr);
+            throw new Error(
+              reauthErr.code === 'auth/wrong-password' || reauthErr.code === 'auth/invalid-credential'
+                ? 'Incorrect password. Verification failed.'
+                : (reauthErr.message || 'Re-authentication failed. Please check your password.')
+            );
+          }
+        }
+        try {
+          freshToken = await auth.currentUser.getIdToken(true);
+        } catch (tokErr) {
+          console.warn('Could not refresh ID token:', tokErr);
+        }
+      }
 
-              Alert.alert('Account Deleted', 'Your account and personal data have been permanently removed.');
-              if (onLogout) {
-                await onLogout();
-              }
-            } catch (err) {
-              Alert.alert('Error', err.message || 'Failed to delete account. Please try again.');
-            } finally {
-              setDeleting(false);
-            }
-          },
-        },
-      ]
-    );
+      // 1. Delete all personal logs and profile from PostgreSQL backend
+      await deleteAccount(freshToken);
+
+      // 2. Delete user authentication identity from Firebase Auth
+      if (auth && auth.currentUser) {
+        try {
+          await deleteUser(auth.currentUser);
+        } catch (fbErr) {
+          console.warn('Firebase user deletion warning:', fbErr);
+        }
+      }
+
+      setDeleteAccountModalOpen(false);
+      Alert.alert('Account Deleted', 'Your account and personal data have been permanently removed.');
+      if (onLogout) {
+        await onLogout();
+      }
+    } finally {
+      setDeleting(false);
+    }
   };
+
+  const handleConfirmResetData = async ({ confirmation, password }) => {
+    if (confirmation !== 'RESET') {
+      throw new Error('Confirmation string must be "RESET" in capital letters.');
+    }
+
+    setResetting(true);
+    try {
+      let freshToken = null;
+      if (auth && auth.currentUser) {
+        if (password && auth.currentUser.email) {
+          try {
+            const credential = EmailAuthProvider.credential(auth.currentUser.email, password);
+            await reauthenticateWithCredential(auth.currentUser, credential);
+          } catch (reauthErr) {
+            console.warn('Firebase reauthentication failed:', reauthErr);
+            throw new Error(
+              reauthErr.code === 'auth/wrong-password' || reauthErr.code === 'auth/invalid-credential'
+                ? 'Incorrect password. Verification failed.'
+                : (reauthErr.message || 'Re-authentication failed. Please check your password.')
+            );
+          }
+        }
+        try {
+          freshToken = await auth.currentUser.getIdToken(true);
+        } catch (tokErr) {
+          console.warn('Could not refresh ID token:', tokErr);
+        }
+      }
+
+      await resetUserData(resetScope, 'RESET', freshToken);
+      setResetDataModalOpen(false);
+      Alert.alert(
+        'Data Reset Successful',
+        `Your ${resetScope === 'all_logs' ? 'all personal logs' : resetScope} have been erased. Your account remains active.`
+      );
+      await fetchSettings();
+    } finally {
+      setResetting(false);
+    }
+  };
+
 
   if (loading) {
     return (
@@ -323,22 +383,87 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
           style={styles.logoutBtn}
         />
 
-        {/* Account Deletion */}
-        <Button
-          title="Delete Account & All Data"
-          icon="🗑️"
-          variant="outline"
-          size="md"
-          fullWidth
-          loading={deleting}
-          onPress={handleDeleteAccount}
-          style={styles.deleteAccountBtn}
-          textStyle={{ color: colors.dangerText }}
-        />
-        <Text style={styles.deleteWarningText}>
-          Permanently erases your user profile, meal logs, weights, and health metrics.
-        </Text>
+        {/* Danger Zone: Safe Data Reset & Account Deletion */}
+        <View style={styles.dangerZoneCard}>
+          <Text style={styles.dangerZoneTitle}>DANGER ZONE</Text>
+
+          {/* Bulk Reset Logs */}
+          <Button
+            title="Reset Personal Activity Logs"
+            icon="🔄"
+            variant="outline"
+            size="md"
+            fullWidth
+            loading={resetting}
+            onPress={() => {
+              setResetScope('all_logs');
+              setResetDataModalOpen(true);
+            }}
+            style={styles.resetLogsBtn}
+            textStyle={{ color: colors.warning || '#E8A020' }}
+          />
+          <Text style={styles.dangerZoneSubText}>
+            Clear all meal logs, weights, and step counts while keeping your account and profile active.
+          </Text>
+
+          {/* Account Deletion */}
+          <Button
+            title="Delete Account & All Data"
+            icon="🗑️"
+            variant="outline"
+            size="md"
+            fullWidth
+            loading={deleting}
+            onPress={() => setDeleteAccountModalOpen(true)}
+            style={styles.deleteAccountBtn}
+            textStyle={{ color: colors.dangerText || '#E57453' }}
+          />
+          <Text style={styles.deleteWarningText}>
+            Permanently erases your user profile, meal logs, weights, and health metrics.
+          </Text>
+        </View>
       </ScrollView>
+
+      {/* Account Deletion Modal */}
+      <SafeActionModal
+        visible={deleteAccountModalOpen}
+        onClose={() => setDeleteAccountModalOpen(false)}
+        onConfirm={handleConfirmDeleteAccount}
+        title="Permanently Delete Account"
+        description="This will permanently delete your account, authentication identity, and all personal records. This action is irreversible."
+        itemizedWarnings={[
+          'All meal photos, nutrition logs, and food item breakdowns',
+          'All weight logs, trajectory records, and trend curves',
+          'All step tracking history and calorie burn records',
+          'Custom calorie and macro goals, and AI-generated meal plans',
+          'Your authentication account and profile data will be permanently removed',
+        ]}
+        requiredKeyword="DELETE"
+        confirmButtonText="Permanently Delete Account"
+        requiresPassword={true}
+        userEmail={user?.email || auth?.currentUser?.email || ''}
+        loading={deleting}
+      />
+
+      {/* Bulk Data Reset Modal */}
+      <SafeActionModal
+        visible={resetDataModalOpen}
+        onClose={() => setResetDataModalOpen(false)}
+        onConfirm={handleConfirmResetData}
+        title="Reset Personal Activity Logs"
+        description="This will wipe your selected activity logs and restart your history from scratch. Your account and login credentials will remain active."
+        itemizedWarnings={[
+          'All logged meals, recipes, and food breakdown entries',
+          'All weight entries and trend trajectory history',
+          'All step tracking and activity logs',
+          'Note: Your account profile, login, and goals will be preserved',
+        ]}
+        requiredKeyword="RESET"
+        confirmButtonText="Reset Log History"
+        requiresPassword={true}
+        userEmail={user?.email || auth?.currentUser?.email || ''}
+        loading={resetting}
+      />
     </SafeAreaView>
   );
 }
@@ -769,6 +894,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
+  dangerZoneCard: {
+    marginTop: 14,
+    marginBottom: 30,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(199, 80, 47, 0.35)',
+    backgroundColor: 'rgba(199, 80, 47, 0.05)',
+  },
+  dangerZoneTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.dangerText || '#E57453',
+    letterSpacing: 0.8,
+    marginBottom: 10,
+  },
+  resetLogsBtn: {
+    borderColor: colors.warning || '#E8A020',
+    marginBottom: 6,
+  },
+  dangerZoneSubText: {
+    fontSize: 11,
+    color: colors.textSecondary || '#A79A85',
+    marginBottom: 14,
+    lineHeight: 15,
+  },
   deleteAccountBtn: {
     backgroundColor: 'rgba(248, 81, 73, 0.08)',
     borderRadius: 10,
@@ -788,6 +939,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textAlign: 'center',
     marginTop: 6,
-    marginBottom: 30,
+    marginBottom: 8,
   },
 });
+

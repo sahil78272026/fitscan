@@ -14,13 +14,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CalendarGrid from '../components/CalendarGrid';
-import {
-  syncStepsToBackend,
-  getHealthConnectHourlySteps,
-  getHealthConnectDailyMetrics,
-  getHealthConnectRangeMetrics,
-  checkHealthConnectPermissionsGranted,
-} from '../services/pedometer';
 import { getDailySummary, getDailySteps, getCalendarMonth, getStepHistory } from '../services/api';
 import {
   formatDateKey,
@@ -96,6 +89,34 @@ export default function ActivityDetailScreen({ navigation, route }) {
     }));
   };
 
+  // R2: Nutrient sorting filter state: 'default' | 'protein' | 'carbs' | 'fat'
+  const [mealSortFilter, setMealSortFilter] = useState('default');
+
+  const handleSortFilterPress = (filterKey) => {
+    setMealSortFilter((prev) => (prev === filterKey ? 'default' : filterKey));
+  };
+
+  // Pure non-mutating sorted meals hook
+  const sortedMeals = useMemo(() => {
+    if (!summary?.meals || !Array.isArray(summary.meals)) return [];
+    const list = [...summary.meals];
+
+    const getProtein = (m) => Number(m.total_protein ?? m.protein ?? 0);
+    const getCarbs = (m) => Number(m.total_carbs ?? m.carbs ?? 0);
+    const getFat = (m) => Number(m.total_fat ?? m.fat ?? 0);
+
+    if (mealSortFilter === 'protein') {
+      return list.sort((a, b) => getProtein(b) - getProtein(a));
+    }
+    if (mealSortFilter === 'carbs') {
+      return list.sort((a, b) => getCarbs(b) - getCarbs(a));
+    }
+    if (mealSortFilter === 'fat') {
+      return list.sort((a, b) => getFat(b) - getFat(a));
+    }
+    return list; // Preserves default order
+  }, [summary?.meals, mealSortFilter]);
+
   // Tab order & Horizontal Paging for buttery-smooth sliding
   const { width: windowWidth } = useWindowDimensions();
   const horizontalScrollRef = useRef(null);
@@ -145,7 +166,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
     return `${y}-${m}-${d}`;
   }, [currentDate]);
 
-  // Synchronize meal summary and step metrics for active date (Health Connect FIRST)
+  // Synchronize meal summary and step metrics for active date from backend API
   useEffect(() => {
     let isMounted = true;
     setSelectedHour(null);
@@ -157,29 +178,8 @@ export default function ActivityDetailScreen({ navigation, route }) {
       })
       .catch(() => {});
 
-    // 2. Fetch step count prioritizing Google Health Connect
+    // 2. Fetch daily step count from backend
     (async () => {
-      try {
-        const hc = await getHealthConnectDailyMetrics(currentDate);
-        if (isMounted && hc && typeof hc.steps === 'number') {
-          setStepData({
-            step_count: hc.steps,
-            calories_burned: hc.calories,
-            date: dateStr,
-          });
-          setStepHistory((prev) => ({ ...prev, [dateStr]: hc.steps }));
-          setStepCaloriesHistory((prev) => ({ ...prev, [dateStr]: hc.calories }));
-          const isToday = new Date().toDateString() === currentDate.toDateString();
-          if (isToday && hc.steps > 0) {
-            syncStepsToBackend(hc.steps, hc.calories);
-          }
-          return; // Success from Health Connect; do not overwrite with backend
-        }
-      } catch (hcErr) {
-        // Health Connect unavailable or failed, fallback to backend below
-      }
-
-      // Fallback: fetch from backend only if Health Connect had no data
       try {
         const res = await getDailySteps(dateStr);
         if (isMounted && res) {
@@ -198,15 +198,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
       }
     })();
 
-    // 3. Fetch hourly steps from Health Connect for the active date
     setRealHourlySteps(null);
-    getHealthConnectHourlySteps(currentDate)
-      .then((hourly) => {
-        if (isMounted) setRealHourlySteps({ date: dateStr, data: hourly });
-      })
-      .catch(() => {
-        if (isMounted) setRealHourlySteps(null);
-      });
 
     return () => {
       isMounted = false;
@@ -249,53 +241,6 @@ export default function ActivityDetailScreen({ navigation, route }) {
     };
   }, []);
 
-  // Fetch Health Connect metrics for every day in the current week/month in ONE single shot
-  useEffect(() => {
-    let isMounted = true;
-    (async () => {
-      try {
-        const hcGranted = await checkHealthConnectPermissionsGranted();
-        if (!hcGranted) return;
-
-        const daysInMonth = new Date(curYear, curMonth, 0).getDate();
-        const monthStart = new Date(curYear, curMonth - 1, 1, 0, 0, 0, 0);
-        const monthEnd = new Date(curYear, curMonth - 1, daysInMonth, 23, 59, 59, 999);
-
-        const ref = new Date(currentDate);
-        ref.setHours(12, 0, 0, 0);
-        const day = ref.getDay();
-        const diffToMon = (day + 6) % 7;
-        const weekStart = new Date(ref);
-        weekStart.setDate(ref.getDate() - diffToMon);
-        weekStart.setHours(0, 0, 0, 0);
-
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
-        weekEnd.setHours(23, 59, 59, 999);
-
-        const rangeStart = monthStart < weekStart ? monthStart : weekStart;
-        const rangeEnd = monthEnd > weekEnd ? monthEnd : weekEnd;
-
-        const metricsMap = await getHealthConnectRangeMetrics(rangeStart, rangeEnd);
-        if (isMounted && metricsMap && Object.keys(metricsMap).length > 0) {
-          const updates = {};
-          const calUpdates = {};
-          Object.entries(metricsMap).forEach(([dStr, m]) => {
-            updates[dStr] = m.steps;
-            calUpdates[dStr] = m.calories;
-          });
-          setStepHistory((prev) => ({ ...prev, ...updates }));
-          setStepCaloriesHistory((prev) => ({ ...prev, ...calUpdates }));
-        }
-      } catch (err) {
-        // ignore
-      }
-    })();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [currentDate, period, curYear, curMonth]);
 
   // Period navigation
   const prevPeriod = () => {
@@ -938,13 +883,49 @@ export default function ActivityDetailScreen({ navigation, route }) {
               Logged Meals {summary?.meals?.length ? `(${summary.meals.length})` : ''}
             </Text>
           </View>
-          {(!summary?.meals || summary.meals.length === 0) ? (
+
+          {/* R2: Interactive Nutrient Sorting Filter Pills */}
+          <View style={styles.mealFilterRow}>
+            {[
+              { key: 'default', label: 'Default' },
+              { key: 'protein', label: 'Protein ↓' },
+              { key: 'carbs', label: 'Carbs ↓' },
+              { key: 'fat', label: 'Fat ↓' },
+            ].map((f) => {
+              const isActive = mealSortFilter === f.key;
+              return (
+                <TouchableOpacity
+                  key={f.key}
+                  style={[
+                    styles.mealFilterPill,
+                    isActive && styles.mealFilterPillActive,
+                  ]}
+                  onPress={() => handleSortFilterPress(f.key)}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Sort meals by ${f.label}${isActive ? ' (active)' : ''}`}
+                >
+                  <Text
+                    style={[
+                      styles.mealFilterPillText,
+                      isActive && styles.mealFilterPillTextActive,
+                    ]}
+                  >
+                    {f.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {(!sortedMeals || sortedMeals.length === 0) ? (
             <View style={styles.emptyMealBox}>
               <Text style={styles.emptyMealIcon}>🍽️</Text>
               <Text style={styles.emptyMealText}>No meals logged for this date</Text>
             </View>
           ) : (
-            summary.meals.map((m) => {
+            sortedMeals.map((m) => {
               const getMealIcon = (type) => {
                 switch (type?.toLowerCase()) {
                   case 'breakfast': return '🍳';
@@ -969,7 +950,11 @@ export default function ActivityDetailScreen({ navigation, route }) {
               return (
                 <TouchableOpacity
                   key={m.id}
-                  style={[styles.activityCard, isExpanded && styles.activityCardExpanded]}
+                  style={[
+                    styles.activityCard,
+                    styles.activityMealCard,
+                    isExpanded && styles.activityCardExpanded,
+                  ]}
                   onPress={() => toggleMealExpanded(m.id)}
                   activeOpacity={0.8}
                   accessibilityRole="button"
@@ -1769,6 +1754,34 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#F4ECDD',
   },
+  // R2: Interactive Nutrient Filter Pills Styles
+  mealFilterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  mealFilterPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#251E17',
+    borderWidth: 1,
+    borderColor: '#352B20',
+  },
+  mealFilterPillActive: {
+    backgroundColor: '#2E2214',
+    borderColor: '#E8A020',
+  },
+  mealFilterPillText: {
+    fontSize: 12,
+    color: '#8A7D6F',
+    fontWeight: '600',
+  },
+  mealFilterPillTextActive: {
+    color: '#F4ECDD',
+    fontWeight: '700',
+  },
   activityCard: {
     backgroundColor: '#1E1914',
     borderRadius: 12,
@@ -1776,6 +1789,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderWidth: 1,
     borderColor: '#2D241B',
+  },
+  // R3: Yellow rounded border for meal cards in Activity Screen
+  activityMealCard: {
+    borderColor: '#E8A020',
+    borderWidth: 1.5,
+    borderRadius: 12,
   },
   activityCardExpanded: {
     borderColor: '#E8A020',

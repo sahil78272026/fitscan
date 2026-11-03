@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useMemo } from "react";
+import Image from "next/image";
 import styles from "./MealInput.module.css";
 
 const MEAL_TYPES = [
@@ -210,7 +211,7 @@ async function compressImageFile(file, maxWidth = 1280, maxHeight = 1280, qualit
 
       {previewUrl && (
         <div className={styles.previewContainer}>
-          <img src={previewUrl} alt="Meal preview" className={styles.previewImage} />
+          <Image src={previewUrl} alt="Meal preview" width={50} height={50} unoptimized className={styles.previewImage} />
           <button type="button" className={styles.removeImgBtn} onClick={clearFile}>✕ Remove Photo</button>
         </div>
       )}

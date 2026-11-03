@@ -1,4 +1,60 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api";
+export const ENABLE_API_LOGGING = process.env.NODE_ENV !== "production";
+const REQUEST_TIMEOUT_MS = 15000;
+
+export function createNetworkError(originalError) {
+  const error = new Error("Unable to connect to server. Please check your internet connection.");
+  error.name = "NetworkError";
+  error.netErr = true;
+  error.originalError = originalError;
+  return error;
+}
+
+export function isNetworkError(err) {
+  if (!err) return false;
+  if (err.name === "AbortError" || err.netErr) return true;
+  const msg = err.message || "";
+  return (
+    err instanceof TypeError ||
+    msg.includes("Failed to fetch") ||
+    msg.includes("Network request failed") ||
+    msg.includes("network error") ||
+    msg.includes("aborted")
+  );
+}
+
+export async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  if (options.signal) {
+    options.signal.addEventListener("abort", () => controller.abort());
+  }
+
+  try {
+    if (ENABLE_API_LOGGING) {
+      console.log(`[API Request] ${options.method || "GET"} ${url}`);
+    }
+    const res = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    if (ENABLE_API_LOGGING) {
+      console.log(`[API Response] ${res.status} ${url}`);
+    }
+    return res;
+  } catch (err) {
+    if (ENABLE_API_LOGGING) {
+      console.error(`[API Error] ${options.method || "GET"} ${url}:`, err);
+    }
+    if (isNetworkError(err)) {
+      throw createNetworkError(err);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 function getToken() {
   if (typeof window === "undefined") return null;
@@ -20,7 +76,7 @@ async function request(endpoint, options = {}, requireAuth = true) {
     }
   }
 
-  const res = await fetch(url, { ...options, headers });
+  const res = await fetchWithTimeout(url, { ...options, headers });
 
   // Handle 401 — redirect to login
   if (res.status === 401) {
@@ -51,7 +107,7 @@ async function requestForm(endpoint, formData) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     method: "POST",
     headers,
     body: formData,

@@ -231,7 +231,7 @@ export default function MealDetailModal({
 
   // Action: Share Recipe
   const handleShareMeal = async () => {
-    let text = `FITSCAN MEAL RECIPE\n`;
+    let text = `CORECONTROL MEAL RECIPE\n`;
     text += `[${mealTypeStr.toUpperCase()}] ${meal.dish_name}\n`;
     text += `Estimated Cost: ${costInfo.formatted} / serving (${costInfo.percentage}% of daily budget)\n`;
     text += `Target Macros: ${meal.calories} kcal | ${meal.protein}g Protein | ${meal.carbs}g Carbs | ${meal.fat}g Fat\n\n`;
@@ -249,11 +249,11 @@ export default function MealDetailModal({
       text += ` ${i + 1}. ${st}\n`;
     });
 
-    text += `\nShared via FitScan • AI Nutrition Coach\n`;
+    text += `\nShared via CoreControl • AI Nutrition Coach\n`;
 
     try {
       await Share.share({
-        title: `${meal.dish_name} - FitScan Recipe`,
+        title: `${meal.dish_name} - CoreControl Recipe`,
         message: text,
       });
     } catch (err) {

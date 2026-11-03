@@ -41,6 +41,76 @@ function parseBody(body) {
   return body;
 }
 
+const SENSITIVE_KEY_PATTERNS = [
+  'password',
+  'otp',
+  'token',
+  'phone',
+  'refreshtoken',
+  'refresh_token',
+  'secret',
+  'authorization',
+  'idtoken',
+  'id_token',
+  'firebase_token',
+  'access_token',
+];
+
+function isSensitiveKey(key) {
+  if (!key || typeof key !== 'string') return false;
+  const normalized = key.toLowerCase().replace(/[-_]/g, '');
+  return SENSITIVE_KEY_PATTERNS.some((pat) => {
+    const normPat = pat.replace(/[-_]/g, '');
+    return normalized.includes(normPat);
+  });
+}
+
+export function sanitizeHeaders(headers) {
+  const parsed = parseHeaders(headers);
+  if (!parsed || typeof parsed !== 'object') return parsed;
+  const sanitized = {};
+  for (const [key, value] of Object.entries(parsed)) {
+    if (key.toLowerCase() === 'authorization') {
+      if (typeof value === 'string' && value.toLowerCase().startsWith('bearer ')) {
+        sanitized[key] = 'Bearer [REDACTED]';
+      } else {
+        sanitized[key] = '[REDACTED]';
+      }
+    } else if (isSensitiveKey(key)) {
+      sanitized[key] = '[REDACTED]';
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  return sanitized;
+}
+
+export function sanitizeBody(body) {
+  const parsed = parseBody(body);
+  if (!parsed) return parsed;
+
+  function deepSanitize(val) {
+    if (val === null || val === undefined) return val;
+    if (Array.isArray(val)) {
+      return val.map(deepSanitize);
+    }
+    if (typeof val === 'object') {
+      const sanitizedObj = {};
+      for (const [k, v] of Object.entries(val)) {
+        if (isSensitiveKey(k)) {
+          sanitizedObj[k] = '[REDACTED]';
+        } else {
+          sanitizedObj[k] = deepSanitize(v);
+        }
+      }
+      return sanitizedObj;
+    }
+    return val;
+  }
+
+  return deepSanitize(parsed);
+}
+
 function shouldIgnoreUrl(url) {
   if (!url || typeof url !== 'string') return true;
   // Ignore Metro bundler, symbols, hot reloading, and dev server sockets
@@ -68,30 +138,34 @@ function logGrouped({ id, method, url, status, headers, reqBody, resData, durati
   }
 
   const title = `${icon} [#${id}] ${method} ${endpoint} [${status}] (${durationMs}ms)`;
+  const cleanHeaders = sanitizeHeaders(headers);
+  const cleanReqBody = sanitizeBody(reqBody);
+  const cleanResData = typeof resData === 'object' && resData !== null ? sanitizeBody(resData) : resData;
 
   if (console.groupCollapsed) {
     console.groupCollapsed(title);
     console.log('🌐 Full URL:', url);
     console.log('📤 Request:', {
-      headers: parseHeaders(headers),
-      body: parseBody(reqBody),
+      headers: cleanHeaders,
+      body: cleanReqBody,
     });
     if (error) {
       console.log('❌ Error:', error);
     } else {
-      console.log('📥 Response:', resData ?? '');
+      console.log('📥 Response:', cleanResData ?? '');
     }
     console.groupEnd();
   } else {
     console.log(title, {
       url,
-      req: { headers: parseHeaders(headers), body: parseBody(reqBody) },
-      res: resData || error,
+      req: { headers: cleanHeaders, body: cleanReqBody },
+      res: cleanResData || error,
     });
   }
 }
 
 export function initGlobalNetworkLogger(enabled = __DEV__) {
+  if (typeof __DEV__ !== 'undefined' && !__DEV__) return;
   if (!enabled) return;
   if (global.__NETWORK_LOGGER_INITIALIZED__) return;
   global.__NETWORK_LOGGER_INITIALIZED__ = true;
@@ -100,6 +174,10 @@ export function initGlobalNetworkLogger(enabled = __DEV__) {
   if (typeof originalFetch !== 'function') return;
 
   global.fetch = async (...args) => {
+    if (typeof __DEV__ !== 'undefined' && !__DEV__) {
+      return originalFetch(...args);
+    }
+
     const [resource, config] = args;
     const url = typeof resource === 'string' ? resource : resource?.url;
 

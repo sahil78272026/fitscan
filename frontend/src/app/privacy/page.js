@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import styles from "./page.module.css";
 
 export const metadata = {
@@ -16,7 +17,7 @@ export default function PrivacyPage() {
             ← Back to App
           </Link>
           <div className={styles.brand}>
-            <img src="/corecontrol_logo.png" alt="CoreControl Logo" className={styles.logoImage} />
+            <Image src="/corecontrol_logo.png" alt="CoreControl Logo" width={28} height={28} className={styles.logoImage} />
             <span className={styles.logoText}>CoreControl</span>
           </div>
         </header>

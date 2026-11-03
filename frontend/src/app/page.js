@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 import ProgressRing from "@/components/ProgressRing";
 import MacroProgressBar from "@/components/MacroProgressBar";
@@ -257,8 +258,13 @@ export default function Home() {
         promises.push(fetchCalendar(sunYear, sunMonth));
       }
 
-      await Promise.all(promises);
-      setLoading(false);
+      try {
+        await Promise.all(promises);
+      } catch (err) {
+        showToast(err.message || "Failed to load dashboard data. Please check your connection.", "error");
+      } finally {
+        setLoading(false);
+      }
     }
 
     initDashboard();
@@ -398,9 +404,12 @@ export default function Home() {
     return (
       <main className={styles.main}>
         <div className={styles.loader}>
-          <img
+          <Image
             src="/corecontrol_logo.png"
             alt="CoreControl"
+            width={64}
+            height={64}
+            priority
             style={{ width: "64px", height: "64px", borderRadius: "16px", objectFit: "cover", marginBottom: "0.25rem", boxShadow: "0 4px 16px rgba(0,0,0,0.4)" }}
           />
           <div className={styles.loaderSpinner} />
@@ -449,9 +458,12 @@ export default function Home() {
         <header className={styles.header}>
           <div className={styles.brand}>
             <div className={styles.logoRow}>
-              <img
+              <Image
                 src="/corecontrol_logo.png"
                 alt="CoreControl"
+                width={36}
+                height={36}
+                priority
                 className={styles.logoImage}
               />
               <h1 className={styles.logoTitle}>CoreControl</h1>
