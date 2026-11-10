@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -11,13 +11,15 @@ import {
   ScrollView,
   KeyboardAvoidingView,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import { logMeal, scanMealImage, scanMealImageBase64 } from '../services/api';
+import { logMeal, scanMealImage, scanMealImageBase64, getSettings } from '../services/api';
 import { uploadMealImageToFirebase, auth } from '../services/firebase';
 import { ScreenHeader, Button } from '../components/ui';
 import { colors, spacing, typography, radius } from '../theme';
 import ProUpgradeModal from '../components/ProUpgradeModal';
+import OnboardingModal from '../components/OnboardingModal';
 import useSubscription from '../hooks/useSubscription';
 
 export default function ScanMealScreen({ navigation, route }) {
@@ -32,6 +34,8 @@ export default function ScanMealScreen({ navigation, route }) {
     isPaywallOpen,
   } = useSubscription();
 
+  const [userSettings, setUserSettings] = useState(null);
+  const [goalModalOpen, setGoalModalOpen] = useState(false);
   const [imageUri, setImageUri] = useState(null);
   const [photoBase64, setPhotoBase64] = useState(null);
   const [rawInput, setRawInput] = useState('');
@@ -40,9 +44,39 @@ export default function ScanMealScreen({ navigation, route }) {
 
   const mealDate = route?.params?.mealDate || null;
 
+  useEffect(() => {
+    let isMounted = true;
+    getSettings()
+      .then((settings) => {
+        if (isMounted && settings) {
+          setUserSettings(settings);
+          if (!settings?.height_cm || !settings?.weight_kg) {
+            setGoalModalOpen(true);
+          }
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const hasGoals = Boolean(userSettings?.height_cm && userSettings?.weight_kg);
+
   const pickImage = async () => {
     if (!hasAccess) {
       openPaywall('scan_meal');
+      return;
+    }
+    if (!hasGoals) {
+      Alert.alert(
+        'Goal Required',
+        'Please set your fitness and calorie goal before scanning meals.',
+        [
+          { text: 'Set Goal', onPress: () => setGoalModalOpen(true) },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
       return;
     }
     try {
@@ -78,6 +112,17 @@ export default function ScanMealScreen({ navigation, route }) {
       openPaywall('scan_meal');
       return;
     }
+    if (!hasGoals) {
+      Alert.alert(
+        'Goal Required',
+        'Please set your fitness and calorie goal before scanning meals.',
+        [
+          { text: 'Set Goal', onPress: () => setGoalModalOpen(true) },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+      return;
+    }
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
@@ -110,6 +155,17 @@ export default function ScanMealScreen({ navigation, route }) {
       openPaywall('scan_meal');
       return;
     }
+    if (!hasGoals) {
+      Alert.alert(
+        'Goal Required',
+        'Please set your fitness and calorie goal before logging meals.',
+        [
+          { text: 'Set Goal', onPress: () => setGoalModalOpen(true) },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+      return;
+    }
 
     if (!rawInput.trim() && !imageUri && !photoBase64) {
       if (Platform.OS === 'web') {
@@ -125,22 +181,35 @@ export default function ScanMealScreen({ navigation, route }) {
       let uploadedImageUrl = null;
       const currentUid = auth?.currentUser?.uid || 'user';
 
+      let createdMeal = null;
       if (photoBase64) {
         try {
-          uploadedImageUrl = await uploadMealImageToFirebase(photoBase64, true, currentUid);
+          const uploadSource = imageUri || photoBase64;
+          const isB64Flag = !imageUri;
+          uploadedImageUrl = await uploadMealImageToFirebase(uploadSource, isB64Flag, currentUid);
         } catch (uploadErr) {
           console.warn('Firebase photo upload failed, proceeding with scan:', uploadErr);
         }
-        await scanMealImageBase64(photoBase64, rawInput.trim(), mealType, mealDate, uploadedImageUrl);
+        createdMeal = await scanMealImageBase64(photoBase64, rawInput.trim(), mealType, mealDate, uploadedImageUrl);
       } else if (imageUri) {
         try {
           uploadedImageUrl = await uploadMealImageToFirebase(imageUri, false, currentUid);
         } catch (uploadErr) {
           console.warn('Firebase photo upload failed, proceeding with scan:', uploadErr);
         }
-        await scanMealImage(imageUri, rawInput.trim(), mealType, mealDate, uploadedImageUrl);
+        createdMeal = await scanMealImage(imageUri, rawInput.trim(), mealType, mealDate, uploadedImageUrl);
       } else {
-        await logMeal(rawInput.trim(), mealType, mealDate);
+        createdMeal = await logMeal(rawInput.trim(), mealType, mealDate);
+      }
+
+      // If an image was taken/picked, cache its local URI for this meal ID so it displays immediately in Logged Meals
+      if (createdMeal?.id && (imageUri || photoBase64)) {
+        try {
+          const cacheUri = imageUri || `data:image/jpeg;base64,${photoBase64}`;
+          await AsyncStorage.setItem(`fitscan_local_meal_img_${createdMeal.id}`, cacheUri);
+        } catch (cacheErr) {
+          if (__DEV__) console.warn('Failed to cache local meal image URI:', cacheErr);
+        }
       }
 
       if (Platform.OS === 'web') {
@@ -188,14 +257,30 @@ export default function ScanMealScreen({ navigation, route }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {/* Goal Warning Banner if goals not configured */}
+          {!hasGoals && userSettings && (
+            <View style={styles.goalBanner}>
+              <Text style={styles.goalBannerTitle}>Goal Setup Required</Text>
+              <Text style={styles.goalBannerDesc}>
+                Set your fitness and calorie goal to enable AI photo scanning and personalized macro tracking.
+              </Text>
+              <TouchableOpacity
+                style={styles.goalBannerBtn}
+                onPress={() => setGoalModalOpen(true)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.goalBannerBtnText}>Set Goals Now</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Image Preview Box */}
           <TouchableOpacity style={styles.imageBox} onPress={pickImage} activeOpacity={0.8}>
             {imageUri ? (
               <Image source={{ uri: imageUri }} style={styles.previewImage} />
             ) : (
               <View style={styles.placeholder}>
-                <Text style={styles.placeholderIcon}>📷</Text>
-                <Text style={styles.placeholderText}>Tap to select or take photo</Text>
+                <Text style={styles.placeholderText}>Tap to select or take meal photo</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -203,10 +288,10 @@ export default function ScanMealScreen({ navigation, route }) {
           {/* Action Buttons for Camera / Gallery */}
           <View style={styles.mediaRow}>
             <TouchableOpacity style={styles.mediaBtn} onPress={takePhoto} activeOpacity={0.75}>
-              <Text style={styles.mediaBtnText}>📷 Take Photo</Text>
+              <Text style={styles.mediaBtnText}>Take Photo</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.mediaBtn} onPress={pickImage} activeOpacity={0.75}>
-              <Text style={styles.mediaBtnText}>🖼️ Choose Gallery</Text>
+              <Text style={styles.mediaBtnText}>Choose from Gallery</Text>
             </TouchableOpacity>
           </View>
 
@@ -249,6 +334,17 @@ export default function ScanMealScreen({ navigation, route }) {
         </ScrollView>
       </KeyboardAvoidingView>
 
+      {/* Onboarding Goal Setup Modal */}
+      <OnboardingModal
+        visible={goalModalOpen}
+        initialSettings={userSettings}
+        onClose={() => setGoalModalOpen(false)}
+        onComplete={(updated) => {
+          setUserSettings(updated);
+          setGoalModalOpen(false);
+        }}
+      />
+
       {/* Monetization Paywall Modal */}
       <ProUpgradeModal
         visible={isPaywallOpen}
@@ -274,6 +370,39 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.screenPadding || 16,
+  },
+  goalBanner: {
+    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+    borderRadius: radius.md || 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  goalBannerTitle: {
+    color: colors.primary || '#F59E0B',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    marginBottom: 4,
+  },
+  goalBannerDesc: {
+    color: colors.textSecondary || '#A8A29E',
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 12,
+  },
+  goalBannerBtn: {
+    backgroundColor: colors.primary || '#F59E0B',
+    borderRadius: radius.sm || 8,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    alignSelf: 'flex-start',
+  },
+  goalBannerBtnText: {
+    color: '#181410',
+    fontSize: 12,
+    fontWeight: '700',
   },
   imageBox: {
     height: 190,

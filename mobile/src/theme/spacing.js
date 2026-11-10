@@ -19,6 +19,7 @@ export const spacing = {
   cardPadding: 16,
   sectionGap: 20,
   itemGap: 12,
+  floatingTabOffset: 96,  // Bottom padding clearance for screens above floating pill tab bar
 
   // Accessibility touch target standards
   touchTargetMin: 48,     // Universal accessibility standard (Android Material >=48dp, iOS HIG >=44pt)

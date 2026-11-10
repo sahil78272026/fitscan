@@ -520,3 +520,112 @@ class TestImageScanEndpoints:
                 data = resp.json()
                 assert data["id"] == 105
                 assert data["total_calories"] == 300
+
+
+class TestFoodAnalysisCaching:
+    @pytest.mark.asyncio
+    async def test_food_analysis_cache_hit_returns_cached_without_calling_gemini(self):
+        """Verify cache HIT immediately returns cached result without invoking Gemini client."""
+        cached_data = {
+            "items": [
+                {
+                    "name": "Paneer Tikka",
+                    "quantity": 1.0,
+                    "unit": "plate",
+                    "calories": 320,
+                    "protein": 22.0,
+                    "carbs": 10.0,
+                    "fat": 18.0,
+                }
+            ],
+            "total_calories": 320,
+            "total_protein": 22.0,
+            "total_carbs": 10.0,
+            "total_fat": 18.0,
+        }
+
+        with patch("app.services.gemini_service.cache_get", new_callable=AsyncMock) as mock_get, \
+             patch("google.genai.Client") as mock_client_cls:
+            mock_get.return_value = cached_data
+
+            result = await analyze_food(raw_input="paneer tikka")
+            assert result == cached_data
+            mock_client_cls.assert_not_called()
+            mock_get.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_food_analysis_cache_miss_stores_result_with_7day_ttl(self):
+        """Verify cache MISS queries Gemini and stores parsed result with 7-day TTL (604800s)."""
+        mock_response = MagicMock()
+        mock_response.text = '{"items": [{"name": "Dal Tadka", "calories": 180, "protein": 9.0, "carbs": 26.0, "fat": 4.0}], "total_calories": 180, "total_protein": 9.0, "total_carbs": 26.0, "total_fat": 4.0}'
+
+        with patch("app.services.gemini_service.cache_get", new_callable=AsyncMock) as mock_get, \
+             patch("app.services.gemini_service.cache_set", new_callable=AsyncMock) as mock_set, \
+             patch("app.services.gemini_service.get_settings") as mock_get_settings, \
+             patch("google.genai.Client") as mock_client_cls:
+            mock_get.return_value = None
+            settings = mock_get_settings.return_value
+            settings.GEMINI_API_KEY = "test_key"
+            settings.GEMINI_MODEL = "gemini-2.0-flash"
+            settings.GEMINI_TIMEOUT_SECONDS = 35.0
+
+            mock_client = mock_client_cls.return_value
+            mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
+
+            result = await analyze_food(raw_input="Dal Tadka")
+            assert result["total_calories"] == 180
+            assert result["items"][0]["name"] == "Dal Tadka"
+
+            mock_set.assert_awaited_once()
+            call_args = mock_set.await_args
+            key, val = call_args.args[0], call_args.args[1]
+            kwargs = call_args.kwargs
+            assert key.startswith("food_analysis:")
+            assert val["total_calories"] == 180
+            assert kwargs.get("ex") == 604800
+
+    @pytest.mark.asyncio
+    async def test_food_analysis_cache_key_differentiation(self):
+        """Verify different images or prompts produce distinct SHA-256 cache keys."""
+        captured_keys = []
+
+        async def fake_get(k):
+            captured_keys.append(k)
+            return {"items": [{"name": "Cached", "calories": 100, "protein": 0.0, "carbs": 0.0, "fat": 0.0}], "total_calories": 100, "total_protein": 0.0, "total_carbs": 0.0, "total_fat": 0.0}
+
+        with patch("app.services.gemini_service.cache_get", side_effect=fake_get):
+            img_a = b"image_data_alpha_12345"
+            img_b = b"image_data_beta_67890"
+
+            await analyze_food(raw_input="Salad", image_bytes=img_a)
+            await analyze_food(raw_input="Salad", image_bytes=img_b)
+            await analyze_food(raw_input="Soup", image_bytes=img_a)
+
+            assert len(captured_keys) == 3
+            # Distinct keys for distinct inputs
+            assert captured_keys[0] != captured_keys[1]
+            assert captured_keys[0] != captured_keys[2]
+            assert captured_keys[1] != captured_keys[2]
+
+    @pytest.mark.asyncio
+    async def test_food_analysis_failsafe_on_redis_error(self):
+        """Verify food analysis completes successfully even if Redis cache raises errors."""
+        mock_response = MagicMock()
+        mock_response.text = '{"items": [{"name": "Apple", "calories": 95, "protein": 0.5, "carbs": 25.0, "fat": 0.3}], "total_calories": 95, "total_protein": 0.5, "total_carbs": 25.0, "total_fat": 0.3}'
+
+        with patch("app.services.gemini_service.cache_get", side_effect=Exception("Redis connection refused")), \
+             patch("app.services.gemini_service.cache_set", side_effect=Exception("Redis write timeout")), \
+             patch("app.services.gemini_service.get_settings") as mock_get_settings, \
+             patch("google.genai.Client") as mock_client_cls:
+            settings = mock_get_settings.return_value
+            settings.GEMINI_API_KEY = "test_key"
+            settings.GEMINI_MODEL = "gemini-2.0-flash"
+            settings.GEMINI_TIMEOUT_SECONDS = 35.0
+
+            mock_client = mock_client_cls.return_value
+            mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
+
+            result = await analyze_food(raw_input="Apple")
+            assert result["total_calories"] == 95
+            assert result["items"][0]["name"] == "Apple"
+

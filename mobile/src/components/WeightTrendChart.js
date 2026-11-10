@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,6 +8,15 @@ import {
   useWindowDimensions,
   Animated,
 } from 'react-native';
+import Svg, {
+  Defs,
+  LinearGradient,
+  Stop,
+  Path,
+  Circle,
+  Line,
+  Text as SvgText,
+} from 'react-native-svg';
 import { colors } from '../theme';
 
 export default function WeightTrendChart({
@@ -39,12 +48,14 @@ export default function WeightTrendChart({
     }).start();
   };
 
-
   if (!validLogs || validLogs.length === 0) {
     return (
       <View style={styles.card}>
         <View style={styles.headerRow}>
-          <Text style={styles.title}>Weight Trend & Trajectory</Text>
+          <View style={styles.titleCol}>
+            <Text style={styles.title}>Weight & Body Trend</Text>
+            <Text style={styles.subtitle}>Track your body composition changes</Text>
+          </View>
           <View style={styles.timeframeRow}>
             {[7, 30, 90].map((days) => (
               <TouchableOpacity
@@ -60,10 +71,33 @@ export default function WeightTrendChart({
             ))}
           </View>
         </View>
+
+        {/* Clean SVG Empty State - Zero Emojis */}
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>📈</Text>
+          <Svg width={44} height={44} viewBox="0 0 24 24" fill="none">
+            <Path
+              d="M3 17l6-6 4 4 8-8"
+              stroke={colors.primary || '#F59E0B'}
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <Path
+              d="M17 7h4v4"
+              stroke={colors.primary || '#F59E0B'}
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <Circle cx={3} cy={17} r={1.5} fill={colors.primary || '#F59E0B'} />
+            <Circle cx={9} cy={11} r={1.5} fill={colors.primary || '#F59E0B'} />
+            <Circle cx={13} cy={15} r={1.5} fill={colors.primary || '#F59E0B'} />
+            <Circle cx={21} cy={7} r={1.5} fill={colors.primary || '#F59E0B'} />
+          </Svg>
           <Text style={styles.emptyTitle}>No weight entries logged yet</Text>
-          <Text style={styles.emptySub}>Log your weight below to view your interactive curve</Text>
+          <Text style={styles.emptySub}>
+            Log your current weight below to start plotting your trend line
+          </Text>
         </View>
       </View>
     );
@@ -77,42 +111,95 @@ export default function WeightTrendChart({
   const netDeltaNum = Number((latestWeight - firstWeight).toFixed(1));
   const netDeltaStr = netDeltaNum > 0 ? `+${netDeltaNum}` : `${netDeltaNum}`;
 
-  // Layout Geometry
-  const chartHeight = 180;
-  const paddingVertical = 30;
-  const usableHeight = chartHeight - paddingVertical * 2;
-  const pointSpacing = Math.max(54, Math.floor((windowWidth - 72) / Math.max(validLogs.length, 1)));
-  const totalChartWidth = Math.max(windowWidth - 64, (validLogs.length - 1) * pointSpacing + 64);
+  // SVG Chart Geometry
+  const chartHeight = 170;
+  const paddingTop = 26;
+  const paddingBottom = 32;
+  const paddingLeft = 32;
+  const paddingRight = 32;
+  const usableHeight = chartHeight - paddingTop - paddingBottom;
 
-  const yRange = maxWeight === minWeight ? 2 : maxWeight - minWeight;
-  const minY = minWeight - yRange * 0.15;
-  const maxY = maxWeight + yRange * 0.15;
+  const pointSpacing = Math.max(
+    56,
+    Math.floor((windowWidth - 72) / Math.max(validLogs.length, 1))
+  );
+  const totalChartWidth = Math.max(
+    windowWidth - 64,
+    (validLogs.length - 1) * pointSpacing + paddingLeft + paddingRight
+  );
+
+  const rawRange = maxWeight - minWeight;
+  const yPadding = rawRange === 0 ? 1.0 : Math.max(0.5, rawRange * 0.15);
+  const minY = minWeight - yPadding;
+  const maxY = maxWeight + yPadding;
   const effectiveRange = maxY - minY;
 
   const points = validLogs.map((item, idx) => {
-    const x = 32 + idx * pointSpacing;
-    const y = chartHeight - paddingVertical - ((item.weight_kg - minY) / effectiveRange) * usableHeight;
+    const x =
+      validLogs.length === 1
+        ? totalChartWidth / 2
+        : paddingLeft + idx * pointSpacing;
+    const y =
+      chartHeight -
+      paddingBottom -
+      ((item.weight_kg - minY) / effectiveRange) * usableHeight;
     return { ...item, x, y, idx };
   });
 
-  const activePoint = selectedIdx !== null && points[selectedIdx] ? points[selectedIdx] : points[points.length - 1];
-  const deltaFromStart = activePoint ? Number((activePoint.weight_kg - firstWeight).toFixed(1)) : 0;
-  const deltaFromStartStr = deltaFromStart > 0 ? `+${deltaFromStart}` : `${deltaFromStart}`;
+  // Smooth SVG Path Generation (Monotone cubic spline or line)
+  let pathD = '';
+  let areaD = '';
+
+  if (points.length === 1) {
+    pathD = `M ${points[0].x - 18} ${points[0].y} L ${points[0].x + 18} ${points[0].y}`;
+    areaD = `M ${points[0].x - 18} ${chartHeight - paddingBottom} L ${points[0].x - 18} ${points[0].y} L ${points[0].x + 18} ${points[0].y} L ${points[0].x + 18} ${chartHeight - paddingBottom} Z`;
+  } else {
+    // Build path with clean line segments
+    pathD = points.reduce(
+      (acc, p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`),
+      ''
+    );
+    const lastP = points[points.length - 1];
+    const firstP = points[0];
+    areaD = `${pathD} L ${lastP.x} ${chartHeight - paddingBottom} L ${firstP.x} ${chartHeight - paddingBottom} Z`;
+  }
+
+  const activePoint =
+    selectedIdx !== null && points[selectedIdx]
+      ? points[selectedIdx]
+      : points[points.length - 1];
+
+  const deltaFromStart = activePoint
+    ? Number((activePoint.weight_kg - firstWeight).toFixed(1))
+    : 0;
+  const deltaFromStartStr =
+    deltaFromStart > 0 ? `+${deltaFromStart}` : `${deltaFromStart}`;
+
+  // Target weight Y coordinate
+  const targetY =
+    typeof targetWeight === 'number' && targetWeight >= minY && targetWeight <= maxY
+      ? chartHeight - paddingBottom - ((targetWeight - minY) / effectiveRange) * usableHeight
+      : null;
 
   return (
     <View style={styles.card}>
-      {/* Header & Badges */}
+      {/* Header Row */}
       <View style={styles.headerRow}>
         <View style={styles.titleCol}>
-          <Text style={styles.title}>Weight Trend & Trajectory</Text>
+          <Text style={styles.title}>Weight & Body Trend</Text>
           <View style={styles.summaryBadgeRow}>
             <View style={[styles.pill, styles.minPill]}>
-              <Text style={styles.minPillText}>Min {minWeight}kg</Text>
+              <Text style={styles.minPillText}>Min {minWeight.toFixed(1)}kg</Text>
             </View>
             <View style={[styles.pill, styles.maxPill]}>
-              <Text style={styles.maxPillText}>Max {maxWeight}kg</Text>
+              <Text style={styles.maxPillText}>Max {maxWeight.toFixed(1)}kg</Text>
             </View>
-            <View style={[styles.pill, netDeltaNum <= 0 ? styles.lossPill : styles.gainPill]}>
+            <View
+              style={[
+                styles.pill,
+                netDeltaNum <= 0 ? styles.lossPill : styles.gainPill,
+              ]}
+            >
               <Text style={netDeltaNum <= 0 ? styles.lossText : styles.gainText}>
                 {netDeltaStr} kg
               </Text>
@@ -120,7 +207,7 @@ export default function WeightTrendChart({
           </View>
         </View>
 
-        {/* Timeframe Buttons */}
+        {/* Timeframe Selector Buttons */}
         <View style={styles.timeframeRow}>
           {[7, 30, 90].map((days) => (
             <TouchableOpacity
@@ -142,168 +229,198 @@ export default function WeightTrendChart({
 
       {/* Floating Active Tooltip Callout */}
       {activePoint && (
-        <Animated.View style={[styles.tooltipBox, { transform: [{ scale: tooltipScale }] }]}>
+        <Animated.View
+          style={[styles.tooltipBox, { transform: [{ scale: tooltipScale }] }]}
+        >
           <View style={styles.tooltipLeft}>
             <Text style={styles.tooltipDate}>{activePoint.logged_date}</Text>
-            <Text style={styles.tooltipVal}>{activePoint.weight_kg} kg</Text>
+            <Text style={styles.tooltipVal}>{activePoint.weight_kg.toFixed(1)} kg</Text>
           </View>
           <View style={styles.tooltipRight}>
             <View style={styles.badgeWrapper}>
               <Text style={styles.tooltipTag}>
                 {activePoint.weight_kg === minWeight && points.length > 1
-                  ? '🟢 Lowest'
+                  ? 'Lowest'
                   : activePoint.weight_kg === maxWeight && points.length > 1
-                  ? '🔴 Peak'
+                  ? 'Peak'
                   : activePoint.idx === points.length - 1
-                  ? '🟡 Current'
+                  ? 'Current'
                   : 'Entry'}
               </Text>
             </View>
             {points.length > 1 && (
-              <Text style={[styles.tooltipDelta, deltaFromStart <= 0 ? styles.lossText : styles.gainText]}>
-                {deltaFromStart <= 0 ? '📉' : '📈'} {deltaFromStartStr} kg
+              <Text
+                style={[
+                  styles.tooltipDelta,
+                  deltaFromStart <= 0 ? styles.lossText : styles.gainText,
+                ]}
+              >
+                {deltaFromStartStr} kg
               </Text>
             )}
           </View>
         </Animated.View>
       )}
 
-      {/* Interactive Trend Chart Canvas */}
+      {/* Modern Luxury SVG Graph */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ width: totalChartWidth, height: chartHeight + 28 }}
+        contentContainerStyle={{ width: totalChartWidth, height: chartHeight + 12 }}
       >
-        <View style={[styles.chartCanvas, { width: totalChartWidth, height: chartHeight }]}>
-          {/* Target Reference Line */}
-          {typeof targetWeight === 'number' && targetWeight >= minY && targetWeight <= maxY && (
-            <View
-              style={[
-                styles.targetLine,
-                {
-                  top: chartHeight - paddingVertical - ((targetWeight - minY) / effectiveRange) * usableHeight,
-                  width: totalChartWidth,
-                },
-              ]}
-            >
-              <Text style={styles.targetLabel}>Target {targetWeight} kg</Text>
-            </View>
-          )}
+        <View style={[styles.chartContainer, { width: totalChartWidth, height: chartHeight }]}>
+          <Svg
+            width={totalChartWidth}
+            height={chartHeight}
+            viewBox={`0 0 ${totalChartWidth} ${chartHeight}`}
+          >
+            <Defs>
+              <LinearGradient id="weightGradientMobile" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0%" stopColor="#F59E0B" stopOpacity="0.45" />
+                <Stop offset="75%" stopColor="#F59E0B" stopOpacity="0.08" />
+                <Stop offset="100%" stopColor="#F59E0B" stopOpacity="0.0" />
+              </LinearGradient>
+            </Defs>
 
-          {/* Baseline Grid Line */}
-          <View style={[styles.gridLine, { top: chartHeight - paddingVertical, width: totalChartWidth }]} />
-
-          {/* Connected Vector Line Segments & Glow Area Columns */}
-          {points.map((p, i) => {
-            if (i === points.length - 1) return null;
-            const next = points[i + 1];
-            const dx = next.x - p.x;
-            const dy = next.y - p.y;
-            const length = Math.sqrt(dx * dx + dy * dy);
-            const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-            const midX = (p.x + next.x) / 2;
-            const midY = (p.y + next.y) / 2;
-
-            return (
-              <React.Fragment key={`segment-${i}`}>
-                {/* Glowing area under data point */}
-                <View
-                  style={[
-                    styles.glowColumn,
-                    {
-                      left: p.x - 14,
-                      top: p.y,
-                      height: Math.max(4, chartHeight - paddingVertical - p.y),
-                      width: 28,
-                    },
-                  ]}
-                />
-                {/* Anti-aliased connected vector trend line */}
-                <View
-                  style={[
-                    styles.vectorLine,
-                    {
-                      width: length,
-                      left: midX - length / 2,
-                      top: midY - 1.5,
-                      transform: [{ rotate: `${angle}deg` }],
-                    },
-                  ]}
-                />
-              </React.Fragment>
-            );
-          })}
-
-          {/* Glow area for the last data point */}
-          {points.length > 0 && (
-            <View
-              style={[
-                styles.glowColumn,
-                {
-                  left: points[points.length - 1].x - 14,
-                  top: points[points.length - 1].y,
-                  height: Math.max(4, chartHeight - paddingVertical - points[points.length - 1].y),
-                  width: 28,
-                },
-              ]}
+            {/* Baseline Grid Line */}
+            <Line
+              x1={16}
+              y1={chartHeight - paddingBottom}
+              x2={totalChartWidth - 16}
+              y2={chartHeight - paddingBottom}
+              stroke={colors.border || '#222631'}
+              strokeWidth={1}
             />
-          )}
 
-          {/* Interactive Data Nodes with glowing halos */}
-          {points.map((p) => {
-            const isMin = p.weight_kg === minWeight && points.length > 1;
-            const isMax = p.weight_kg === maxWeight && points.length > 1;
-            const isSelected = activePoint && activePoint.idx === p.idx;
-
-            return (
-              <TouchableOpacity
-                key={`node-${p.id || p.idx}`}
-                style={[
-                  styles.nodeTouch,
-                  { left: p.x - 18, top: p.y - 18 },
-                ]}
-                onPress={() => handleSelectNode(p.idx)}
-                activeOpacity={0.8}
-              >
-                {isSelected && <View style={styles.nodeOuterHalo} />}
-                <View
-                  style={[
-                    styles.nodeOuter,
-                    isMin && styles.nodeOuterMin,
-                    isMax && styles.nodeOuterMax,
-                    isSelected && styles.nodeOuterSelected,
-                  ]}
+            {/* Optional Target Weight Reference Line */}
+            {targetY !== null && (
+              <>
+                <Line
+                  x1={16}
+                  y1={targetY}
+                  x2={totalChartWidth - 16}
+                  y2={targetY}
+                  stroke="#10B981"
+                  strokeWidth={1}
+                  strokeDasharray="4, 4"
+                />
+                <SvgText
+                  x={totalChartWidth - 20}
+                  y={targetY - 5}
+                  fontSize={9}
+                  fill="#10B981"
+                  fontWeight="600"
+                  textAnchor="end"
                 >
-                  <View
-                    style={[
-                      styles.nodeInner,
-                      isMin && styles.nodeInnerMin,
-                      isMax && styles.nodeInnerMax,
-                      isSelected && styles.nodeInnerSelected,
-                    ]}
-                  />
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+                  Target {targetWeight}kg
+                </SvgText>
+              </>
+            )}
 
-          {/* Responsive Date Axis Labels */}
+            {/* Area Fill */}
+            <Path d={areaD} fill="url(#weightGradientMobile)" />
+
+            {/* Stroke Line */}
+            <Path
+              d={pathD}
+              fill="none"
+              stroke="#F59E0B"
+              strokeWidth={3}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+
+            {/* Min / Max Reference Y-Labels */}
+            <SvgText
+              x={paddingLeft}
+              y={paddingTop - 10}
+              fontSize={10}
+              fill={colors.textSecondary || '#94A3B8'}
+              fontWeight="600"
+            >
+              {maxY.toFixed(1)} kg
+            </SvgText>
+            <SvgText
+              x={paddingLeft}
+              y={chartHeight - paddingBottom + 16}
+              fontSize={10}
+              fill={colors.textSecondary || '#94A3B8'}
+              fontWeight="600"
+            >
+              {minY.toFixed(1)} kg
+            </SvgText>
+
+            {/* Data Point SVG Circles */}
+            {points.map((p) => {
+              const isSelected = activePoint && activePoint.idx === p.idx;
+              const isMin = p.weight_kg === minWeight && points.length > 1;
+              const isMax = p.weight_kg === maxWeight && points.length > 1;
+
+              const circleStroke = isMin ? '#10B981' : isMax ? '#F43F5E' : '#F59E0B';
+              const circleFill = isSelected ? '#FFFFFF' : colors.surface || '#111318';
+
+              return (
+                <React.Fragment key={`svg-node-${p.id || p.idx}`}>
+                  {/* Subtle outer halo for selected point */}
+                  {isSelected && (
+                    <Circle
+                      cx={p.x}
+                      cy={p.y}
+                      r={10}
+                      fill="rgba(245, 158, 11, 0.25)"
+                      stroke="rgba(245, 158, 11, 0.6)"
+                      strokeWidth={1.5}
+                    />
+                  )}
+                  <Circle
+                    cx={p.x}
+                    cy={p.y}
+                    r={isSelected ? 6 : 4.5}
+                    fill={circleFill}
+                    stroke={circleStroke}
+                    strokeWidth={isSelected ? 2.5 : 2}
+                  />
+                </React.Fragment>
+              );
+            })}
+          </Svg>
+
+          {/* Interactive Touch Overlay Nodes */}
           {points.map((p) => {
             const dateParts = p.logged_date ? p.logged_date.split('-') : [];
-            const shortDate = dateParts.length >= 3 ? `${dateParts[1]}/${dateParts[2]}` : p.logged_date;
+            const shortDate =
+              dateParts.length >= 3 ? `${dateParts[1]}/${dateParts[2]}` : p.logged_date;
             const isSelected = activePoint && activePoint.idx === p.idx;
 
             return (
-              <Text
-                key={`label-${p.idx}`}
-                style={[
-                  styles.dateLabel,
-                  { left: p.x - 18, top: chartHeight - 18 },
-                  isSelected && styles.dateLabelActive,
-                ]}
-              >
-                {shortDate}
-              </Text>
+              <React.Fragment key={`touch-${p.id || p.idx}`}>
+                <TouchableOpacity
+                  style={[
+                    styles.nodeTouchTarget,
+                    {
+                      left: p.x - 22,
+                      top: p.y - 22,
+                    },
+                  ]}
+                  onPress={() => handleSelectNode(p.idx)}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                />
+                {/* Responsive Date Axis Label */}
+                <Text
+                  style={[
+                    styles.dateLabel,
+                    {
+                      left: p.x - 24,
+                      top: chartHeight - 20,
+                    },
+                    isSelected && styles.dateLabelActive,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {shortDate}
+                </Text>
+              </React.Fragment>
             );
           })}
         </View>
@@ -314,12 +431,12 @@ export default function WeightTrendChart({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface || '#221D17',
+    backgroundColor: colors.surface || '#111318',
     borderRadius: 16,
     padding: 16,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: colors.border || '#3A3128',
+    borderColor: colors.border || '#222631',
   },
   headerRow: {
     flexDirection: 'row',
@@ -333,14 +450,20 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.textPrimary || '#F4ECDD',
+    fontWeight: '700',
+    color: colors.textPrimary || '#F8FAFC',
+    letterSpacing: -0.2,
+  },
+  subtitle: {
+    fontSize: 12,
+    color: colors.textSecondary || '#94A3B8',
+    marginTop: 2,
   },
   summaryBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 6,
+    marginTop: 8,
     flexWrap: 'wrap',
   },
   pill: {
@@ -350,40 +473,40 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   minPill: {
-    backgroundColor: 'rgba(123, 160, 91, 0.15)',
-    borderColor: '#7BA05B',
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderColor: 'rgba(16, 185, 129, 0.35)',
   },
   minPillText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#7BA05B',
+    color: '#10B981',
   },
   maxPill: {
-    backgroundColor: 'rgba(229, 116, 83, 0.15)',
-    borderColor: '#E57453',
+    backgroundColor: 'rgba(244, 63, 94, 0.12)',
+    borderColor: 'rgba(244, 63, 94, 0.35)',
   },
   maxPillText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#E57453',
+    color: '#F43F5E',
   },
   lossPill: {
-    backgroundColor: 'rgba(123, 160, 91, 0.15)',
-    borderColor: '#7BA05B',
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderColor: 'rgba(16, 185, 129, 0.35)',
   },
   gainPill: {
-    backgroundColor: 'rgba(229, 116, 83, 0.15)',
-    borderColor: '#E57453',
+    backgroundColor: 'rgba(244, 63, 94, 0.12)',
+    borderColor: 'rgba(244, 63, 94, 0.35)',
   },
   lossText: {
-    color: '#7BA05B',
+    color: '#10B981',
     fontSize: 11,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   gainText: {
-    color: '#E57453',
+    color: '#F43F5E',
     fontSize: 11,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   timeframeRow: {
     flexDirection: 'row',
@@ -393,51 +516,51 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
-    backgroundColor: colors.background || '#181410',
+    backgroundColor: colors.surfaceElevated || '#1A1D24',
     borderWidth: 1,
-    borderColor: colors.border || '#3A3128',
+    borderColor: colors.border || '#222631',
   },
   tfBtnActive: {
-    backgroundColor: colors.primary || '#E8A020',
-    borderColor: colors.primary || '#E8A020',
+    backgroundColor: colors.primary || '#F59E0B',
+    borderColor: colors.primary || '#F59E0B',
   },
   tfText: {
     fontSize: 12,
-    color: colors.textSecondary || '#A79A85',
+    color: colors.textSecondary || '#94A3B8',
     fontWeight: '600',
   },
   tfTextActive: {
-    color: '#221803',
-    fontWeight: 'bold',
+    color: '#08090C',
+    fontWeight: '700',
   },
   emptyContainer: {
     alignItems: 'center',
-    paddingVertical: 28,
-  },
-  emptyIcon: {
-    fontSize: 34,
-    marginBottom: 8,
+    paddingVertical: 32,
   },
   emptyTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: colors.textPrimary || '#F4ECDD',
+    fontWeight: '700',
+    color: colors.textPrimary || '#F8FAFC',
+    marginTop: 12,
   },
   emptySub: {
     fontSize: 12,
-    color: colors.textSecondary || '#A79A85',
+    color: colors.textSecondary || '#94A3B8',
     marginTop: 4,
+    textAlign: 'center',
+    paddingHorizontal: 24,
+    lineHeight: 18,
   },
   tooltipBox: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: colors.background || '#181410',
+    backgroundColor: colors.surfaceElevated || '#1A1D24',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: colors.border || '#3A3128',
+    borderColor: colors.border || '#222631',
     marginBottom: 10,
   },
   tooltipLeft: {
@@ -445,20 +568,21 @@ const styles = StyleSheet.create({
   },
   tooltipDate: {
     fontSize: 11,
-    color: colors.textSecondary || '#A79A85',
+    color: colors.textSecondary || '#94A3B8',
     fontWeight: '500',
   },
   tooltipVal: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.primary || '#E8A020',
+    fontWeight: '700',
+    color: colors.primary || '#F59E0B',
     marginTop: 2,
+    letterSpacing: -0.2,
   },
   tooltipRight: {
     alignItems: 'flex-end',
   },
   badgeWrapper: {
-    backgroundColor: 'rgba(232, 160, 32, 0.15)',
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
@@ -466,127 +590,33 @@ const styles = StyleSheet.create({
   tooltipTag: {
     fontSize: 11,
     fontWeight: '600',
-    color: colors.textPrimary || '#F4ECDD',
+    color: colors.textPrimary || '#F8FAFC',
   },
   tooltipDelta: {
     fontSize: 11,
     marginTop: 3,
   },
-  chartCanvas: {
+  chartContainer: {
     position: 'relative',
     marginTop: 4,
   },
-  targetLine: {
+  nodeTouchTarget: {
     position: 'absolute',
-    left: 0,
-    height: 1,
-    borderTopWidth: 1,
-    borderTopColor: '#7BA05B',
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-    zIndex: 1,
-  },
-  targetLabel: {
-    position: 'absolute',
-    right: 8,
-    top: -14,
-    fontSize: 10,
-    color: '#7BA05B',
-    fontWeight: '600',
-    backgroundColor: colors.surface || '#221D17',
-    paddingHorizontal: 4,
-  },
-  gridLine: {
-    position: 'absolute',
-    left: 0,
-    height: 1,
-    backgroundColor: colors.border || '#3A3128',
-    zIndex: 1,
-  },
-  glowColumn: {
-    position: 'absolute',
-    backgroundColor: 'rgba(232, 160, 32, 0.10)',
-    borderTopLeftRadius: 4,
-    borderTopRightRadius: 4,
-    zIndex: 2,
-  },
-  vectorLine: {
-    position: 'absolute',
-    height: 3,
-    backgroundColor: colors.primary || '#E8A020',
-    borderRadius: 1.5,
-    zIndex: 3,
-  },
-  nodeTouch: {
-    position: 'absolute',
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 4,
-  },
-  nodeOuterHalo: {
-    position: 'absolute',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(232, 160, 32, 0.22)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(232, 160, 32, 0.50)',
-    zIndex: 1,
-  },
-  nodeOuter: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: colors.surface || '#221D17',
-    borderWidth: 2,
-    borderColor: colors.primary || '#E8A020',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  nodeOuterMin: {
-    borderColor: '#7BA05B',
-  },
-  nodeOuterMax: {
-    borderColor: '#E57453',
-  },
-  nodeOuterSelected: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 3,
-    borderColor: colors.primary || '#E8A020',
-    backgroundColor: 'rgba(232, 160, 32, 0.25)',
-  },
-  nodeInner: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.primary || '#E8A020',
-  },
-  nodeInnerMin: {
-    backgroundColor: '#7BA05B',
-  },
-  nodeInnerMax: {
-    backgroundColor: '#E57453',
-  },
-  nodeInnerSelected: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#FFFFFF',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    zIndex: 5,
   },
   dateLabel: {
     position: 'absolute',
-    width: 36,
+    width: 48,
     textAlign: 'center',
     fontSize: 10,
-    color: colors.textSecondary || '#A79A85',
-    zIndex: 3,
+    color: colors.textSecondary || '#94A3B8',
+    zIndex: 4,
   },
   dateLabelActive: {
-    color: colors.textPrimary || '#F4ECDD',
-    fontWeight: 'bold',
+    color: colors.textPrimary || '#F8FAFC',
+    fontWeight: '700',
   },
 });

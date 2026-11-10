@@ -6,7 +6,55 @@ import {
   View,
   TouchableOpacity,
 } from 'react-native';
+import Svg, { Path, Circle, Line } from 'react-native-svg';
 import { colors, typography, radius, spacing } from '../../theme';
+
+function EyeIcon({ color = '#94A3B8', size = 18 }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Circle
+        cx="12"
+        cy="12"
+        r="3"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function EyeOffIcon({ color = '#94A3B8', size = 18 }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Line
+        x1="1"
+        y1="1"
+        x2="23"
+        y2="23"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
 
 /**
  * Universal TextInputField primitive for FitScan mobile.
@@ -100,7 +148,7 @@ export function TextInputField({
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={colors.textSecondary || '#A79A85'}
+          placeholderTextColor={colors.textMuted || colors.textSecondary || '#94A3B8'}
           editable={!disabled}
           multiline={multiline}
           numberOfLines={numberOfLines}
@@ -118,10 +166,15 @@ export function TextInputField({
             style={styles.eyeBtn}
             onPress={() => setIsPasswordVisible(!isPasswordVisible)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel={isPasswordVisible ? 'Hide password' : 'Show password'}
           >
-            <Text style={styles.eyeIcon}>{isPasswordVisible ? '👁️' : '🔒'}</Text>
+            {isPasswordVisible ? (
+              <EyeOffIcon color={colors.textSecondary || '#94A3B8'} size={18} />
+            ) : (
+              <EyeIcon color={colors.textSecondary || '#94A3B8'} size={18} />
+            )}
           </TouchableOpacity>
         )}
 
@@ -152,15 +205,15 @@ const styles = StyleSheet.create({
   label: {
     fontSize: typography?.sizes?.sm || 13,
     fontWeight: '600',
-    color: colors.textSecondary || '#A79A85',
+    color: colors.textSecondary || '#94A3B8',
     marginBottom: 6,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceElevated || '#2C251D',
+    backgroundColor: colors.surfaceElevated || '#1A1D24',
     borderWidth: 1,
-    borderColor: colors.border || '#3A3128',
+    borderColor: colors.border || '#222631',
     borderRadius: radius.md || 10,
     minHeight: 48, // Standard 48dp touch target
     paddingHorizontal: 12,
@@ -171,17 +224,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   inputContainerFocused: {
-    borderColor: colors.primary || '#E8A020',
+    borderColor: colors.borderFocus || colors.primary || '#F59E0B',
   },
   inputContainerError: {
-    borderColor: colors.danger || '#C7502F',
+    borderColor: colors.danger || '#EF4444',
   },
   inputContainerDisabled: {
     opacity: 0.6,
   },
   input: {
     flex: 1,
-    color: colors.textPrimary || '#F4ECDD',
+    color: colors.textPrimary || '#F8FAFC',
     fontSize: typography?.sizes?.base || 15,
     paddingVertical: 10,
   },
@@ -209,14 +262,14 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: typography?.sizes?.xs || 12,
-    color: colors.dangerText || '#E57453',
+    color: colors.dangerText || colors.danger || '#EF4444',
     fontWeight: '500',
     marginTop: 4,
     marginLeft: 2,
   },
   helperText: {
     fontSize: typography?.sizes?.xs || 11,
-    color: colors.textSecondary || '#A79A85',
+    color: colors.textSecondary || '#94A3B8',
     marginTop: 4,
     marginLeft: 2,
   },

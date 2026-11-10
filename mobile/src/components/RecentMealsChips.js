@@ -6,7 +6,23 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { colors, typography, radius } from '../theme';
+
+// Semantic vector Plus icon (Zero raw emojis)
+function PlusIcon({ size = 12, color = colors.primary || '#F59E0B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 5v14M5 12h14"
+        stroke={color}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
 
 /**
  * RecentMealsChips Component
@@ -62,7 +78,7 @@ export default function RecentMealsChips({
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <Text style={styles.sectionLabel}>🕒 Previously Eaten Suggestions:</Text>
+        <Text style={styles.sectionLabel}>PREVIOUSLY EATEN</Text>
         <Text style={styles.sectionHint}>Tap to add</Text>
       </View>
       <ScrollView
@@ -76,7 +92,7 @@ export default function RecentMealsChips({
             style={styles.chip}
             onPress={() => onSelectSuggestion && onSelectSuggestion(item.name)}
             disabled={disabled}
-            activeOpacity={0.7}
+            activeOpacity={0.8}
             accessibilityRole="button"
             accessibilityLabel={`Previously eaten item: ${item.name}, ${item.calories} calories`}
           >
@@ -97,7 +113,7 @@ export default function RecentMealsChips({
                 accessibilityRole="button"
                 accessibilityLabel={`Instant log ${item.name}`}
               >
-                <Text style={styles.quickAddIcon}>⚡</Text>
+                <PlusIcon size={12} color={colors.primary || '#F59E0B'} />
               </TouchableOpacity>
             )}
           </TouchableOpacity>
@@ -109,63 +125,65 @@ export default function RecentMealsChips({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
     paddingHorizontal: 2,
   },
   sectionLabel: {
     fontSize: typography?.sizes?.xs || 11,
     fontWeight: '700',
-    color: colors.textSecondary || '#A79A85',
+    color: colors.textSecondary || '#94A3B8',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   sectionHint: {
     fontSize: typography?.sizes?.xs || 11,
-    color: colors.textTertiary || '#706555',
+    color: colors.textMuted || '#64748B',
   },
   scrollRow: {
     gap: 8,
-    paddingVertical: 2,
+    paddingVertical: 4,
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceElevated || '#2C251D',
+    backgroundColor: colors.surfaceElevated || '#1A1D24',
     borderWidth: 1,
-    borderColor: colors.border || '#3A3128',
-    borderRadius: radius.md || 10,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    gap: 6,
+    borderColor: colors.border || '#222631',
+    borderRadius: radius.md || 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
   },
   chipText: {
     fontSize: typography?.sizes?.sm || 12,
     fontWeight: '600',
-    color: colors.textPrimary || '#F4ECDD',
+    color: colors.textPrimary || '#F8FAFC',
     maxWidth: 160,
   },
   calBadge: {
-    backgroundColor: colors.primarySubtle || 'rgba(232, 160, 32, 0.12)',
+    backgroundColor: colors.primarySubtle || 'rgba(245, 158, 11, 0.12)',
     borderRadius: 6,
-    paddingHorizontal: 5,
+    paddingHorizontal: 6,
     paddingVertical: 2,
   },
   calText: {
     fontSize: 10,
     fontWeight: '700',
-    color: colors.primary || '#E8A020',
+    color: colors.primary || '#F59E0B',
   },
   quickAddBtn: {
-    paddingLeft: 2,
-  },
-  quickAddIcon: {
-    fontSize: 11,
-    color: colors.primary || '#E8A020',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.primarySubtle || 'rgba(245, 158, 11, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 2,
   },
 });

@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Platform,
   Alert,
+  KeyboardAvoidingView,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -302,261 +303,228 @@ export default function ProUpgradeModal({
         animationType="fade"
         onRequestClose={onClose}
       >
-        <View style={styles.overlay}>
-          <View style={styles.modalCard}>
-            {/* Close button */}
-            <TouchableOpacity
-              style={styles.closeBtn}
-              onPress={onClose}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              accessibilityRole="button"
-              accessibilityLabel="Close paywall modal"
-            >
-              <CloseIcon size={16} color="#A79A85" />
-            </TouchableOpacity>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardAvoid}
+        >
+          <View style={styles.overlay}>
+            <View style={styles.modalCard}>
+              {/* Close button */}
+              <TouchableOpacity
+                style={styles.closeBtn}
+                onPress={onClose}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityRole="button"
+                accessibilityLabel="Close paywall modal"
+              >
+                <CloseIcon size={16} color="#A79A85" />
+              </TouchableOpacity>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-              {/* Crown Header */}
-              <View style={styles.header}>
-                <View style={styles.crownCircle}>
-                  <CrownIcon size={28} color="#E8A020" />
-                </View>
-                <Text style={styles.title}>
-                  {isPro ? 'CoreControl Pro Active' : 'Unlock CoreControl Pro'}
-                </Text>
-                <Text style={styles.subtitle}>
-                  {daysRemaining > 0 && !isPro ? (
-                    `Free trial active: ${daysRemaining} day${daysRemaining > 1 ? 's' : ''} remaining. Upgrade anytime for permanent Pro access.`
-                  ) : isPro ? (
-                    'Your membership gives you full AI intelligence and unlimited operations.'
-                  ) : (
-                    '7-day free trial expired. Upgrade to keep scanning meals, logging macros, and personalizing plans.'
-                  )}
-                </Text>
-              </View>
-
-              {/* Error Message */}
-              {error && (
-                <View style={styles.errorBanner}>
-                  <Text style={styles.errorText}>{error}</Text>
-                </View>
-              )}
-
-              {/* Feature Highlights Grid */}
-              <View style={styles.featuresList}>
-                <View style={styles.featureItem}>
-                  <View style={styles.featureIconBox}>
-                    <RefreshIcon size={18} color="#E8A020" />
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+              >
+                {/* Crown Header */}
+                <View style={styles.header}>
+                  <View style={styles.crownCircle}>
+                    <CrownIcon size={28} color="#E8A020" />
                   </View>
-                  <View style={styles.featureTextWrapper}>
-                    <Text style={styles.featureTitle}>Unlimited Meal Plan Rotations</Text>
-                    <Text style={styles.featureDesc}>
-                      Generate personalized recipes and shift goals on demand without waiting.
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.featureItem}>
-                  <View style={styles.featureIconBox}>
-                    <TargetIcon size={18} color="#E8A020" />
-                  </View>
-                  <View style={styles.featureTextWrapper}>
-                    <Text style={styles.featureTitle}>Deep Macro & Calorie Precision</Text>
-                    <Text style={styles.featureDesc}>
-                      Sub-dish macro breakdowns calibrated for sustainable fitness progress.
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.featureItem}>
-                  <View style={styles.featureIconBox}>
-                    <SparkleIcon size={18} color="#E8A020" />
-                  </View>
-                  <View style={styles.featureTextWrapper}>
-                    <Text style={styles.featureTitle}>Instant AI Photo Nutritionist</Text>
-                    <Text style={styles.featureDesc}>
-                      High-accuracy visual scanning for complex plates, mixed dishes, and ingredients.
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.featureItem}>
-                  <View style={styles.featureIconBox}>
-                    <ShieldIcon size={18} color="#E8A020" />
-                  </View>
-                  <View style={styles.featureTextWrapper}>
-                    <Text style={styles.featureTitle}>Streak Protection & Full History</Text>
-                    <Text style={styles.featureDesc}>
-                      Permanent calendar logs, PDF meal plan exports, and automated grocery lists.
-                    </Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Pricing Selector (If Free Tier or Expired) */}
-              {!isPro && (
-                <View style={styles.pricingSection}>
-                  {/* Annual Plan Card */}
-                  <TouchableOpacity
-                    style={[
-                      styles.pricingCard,
-                      billingCycle === 'annual' && styles.selectedPricingCard,
-                    ]}
-                    onPress={() => setBillingCycle('annual')}
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.saveBadge}>
-                      <Text style={styles.saveBadgeText}>SAVE 45% • BEST VALUE</Text>
-                    </View>
-                    <View style={styles.pricingRow}>
-                      <View style={styles.radioRow}>
-                        <View style={styles.radioOuter}>
-                          {billingCycle === 'annual' && <View style={styles.radioInner} />}
-                        </View>
-                        <View>
-                          <Text style={styles.planDuration}>Annual Membership</Text>
-                          <Text style={styles.planPerMonth}>~₹83 / month</Text>
-                        </View>
-                      </View>
-                      <View style={styles.priceAmountWrapper}>
-                        <Text style={styles.priceAmount}>₹999</Text>
-                        <Text style={styles.pricePer}>/ year</Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-
-                  {/* Monthly Plan Card */}
-                  <TouchableOpacity
-                    style={[
-                      styles.pricingCard,
-                      billingCycle === 'monthly' && styles.selectedPricingCard,
-                    ]}
-                    onPress={() => setBillingCycle('monthly')}
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.pricingRow}>
-                      <View style={styles.radioRow}>
-                        <View style={styles.radioOuter}>
-                          {billingCycle === 'monthly' && <View style={styles.radioInner} />}
-                        </View>
-                        <View>
-                          <Text style={styles.planDuration}>Monthly Flex</Text>
-                          <Text style={styles.planPerMonth}>Billed monthly</Text>
-                        </View>
-                      </View>
-                      <View style={styles.priceAmountWrapper}>
-                        <Text style={styles.priceAmount}>₹149</Text>
-                        <Text style={styles.pricePer}>/ month</Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-
-                  {/* Promo Code Input Section */}
-                  <View style={styles.couponSection}>
-                    <View style={styles.couponHeader}>
-                      <TagIcon size={14} color="#E8A020" />
-                      <Text style={styles.couponLabel}>Have a promo code?</Text>
-                    </View>
-
-                    {appliedCoupon ? (
-                      <View style={styles.appliedCouponRow}>
-                        <View style={styles.appliedPill}>
-                          <CheckIcon size={14} color="#4ADE80" />
-                          <Text style={styles.appliedPillText}>
-                            {appliedCoupon.code} (
-                            {appliedCoupon.discount_percentage === 100
-                              ? '100% OFF • Free Pro Access'
-                              : `${appliedCoupon.discount_percentage}% OFF`}
-                            )
-                          </Text>
-                        </View>
-                        <TouchableOpacity
-                          style={styles.removeCouponBtn}
-                          onPress={handleRemoveCoupon}
-                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        >
-                          <Text style={styles.removeCouponText}>Remove</Text>
-                        </TouchableOpacity>
-                      </View>
+                  <Text style={styles.title}>
+                    {isPro ? 'CoreControl Pro Active' : 'Unlock CoreControl Pro'}
+                  </Text>
+                  <Text style={styles.subtitle}>
+                    {daysRemaining > 0 && !isPro ? (
+                      `Free trial active: ${daysRemaining} day${daysRemaining > 1 ? 's' : ''} remaining. Upgrade anytime for permanent Pro access.`
+                    ) : isPro ? (
+                      'Your membership gives you full AI intelligence and unlimited operations.'
                     ) : (
-                      <View style={styles.couponInputRow}>
-                        <TextInput
-                          style={styles.couponInput}
-                          placeholder="e.g. FITSCAN100"
-                          placeholderTextColor="#6B5E4E"
-                          value={couponCode}
-                          onChangeText={(text) => {
-                            setCouponCode(text.toUpperCase());
-                            setCouponError(null);
-                          }}
-                          autoCapitalize="characters"
-                          autoCorrect={false}
-                          editable={!couponLoading}
-                        />
-                        <TouchableOpacity
-                          style={[
-                            styles.applyCouponBtn,
-                            (!couponCode.trim() || couponLoading) && styles.applyCouponBtnDisabled,
-                          ]}
-                          onPress={handleApplyCoupon}
-                          disabled={!couponCode.trim() || couponLoading}
-                          activeOpacity={0.8}
-                        >
-                          {couponLoading ? (
-                            <ActivityIndicator size="small" color="#221803" />
-                          ) : (
-                            <Text style={styles.applyCouponBtnText}>Apply</Text>
-                          )}
-                        </TouchableOpacity>
-                      </View>
+                      '7-day free trial expired. Enter your Early Bird promo code to unlock instant access.'
                     )}
-
-                    {couponError && (
-                      <Text style={styles.couponErrorText}>{couponError}</Text>
-                    )}
-                  </View>
+                  </Text>
                 </View>
-              )}
 
-              {/* Action Section */}
-              <View style={styles.actionSection}>
-                {!isPro ? (
-                  is100PercentDiscount ? (
-                    <TouchableOpacity
-                      style={[
-                        styles.upgradeBtn,
-                        styles.freeClaimBtn,
-                        loading && styles.upgradeBtnDisabled,
-                      ]}
-                      onPress={handlePrimaryAction}
-                      disabled={loading}
-                      activeOpacity={0.85}
-                    >
-                      {loading ? (
-                        <ActivityIndicator color="#221803" size="small" />
-                      ) : (
-                        <Text style={styles.upgradeBtnText}>
-                          Claim 100% Free Access Instantly
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-                  ) : (
-                    <View style={styles.couponOnlyNoticeBox}>
-                      <Text style={styles.couponOnlyNoticeText}>
-                        Apply a promo code above to activate your complimentary Pro membership.
-                      </Text>
-                    </View>
-                  )
-                ) : (
-                  <View style={styles.proActiveBox}>
-                    <CheckIcon size={20} color="#4ADE80" />
-                    <Text style={styles.proActiveText}>Pro Membership Active</Text>
+                {/* Error Message */}
+                {error && (
+                  <View style={styles.errorBanner}>
+                    <Text style={styles.errorText}>{error}</Text>
                   </View>
                 )}
-              </View>
-            </ScrollView>
+
+                {/* Feature Highlights Grid */}
+                <View style={styles.featuresList}>
+                  <View style={styles.featureItem}>
+                    <View style={styles.featureIconBox}>
+                      <RefreshIcon size={18} color="#E8A020" />
+                    </View>
+                    <View style={styles.featureTextWrapper}>
+                      <Text style={styles.featureTitle}>Unlimited Meal Plan Rotations</Text>
+                      <Text style={styles.featureDesc}>
+                        Generate personalized recipes and shift goals on demand without waiting.
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.featureItem}>
+                    <View style={styles.featureIconBox}>
+                      <TargetIcon size={18} color="#E8A020" />
+                    </View>
+                    <View style={styles.featureTextWrapper}>
+                      <Text style={styles.featureTitle}>Deep Macro & Calorie Precision</Text>
+                      <Text style={styles.featureDesc}>
+                        Sub-dish macro breakdowns calibrated for sustainable fitness progress.
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.featureItem}>
+                    <View style={styles.featureIconBox}>
+                      <SparkleIcon size={18} color="#E8A020" />
+                    </View>
+                    <View style={styles.featureTextWrapper}>
+                      <Text style={styles.featureTitle}>Instant AI Photo Nutritionist</Text>
+                      <Text style={styles.featureDesc}>
+                        High-accuracy visual scanning for complex plates, mixed dishes, and ingredients.
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.featureItem}>
+                    <View style={styles.featureIconBox}>
+                      <ShieldIcon size={18} color="#E8A020" />
+                    </View>
+                    <View style={styles.featureTextWrapper}>
+                      <Text style={styles.featureTitle}>Streak Protection & Full History</Text>
+                      <Text style={styles.featureDesc}>
+                        Permanent calendar logs, PDF meal plan exports, and automated grocery lists.
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Early Bird Access & Promo Code Section */}
+                {!isPro && (
+                  <View style={styles.earlyBirdSection}>
+                    <View style={styles.earlyBirdBanner}>
+                      <View style={styles.earlyBirdHeader}>
+                        <View style={styles.earlyBirdBadge}>
+                          <SparkleIcon size={12} color="#F59E0B" />
+                          <Text style={styles.earlyBirdBadgeText}>EARLY BIRD SPECIAL ACCESS</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.earlyBirdTitle}>Complimentary Launch Access</Text>
+                      <Text style={styles.earlyBirdDesc}>
+                        Direct payment plans are upcoming soon. During our early bird launch period, unlock 100% free CoreControl Pro with your exclusive promo code.
+                      </Text>
+                    </View>
+
+                    {/* Promo Code Input Section */}
+                    <View style={styles.couponSection}>
+                      <View style={styles.couponHeader}>
+                        <TagIcon size={14} color="#E8A020" />
+                        <Text style={styles.couponLabel}>Enter Early Bird Promo Code</Text>
+                      </View>
+
+                      {appliedCoupon ? (
+                        <View style={styles.appliedCouponRow}>
+                          <View style={styles.appliedPill}>
+                            <CheckIcon size={14} color="#4ADE80" />
+                            <Text style={styles.appliedPillText}>
+                              {appliedCoupon.code} (
+                              {appliedCoupon.discount_percentage === 100
+                                ? '100% OFF • Free Pro Access'
+                                : `${appliedCoupon.discount_percentage}% OFF`}
+                              )
+                            </Text>
+                          </View>
+                          <TouchableOpacity
+                            style={styles.removeCouponBtn}
+                            onPress={handleRemoveCoupon}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          >
+                            <Text style={styles.removeCouponText}>Remove</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        <View style={styles.couponInputRow}>
+                          <TextInput
+                            style={styles.couponInput}
+                            placeholder="e.g. TESTFREE"
+                            placeholderTextColor="#6B5E4E"
+                            value={couponCode}
+                            onChangeText={(text) => {
+                              setCouponCode(text.toUpperCase());
+                              setCouponError(null);
+                            }}
+                            autoCapitalize="characters"
+                            autoCorrect={false}
+                            editable={!couponLoading}
+                          />
+                          <TouchableOpacity
+                            style={[
+                              styles.applyCouponBtn,
+                              (!couponCode.trim() || couponLoading) && styles.applyCouponBtnDisabled,
+                            ]}
+                            onPress={handleApplyCoupon}
+                            disabled={!couponCode.trim() || couponLoading}
+                            activeOpacity={0.8}
+                          >
+                            {couponLoading ? (
+                              <ActivityIndicator size="small" color="#221803" />
+                            ) : (
+                              <Text style={styles.applyCouponBtnText}>Apply</Text>
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      )}
+
+                      {couponError && (
+                        <Text style={styles.couponErrorText}>{couponError}</Text>
+                      )}
+                    </View>
+                  </View>
+                )}
+
+                {/* Action Section */}
+                <View style={styles.actionSection}>
+                  {!isPro ? (
+                    is100PercentDiscount ? (
+                      <TouchableOpacity
+                        style={[
+                          styles.upgradeBtn,
+                          styles.freeClaimBtn,
+                          loading && styles.upgradeBtnDisabled,
+                        ]}
+                        onPress={handlePrimaryAction}
+                        disabled={loading}
+                        activeOpacity={0.85}
+                      >
+                        {loading ? (
+                          <ActivityIndicator color="#221803" size="small" />
+                        ) : (
+                          <Text style={styles.upgradeBtnText}>
+                            Claim 100% Free Access Instantly
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={styles.couponOnlyNoticeBox}>
+                        <Text style={styles.couponOnlyNoticeText}>
+                          Enter code TESTFREE or your early bird promo code above to activate Pro membership.
+                        </Text>
+                      </View>
+                    )
+                  ) : (
+                    <View style={styles.proActiveBox}>
+                      <CheckIcon size={20} color="#4ADE80" />
+                      <Text style={styles.proActiveText}>Pro Membership Active</Text>
+                    </View>
+                  )}
+                </View>
+              </ScrollView>
+            </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* In-App Razorpay Checkout WebView Modal */}
@@ -572,9 +540,13 @@ export default function ProUpgradeModal({
 }
 
 const styles = StyleSheet.create({
+  keyboardAvoid: {
+    flex: 1,
+    justifyContent: 'center',
+  },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    backgroundColor: 'rgba(0, 0, 0, 0.88)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
@@ -582,12 +554,12 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     maxWidth: 420,
-    maxHeight: '92%',
-    backgroundColor: '#1E1914',
+    maxHeight: '90%',
+    backgroundColor: '#111318',
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#3A3128',
+    borderColor: '#222631',
     position: 'relative',
     ...Platform.select({
       ios: {
@@ -609,14 +581,14 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#2C251D',
+    backgroundColor: '#1A1D24',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#3A3128',
+    borderColor: '#222631',
   },
   scrollContent: {
-    paddingBottom: 10,
+    paddingBottom: 20,
   },
   header: {
     alignItems: 'center',
@@ -627,49 +599,49 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: 'rgba(232, 160, 32, 0.14)',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
     borderWidth: 1.5,
-    borderColor: '#E8A020',
+    borderColor: '#F59E0B',
   },
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#F4ECDD',
+    color: '#F8FAFC',
     textAlign: 'center',
     marginBottom: 6,
     letterSpacing: 0.3,
   },
   subtitle: {
     fontSize: 12,
-    color: '#A79A85',
+    color: '#94A3B8',
     textAlign: 'center',
     lineHeight: 18,
     paddingHorizontal: 8,
   },
   errorBanner: {
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    backgroundColor: 'rgba(244, 63, 94, 0.12)',
     borderRadius: 10,
     padding: 10,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.35)',
+    borderColor: 'rgba(244, 63, 94, 0.35)',
   },
   errorText: {
-    color: '#F87171',
+    color: '#FB7185',
     fontSize: 12,
     textAlign: 'center',
   },
   featuresList: {
     gap: 12,
     marginBottom: 18,
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#2C251D',
+    borderColor: '#222631',
   },
   featureItem: {
     flexDirection: 'row',
@@ -680,7 +652,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 8,
-    backgroundColor: 'rgba(232, 160, 32, 0.1)',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 1,
@@ -691,98 +663,64 @@ const styles = StyleSheet.create({
   featureTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#F4ECDD',
+    color: '#F8FAFC',
     marginBottom: 2,
   },
   featureDesc: {
     fontSize: 11,
-    color: '#A79A85',
+    color: '#94A3B8',
     lineHeight: 15,
   },
-  pricingSection: {
+  earlyBirdSection: {
     gap: 12,
     marginBottom: 18,
   },
-  pricingCard: {
-    backgroundColor: '#181410',
+  earlyBirdBanner: {
+    backgroundColor: '#1A1D24',
     borderRadius: 14,
     padding: 14,
-    borderWidth: 1.5,
-    borderColor: '#2C251D',
-    position: 'relative',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.28)',
   },
-  selectedPricingCard: {
-    borderColor: '#E8A020',
-    backgroundColor: 'rgba(232, 160, 32, 0.08)',
+  earlyBirdHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  saveBadge: {
-    position: 'absolute',
-    top: -10,
-    right: 14,
-    backgroundColor: '#E8A020',
+  earlyBirdBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
     borderRadius: 6,
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
   },
-  saveBadgeText: {
-    color: '#221803',
-    fontSize: 9,
+  earlyBirdBadgeText: {
+    color: '#F59E0B',
+    fontSize: 10,
     fontWeight: '800',
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
   },
-  pricingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  radioRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  radioOuter: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#A79A85',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#E8A020',
-  },
-  planDuration: {
+  earlyBirdTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#F4ECDD',
+    color: '#F8FAFC',
+    marginBottom: 4,
   },
-  planPerMonth: {
-    fontSize: 11,
-    color: '#A79A85',
-    marginTop: 2,
-  },
-  priceAmountWrapper: {
-    alignItems: 'flex-end',
-  },
-  priceAmount: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#E8A020',
-  },
-  pricePer: {
-    fontSize: 10,
-    color: '#A79A85',
+  earlyBirdDesc: {
+    fontSize: 12,
+    color: '#94A3B8',
+    lineHeight: 17,
   },
   couponSection: {
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#2C251D',
+    borderColor: '#222631',
     gap: 8,
   },
   couponHeader: {
@@ -793,7 +731,7 @@ const styles = StyleSheet.create({
   couponLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#A79A85',
+    color: '#94A3B8',
   },
   couponInputRow: {
     flexDirection: 'row',
@@ -801,43 +739,43 @@ const styles = StyleSheet.create({
   },
   couponInput: {
     flex: 1,
-    height: 40,
-    backgroundColor: '#221D17',
+    height: 44,
+    backgroundColor: '#1A1D24',
     borderWidth: 1,
-    borderColor: '#3A3128',
+    borderColor: '#222631',
     borderRadius: 8,
     paddingHorizontal: 12,
-    color: '#F4ECDD',
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.5,
+    color: '#F8FAFC',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.8,
   },
   applyCouponBtn: {
-    backgroundColor: '#E8A020',
-    paddingHorizontal: 14,
-    height: 40,
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 16,
+    height: 44,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   applyCouponBtnDisabled: {
-    opacity: 0.5,
+    opacity: 0.4,
   },
   applyCouponBtnText: {
-    color: '#221803',
-    fontWeight: '700',
-    fontSize: 12,
+    color: '#08090C',
+    fontWeight: '800',
+    fontSize: 13,
   },
   appliedCouponRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(74, 222, 128, 0.1)',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
     borderRadius: 8,
     paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: 'rgba(74, 222, 128, 0.3)',
+    borderColor: 'rgba(16, 185, 129, 0.3)',
   },
   appliedPill: {
     flexDirection: 'row',
@@ -846,53 +784,53 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   appliedPillText: {
-    color: '#4ADE80',
+    color: '#10B981',
     fontSize: 12,
     fontWeight: '700',
   },
   removeCouponBtn: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   removeCouponText: {
-    color: '#F87171',
+    color: '#FB7185',
     fontSize: 11,
     fontWeight: '600',
   },
   couponErrorText: {
-    color: '#F87171',
+    color: '#FB7185',
     fontSize: 11,
   },
   actionSection: {
     gap: 8,
   },
   upgradeBtn: {
-    backgroundColor: '#E8A020',
+    backgroundColor: '#F59E0B',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
-    shadowColor: '#E8A020',
+    shadowColor: '#F59E0B',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
   },
   freeClaimBtn: {
-    backgroundColor: '#4ADE80',
-    shadowColor: '#4ADE80',
+    backgroundColor: '#10B981',
+    shadowColor: '#10B981',
   },
   couponOnlyNoticeBox: {
-    backgroundColor: '#1E1914',
+    backgroundColor: '#1A1D24',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#3A3128',
+    borderColor: '#222631',
     paddingVertical: 14,
     paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   couponOnlyNoticeText: {
-    fontSize: 13,
-    color: '#D4C8B5',
+    fontSize: 12,
+    color: '#94A3B8',
     textAlign: 'center',
     lineHeight: 18,
     fontWeight: '500',
@@ -901,7 +839,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   upgradeBtnText: {
-    color: '#221803',
+    color: '#08090C',
     fontSize: 14,
     fontWeight: '800',
     letterSpacing: 0.2,
@@ -914,7 +852,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   proActiveText: {
-    color: '#4ADE80',
+    color: '#10B981',
     fontSize: 14,
     fontWeight: '700',
   },

@@ -60,25 +60,55 @@ import { getStorage, ref, uploadBytes, uploadString, getDownloadURL } from 'fire
 
 export const storage = getStorage(app);
 
+/**
+ * Convert a local file URI (e.g. file:// or content://) to a native Blob in React Native.
+ * Uses XMLHttpRequest with responseType="blob", which native React Native supports without
+ * triggering the "Creating blobs from 'ArrayBuffer' and 'ArrayBufferView' are not supported" error.
+ */
+function uriToBlob(uri) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.onload = function () {
+      resolve(xhr.response);
+    };
+    xhr.onerror = function () {
+      reject(new Error('Failed to read image URI into native blob'));
+    };
+    xhr.responseType = 'blob';
+    xhr.open('GET', uri, true);
+    xhr.send(null);
+  });
+}
+
 export async function uploadMealImageToFirebase(imageUriOrBase64, isBase64 = false, userId = 'anonymous') {
   if (!isFirebaseConfigured()) return null;
   const filename = `meals/${userId}/${Date.now()}_${Math.random().toString(36).substring(2, 9)}.jpg`;
   const storageRef = ref(storage, filename);
 
-  if (isBase64) {
-    let cleanB64 = imageUriOrBase64;
-    if (cleanB64.includes(',')) {
-      cleanB64 = cleanB64.split(',')[1];
+  let blob = null;
+  try {
+    if (!isBase64 && typeof imageUriOrBase64 === 'string' && (imageUriOrBase64.startsWith('file://') || imageUriOrBase64.startsWith('content://') || imageUriOrBase64.startsWith('ph://') || imageUriOrBase64.startsWith('blob:') || imageUriOrBase64.startsWith('http'))) {
+      blob = await uriToBlob(imageUriOrBase64);
+      await uploadBytes(storageRef, blob, { contentType: 'image/jpeg' });
+    } else {
+      // If we only have base64 or a data URI, convert data URI to native blob via uriToBlob
+      let dataUri = imageUriOrBase64;
+      if (!dataUri.startsWith('data:')) {
+        dataUri = `data:image/jpeg;base64,${dataUri}`;
+      }
+      blob = await uriToBlob(dataUri);
+      await uploadBytes(storageRef, blob, { contentType: 'image/jpeg' });
     }
-    await uploadString(storageRef, cleanB64, 'base64', { contentType: 'image/jpeg' });
-  } else {
-    const response = await fetch(imageUriOrBase64);
-    const blob = await response.blob();
-    await uploadBytes(storageRef, blob, { contentType: 'image/jpeg' });
-  }
 
-  const downloadUrl = await getDownloadURL(storageRef);
-  return downloadUrl;
+    const downloadUrl = await getDownloadURL(storageRef);
+    return downloadUrl;
+  } finally {
+    if (blob && typeof blob.close === 'function') {
+      try {
+        blob.close();
+      } catch (_) {}
+    }
+  }
 }
 
 export {

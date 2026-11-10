@@ -10,56 +10,113 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-  StatusBar,
   KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { updateUserGoals } from '../services/api';
+import { colors, radius, typography } from '../theme';
 
 const GOALS = [
-  { id: 'fat_loss', label: '🔥 Fat Loss', desc: 'Burn body fat while maintaining muscle mass', tag: 'High Protein • Deficit' },
-  { id: 'weight_loss', label: '📉 Weight Loss', desc: 'Steady caloric deficit for healthy weight drop', tag: 'Caloric Deficit' },
-  { id: 'muscle_building', label: '💪 Muscle Building', desc: 'Gain lean muscle mass with surplus protein', tag: 'Surplus • High Protein' },
-  { id: 'muscle_maintain', label: '⚖️ Maintenance', desc: 'Maintain current weight and optimize energy', tag: 'Balanced Energy' },
+  {
+    id: 'fat_loss',
+    label: 'Fat Loss & Conditioning',
+    tag: '20% Deficit • High Protein',
+    desc: 'Burn body fat while preserving lean muscle mass and optimizing definition.',
+  },
+  {
+    id: 'muscle_building',
+    label: 'Muscle Building & Hypertrophy',
+    tag: '12% Surplus • High Protein',
+    desc: 'Build lean muscle mass and increase recovery capacity with surplus protein.',
+  },
+  {
+    id: 'weight_loss',
+    label: 'Steady Weight Loss',
+    tag: '15% Deficit • Moderate Protein',
+    desc: 'Consistent caloric deficit designed for sustainable weekly scale reduction.',
+  },
+  {
+    id: 'muscle_maintain',
+    label: 'Maintenance & Athletic Tone',
+    tag: 'Energy Balance • Balanced Macros',
+    desc: 'Maintain current body weight, improve stamina, and boost daily energy.',
+  },
 ];
 
 const DIETS = [
-  { id: 'veg', label: '🥦 Vegetarian', desc: 'Plant foods, lentils, dairy & legumes' },
-  { id: 'non_veg', label: '🍗 Non-Vegetarian', desc: 'Chicken, fish, eggs & dairy' },
-  { id: 'vegan', label: '🌱 Vegan', desc: '100% plant-based, no dairy or eggs' },
-  { id: 'eggetarian', label: '🍳 Eggetarian', desc: 'Vegetarian plus eggs' },
+  {
+    id: 'veg',
+    label: 'Vegetarian',
+    desc: 'Plant foods, lentils, dairy, and legumes.',
+  },
+  {
+    id: 'non_veg',
+    label: 'Non-Vegetarian',
+    desc: 'Chicken, fish, eggs, dairy, and wholesome plant staples.',
+  },
+  {
+    id: 'eggetarian',
+    label: 'Eggetarian',
+    desc: 'Vegetarian meals supplemented with whole eggs.',
+  },
+  {
+    id: 'vegan',
+    label: 'Vegan',
+    desc: '100% plant-based with zero animal products or dairy.',
+  },
 ];
 
 const BUDGETS = [
-  { id: 'low_budget', label: '🪙 Pocket Friendly', desc: 'Budget staples: Chana, Rajma, Eggs, Rice & Seasonal Veggies', cost: '₹100-140/day' },
-  { id: 'moderate', label: '💳 Moderate', desc: 'Balanced variety: Paneer, Oats, Milk, Tofu, Local Chicken', cost: '₹180-250/day' },
-  { id: 'flexible', label: '🌟 Flexible', desc: 'High protein & gourmet items: Whey, Fish, Nuts, Avocados', cost: '₹300+/day' },
+  {
+    id: 'low_budget',
+    label: 'Pocket Friendly',
+    cost: '₹100–140 / day',
+    desc: 'Affordable staples: Chana, rajma, eggs, rice, and seasonal produce.',
+  },
+  {
+    id: 'moderate',
+    label: 'Balanced Moderate',
+    cost: '₹180–250 / day',
+    desc: 'Everyday variety: Paneer, oats, milk, tofu, and fresh chicken.',
+  },
+  {
+    id: 'flexible',
+    label: 'Performance & Gourmet',
+    cost: '₹300+ / day',
+    desc: 'Premium selection: Whey isolate, salmon, nuts, seeds, and avocados.',
+  },
 ];
 
 const ACTIVITIES = [
-  { id: 'sedentary', icon: '🪑', title: 'Sedentary', desc: 'Desk job, little to no workout' },
-  { id: 'light', icon: '🚶', title: 'Light', desc: '1–3 workouts or walks/week' },
-  { id: 'moderate', icon: '🏃', title: 'Moderate', desc: '3–5 regular workout days/week' },
-  { id: 'very_active', icon: '⚡', title: 'Very Active', desc: '6–7 intense workouts/heavy training' },
+  {
+    id: 'sedentary',
+    title: 'Sedentary',
+    schedule: '0–1 workouts/wk',
+    desc: 'Desk job, little to no structured exercise.',
+  },
+  {
+    id: 'light',
+    title: 'Lightly Active',
+    schedule: '1–2 workouts/wk',
+    desc: 'Light weekly workouts or daily brisk walking.',
+  },
+  {
+    id: 'moderate',
+    title: 'Moderately Active',
+    schedule: '3–5 workouts/wk',
+    desc: 'Regular gym sessions, running, or sport activities.',
+  },
+  {
+    id: 'very_active',
+    title: 'Very Active',
+    schedule: '6+ workouts/wk',
+    desc: 'Daily intense training, heavy lifting, or athlete workload.',
+  },
 ];
 
-const getGoalName = (id) => {
-  const g = GOALS.find((item) => item.id === id);
-  if (!g) return 'Goal';
-  return g.label.replace(/^[^\w]+/, '').trim();
-};
-
-const getDietName = (id) => {
-  const d = DIETS.find((item) => item.id === id);
-  if (!d) return 'Diet';
-  return d.label.replace(/^[^\w]+/, '').trim();
-};
-
-const getBudgetName = (id) => {
-  const b = BUDGETS.find((item) => item.id === id);
-  if (!b) return 'Budget';
-  return b.label.replace(/^[^\w]+/, '').trim();
-};
+const getGoalName = (id) => GOALS.find((item) => item.id === id)?.label.split('&')[0].trim() || 'Goal';
+const getDietName = (id) => DIETS.find((item) => item.id === id)?.label || 'Diet';
+const getBudgetName = (id) => BUDGETS.find((item) => item.id === id)?.label.split(' ')[0] || 'Budget';
 
 export const sanitizeWeightInput = (val) => {
   if (val === '' || val === null || val === undefined) return '';
@@ -135,24 +192,8 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
   const [loading, setLoading] = useState(false);
 
   const scrollViewRef = useRef(null);
-  const [scrollY, setScrollY] = useState(0);
-
-  const [cardOffsets, setCardOffsets] = useState({
-    gender: 70,
-    age: 180,
-    weight: 310,
-    height: 440,
-    activity: 600,
-  });
-
-  const handleCardLayout = (key, event) => {
-    const { y, height } = event.nativeEvent.layout;
-    const triggerY = Math.max(20, Math.round(y + height * 0.35));
-    setCardOffsets((prev) => (Math.abs(prev[key] - triggerY) < 5 ? prev : { ...prev, [key]: triggerY }));
-  };
 
   useEffect(() => {
-    setScrollY(0);
     scrollViewRef.current?.scrollTo({ y: 0, animated: false });
   }, [step]);
 
@@ -176,17 +217,17 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
   // Step Selectors with auto-advance
   const handleSelectGoal = (id) => {
     setGoalType(id);
-    setTimeout(() => setStep(2), 150);
+    setTimeout(() => setStep(2), 160);
   };
 
   const handleSelectDiet = (id) => {
     setDietType(id);
-    setTimeout(() => setStep(3), 150);
+    setTimeout(() => setStep(3), 160);
   };
 
   const handleSelectBudget = (id) => {
     setBudgetTier(id);
-    setTimeout(() => setStep(4), 150);
+    setTimeout(() => setStep(4), 160);
   };
 
   // Weight handlers
@@ -197,7 +238,6 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
       setWeightInput('');
       return;
     }
-
     const sanitized = sanitizeWeightInput(val);
     if (!/^[0-9]*\.?[0-9]?$/.test(sanitized)) {
       return;
@@ -291,32 +331,17 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
     handleHeightFtChange(newFt, newIn);
   };
 
-  // Age step
   const stepAge = (delta) => {
     setAge((prev) => Math.max(12, Math.min(99, Number(prev) + delta)));
   };
 
-  // Live Calculations (Mifflin-St Jeor Formula)
+  // Live Nutrition Projection
   const calcResults = useMemo(() => {
     const w = Number(weightKg) || 70;
     const h = Number(heightCm) || 170;
     const a = Number(age) || 25;
 
-    const bmiVal = w / ((h / 100) ** 2);
-    let bmiCategory = 'Normal';
-    let bmiColor = '#7BA05B';
-    if (bmiVal < 18.5) {
-      bmiCategory = 'Underweight';
-      bmiColor = '#D9A441';
-    } else if (bmiVal >= 25 && bmiVal < 30) {
-      bmiCategory = 'Overweight';
-      bmiColor = '#E8A020';
-    } else if (bmiVal >= 30) {
-      bmiCategory = 'Obese';
-      bmiColor = '#C7502F';
-    }
-
-    // BMR
+    // BMR (Mifflin-St Jeor)
     const bmr = gender === 'male'
       ? 10 * w + 6.25 * h - 5 * a + 5
       : 10 * w + 6.25 * h - 5 * a - 161;
@@ -326,35 +351,35 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
 
     let target = tdee;
     let goalLabel = 'Maintenance';
+    let proteinMultiplier = 1.8;
+
     if (goalType === 'fat_loss') {
       target = Math.round(tdee * 0.8);
       goalLabel = 'Fat Loss (-20%)';
+      proteinMultiplier = 2.2;
     } else if (goalType === 'weight_loss') {
       target = Math.round(tdee * 0.85);
       goalLabel = 'Weight Loss (-15%)';
+      proteinMultiplier = 1.9;
     } else if (goalType === 'muscle_building') {
       target = Math.round(tdee * 1.12);
       goalLabel = 'Muscle Building (+12%)';
+      proteinMultiplier = 2.0;
     }
 
+    target = Math.max(1200, Math.min(5500, target));
+    const proteinG = Math.round(Math.min(w * proteinMultiplier, (target * 0.35) / 4));
+    const fatG = Math.round((target * 0.25) / 9);
+    const carbsG = Math.round(Math.max(50, (target - (proteinG * 4 + fatG * 9)) / 4));
+
     return {
-      bmi: bmiVal.toFixed(1),
-      bmiCategory,
-      bmiColor,
-      bmr: Math.round(bmr),
-      tdee,
       target,
       goalLabel,
+      proteinG,
+      carbsG,
+      fatG,
     };
   }, [weightKg, heightCm, age, gender, activityLevel, goalType]);
-
-  const showGender = scrollY >= cardOffsets.gender;
-  const showAge = scrollY >= cardOffsets.age;
-  const showWeight = scrollY >= cardOffsets.weight;
-  const showHeight = scrollY >= cardOffsets.height;
-  const showActivity = scrollY >= cardOffsets.activity;
-
-  const hasAnySticky = showGender || showAge || showWeight || showHeight || showActivity;
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -392,14 +417,14 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          {/* Header & Step Bar */}
+          {/* Header */}
           <View style={styles.modalHeader}>
-            <View style={styles.headerTitleRow}>
-              <Text style={styles.headerIcon}>✨</Text>
-              <Text style={styles.headerTitle}>Personalization Wizard</Text>
+            <View>
+              <Text style={styles.headerTitle}>Fitness Profile & Goals</Text>
+              <Text style={styles.headerSub}>Step {step} of 4</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Text style={styles.closeText}>✕</Text>
+              <Text style={styles.closeText}>Close</Text>
             </TouchableOpacity>
           </View>
 
@@ -408,200 +433,56 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
             <View style={styles.progressTrack}>
               <View style={[styles.progressFill, { width: `${(step / 4) * 100}%` }]} />
             </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.stepLabelsRow}
-            >
+            <View style={styles.stepLabelsRow}>
               <TouchableOpacity
                 onPress={() => step > 1 && setStep(1)}
                 disabled={step <= 1}
-                activeOpacity={0.7}
-                style={step > 1 ? styles.completedStepBadge : styles.stepBadge}
+                style={[styles.stepTab, step === 1 && styles.stepTabActive, step > 1 && styles.stepTabCompleted]}
               >
-                <Text
-                  style={[
-                    styles.stepLabel,
-                    step === 1 && styles.stepLabelCurrent,
-                    step > 1 && styles.stepLabelCompleted,
-                  ]}
-                >
-                  {step > 1 ? `Goal (${getGoalName(goalType)})` : '1. Goal'}
+                <Text style={[styles.stepTabText, step === 1 && styles.stepTabTextActive]}>
+                  {step > 1 ? `1. ${getGoalName(goalType)}` : '1. Goal'}
                 </Text>
               </TouchableOpacity>
-
-              <Text style={styles.stepDivider}>›</Text>
 
               <TouchableOpacity
                 onPress={() => step > 2 && setStep(2)}
                 disabled={step <= 2}
-                activeOpacity={0.7}
-                style={step > 2 ? styles.completedStepBadge : styles.stepBadge}
+                style={[styles.stepTab, step === 2 && styles.stepTabActive, step > 2 && styles.stepTabCompleted]}
               >
-                <Text
-                  style={[
-                    styles.stepLabel,
-                    step === 2 && styles.stepLabelCurrent,
-                    step > 2 && styles.stepLabelCompleted,
-                  ]}
-                >
-                  {step > 2 ? `Diet (${getDietName(dietType)})` : '2. Diet'}
+                <Text style={[styles.stepTabText, step === 2 && styles.stepTabTextActive]}>
+                  {step > 2 ? `2. ${getDietName(dietType)}` : '2. Diet'}
                 </Text>
               </TouchableOpacity>
-
-              <Text style={styles.stepDivider}>›</Text>
 
               <TouchableOpacity
                 onPress={() => step > 3 && setStep(3)}
                 disabled={step <= 3}
-                activeOpacity={0.7}
-                style={step > 3 ? styles.completedStepBadge : styles.stepBadge}
+                style={[styles.stepTab, step === 3 && styles.stepTabActive, step > 3 && styles.stepTabCompleted]}
               >
-                <Text
-                  style={[
-                    styles.stepLabel,
-                    step === 3 && styles.stepLabelCurrent,
-                    step > 3 && styles.stepLabelCompleted,
-                  ]}
-                >
-                  {step > 3 ? `Budget (${getBudgetName(budgetTier)})` : '3. Budget'}
+                <Text style={[styles.stepTabText, step === 3 && styles.stepTabTextActive]}>
+                  {step > 3 ? `3. ${getBudgetName(budgetTier)}` : '3. Budget'}
                 </Text>
               </TouchableOpacity>
 
-              <Text style={styles.stepDivider}>›</Text>
-
-              <View style={styles.stepBadge}>
-                <Text style={[styles.stepLabel, step === 4 && styles.stepLabelCurrent]}>
-                  4. Metrics
+              <View style={[styles.stepTab, step === 4 && styles.stepTabActive]}>
+                <Text style={[styles.stepTabText, step === 4 && styles.stepTabTextActive]}>
+                  4. Profile
                 </Text>
               </View>
-            </ScrollView>
-          </View>
-
-          {/* Sticky Dynamic Metrics Summary Bar (appears dynamically and step-wise when scrolling in Step 4) */}
-          {step === 4 && hasAnySticky && (
-            <View style={styles.stickyMetricsBar}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.stickyMetricsScroll}
-              >
-                <Text style={styles.stickyMetricsTitle}>Selected:</Text>
-
-                {/* 1. Gender */}
-                {showGender && (
-                  <TouchableOpacity
-                    style={styles.stickyMetricChip}
-                    onPress={() => scrollViewRef.current?.scrollTo({ y: Math.max(0, (cardOffsets.gender || 70) - 100), animated: true })}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.stickyMetricChipText}>
-                      {gender === 'male' ? '👨 Male' : '👩 Female'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-
-                {/* 2. Age */}
-                {showAge && (
-                  <TouchableOpacity
-                    style={styles.stickyMetricChip}
-                    onPress={() => scrollViewRef.current?.scrollTo({ y: Math.max(0, (cardOffsets.age || 180) - 100), animated: true })}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.stickyMetricChipText}>
-                      🎂 {age} yrs
-                    </Text>
-                  </TouchableOpacity>
-                )}
-
-                {/* 3. Weight - with plus/minus stepper */}
-                {showWeight && (
-                  <View style={styles.miniStepperChip}>
-                    <TouchableOpacity
-                      style={styles.miniChipBtn}
-                      onPress={() => stepWeight(-0.5)}
-                      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-                      activeOpacity={0.6}
-                    >
-                      <Text style={styles.miniChipBtnText}>–</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => scrollViewRef.current?.scrollTo({ y: Math.max(0, (cardOffsets.weight || 310) - 100), animated: true })}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.stickyMetricChipText}>
-                        ⚖️ {weightInput || displayWeight} {weightUnit}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.miniChipBtn}
-                      onPress={() => stepWeight(0.5)}
-                      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-                      activeOpacity={0.6}
-                    >
-                      <Text style={styles.miniChipBtnText}>+</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-
-                {/* 4. Height - with plus/minus stepper */}
-                {showHeight && (
-                  <View style={styles.miniStepperChip}>
-                    <TouchableOpacity
-                      style={styles.miniChipBtn}
-                      onPress={() => (heightUnit === 'cm' ? stepHeight(-1) : stepInches(-1))}
-                      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-                      activeOpacity={0.6}
-                    >
-                      <Text style={styles.miniChipBtnText}>–</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => scrollViewRef.current?.scrollTo({ y: Math.max(0, (cardOffsets.height || 440) - 100), animated: true })}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.stickyMetricChipText}>
-                        📏 {heightUnit === 'cm' ? `${heightCm} cm` : `${feet}'${inches}"`}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.miniChipBtn}
-                      onPress={() => (heightUnit === 'cm' ? stepHeight(1) : stepInches(1))}
-                      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-                      activeOpacity={0.6}
-                    >
-                      <Text style={styles.miniChipBtnText}>+</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-
-                {/* 5. Activity */}
-                {showActivity && (
-                  <TouchableOpacity
-                    style={styles.stickyMetricChip}
-                    onPress={() => scrollViewRef.current?.scrollTo({ y: Math.max(0, (cardOffsets.activity || 600) - 100), animated: true })}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.stickyMetricChipText}>
-                      {ACTIVITIES.find((a) => a.id === activityLevel)?.icon || '🏃'}{' '}
-                      {ACTIVITIES.find((a) => a.id === activityLevel)?.title || 'Moderate'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </ScrollView>
             </View>
-          )}
+          </View>
 
           <ScrollView
             ref={scrollViewRef}
             contentContainerStyle={styles.scroll}
-            onScroll={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
-            scrollEventThrottle={16}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
             {/* STEP 1: GOALS */}
             {step === 1 && (
               <View style={styles.stepContainer}>
-                <Text style={styles.screenTitle}>🎯 What is your primary fitness goal?</Text>
-                <Text style={styles.screenSubtitle}>We will customize your daily calories & macros based on this target.</Text>
+                <Text style={styles.screenTitle}>What is your primary fitness goal?</Text>
+                <Text style={styles.screenSubtitle}>Your daily calorie and macronutrient targets will align with this objective.</Text>
 
                 <View style={styles.cardList}>
                   {GOALS.map((g) => {
@@ -614,7 +495,7 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
                         activeOpacity={0.7}
                       >
                         <View style={styles.cardTopRow}>
-                          <Text style={styles.cardLabel}>{g.label}</Text>
+                          <Text style={[styles.cardLabel, isSelected && styles.cardLabelActive]}>{g.label}</Text>
                           <View style={[styles.cardTag, isSelected && styles.cardTagActive]}>
                             <Text style={[styles.cardTagText, isSelected && styles.cardTagTextActive]}>{g.tag}</Text>
                           </View>
@@ -630,8 +511,8 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
             {/* STEP 2: DIET */}
             {step === 2 && (
               <View style={styles.stepContainer}>
-                <Text style={styles.screenTitle}>🥗 What is your dietary style?</Text>
-                <Text style={styles.screenSubtitle}>Your AI meal plans will only include recipes aligned with your diet.</Text>
+                <Text style={styles.screenTitle}>What is your dietary preference?</Text>
+                <Text style={styles.screenSubtitle}>Meal plans and recommendations will only include foods compatible with your choice.</Text>
 
                 <View style={styles.cardList}>
                   {DIETS.map((d) => {
@@ -643,7 +524,7 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
                         onPress={() => handleSelectDiet(d.id)}
                         activeOpacity={0.7}
                       >
-                        <Text style={styles.cardLabel}>{d.label}</Text>
+                        <Text style={[styles.cardLabel, isSelected && styles.cardLabelActive]}>{d.label}</Text>
                         <Text style={styles.cardDesc}>{d.desc}</Text>
                       </TouchableOpacity>
                     );
@@ -655,8 +536,8 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
             {/* STEP 3: BUDGET */}
             {step === 3 && (
               <View style={styles.stepContainer}>
-                <Text style={styles.screenTitle}>🪙 Select your daily food budget</Text>
-                <Text style={styles.screenSubtitle}>We'll tailor ingredients to match your preferred spend range.</Text>
+                <Text style={styles.screenTitle}>Select your daily grocery budget</Text>
+                <Text style={styles.screenSubtitle}>We will tailor recipes and ingredients to fit your everyday spending range.</Text>
 
                 <View style={styles.cardList}>
                   {BUDGETS.map((b) => {
@@ -669,9 +550,9 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
                         activeOpacity={0.7}
                       >
                         <View style={styles.cardTopRow}>
-                          <Text style={styles.cardLabel}>{b.label}</Text>
-                          <View style={styles.costBadge}>
-                            <Text style={styles.costBadgeText}>{b.cost}</Text>
+                          <Text style={[styles.cardLabel, isSelected && styles.cardLabelActive]}>{b.label}</Text>
+                          <View style={[styles.costBadge, isSelected && styles.costBadgeActive]}>
+                            <Text style={[styles.costBadgeText, isSelected && styles.costBadgeTextActive]}>{b.cost}</Text>
                           </View>
                         </View>
                         <Text style={styles.cardDesc}>{b.desc}</Text>
@@ -682,192 +563,211 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
               </View>
             )}
 
-            {/* STEP 4: BODY METRICS & ACTIVITY */}
+            {/* STEP 4: BODY PROFILE & ACTIVITY */}
             {step === 4 && (
               <View style={styles.stepContainer}>
-                <Text style={styles.screenTitle}>📏 Enter your personal stats</Text>
-                <Text style={styles.screenSubtitle}>Used to calculate your Basal Metabolic Rate (BMR) and daily targets.</Text>
+                <Text style={styles.screenTitle}>Your Body Profile & Activity</Text>
+                <Text style={styles.screenSubtitle}>Used to compute your baseline energy expenditure and precision macro targets.</Text>
 
-                {/* Gender Toggle */}
-                <View style={styles.metricCard} onLayout={(e) => handleCardLayout('gender', e)}>
-                  <Text style={styles.inputLabel}>👤 Gender</Text>
+                {/* Section 1: Biological Sex & Age */}
+                <View style={styles.metricCard}>
+                  <Text style={styles.cardSectionTitle}>Biological Sex & Age</Text>
+                  
+                  {/* Gender Segmented Control */}
                   <View style={styles.genderRow}>
                     <TouchableOpacity
                       style={[styles.genderBtn, gender === 'male' && styles.genderBtnActive]}
                       onPress={() => setGender('male')}
+                      activeOpacity={0.8}
                     >
-                      <Text style={[styles.genderBtnText, gender === 'male' && styles.genderBtnTextActive]}>👨 Male</Text>
+                      <Text style={[styles.genderBtnText, gender === 'male' && styles.genderBtnTextActive]}>
+                        Male
+                      </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.genderBtn, gender === 'female' && styles.genderBtnActive]}
                       onPress={() => setGender('female')}
+                      activeOpacity={0.8}
                     >
-                      <Text style={[styles.genderBtnText, gender === 'female' && styles.genderBtnTextActive]}>👩 Female</Text>
+                      <Text style={[styles.genderBtnText, gender === 'female' && styles.genderBtnTextActive]}>
+                        Female
+                      </Text>
                     </TouchableOpacity>
                   </View>
-                </View>
 
-                {/* Age Input (now right below Gender) */}
-                <View style={styles.metricCard} onLayout={(e) => handleCardLayout('age', e)}>
-                  <Text style={styles.inputLabel}>🎂 Age</Text>
+                  {/* Age Stepper */}
                   <View style={styles.stepperContainer}>
-                    <TouchableOpacity style={styles.stepperBtn} onPress={() => stepAge(-1)}>
-                      <Text style={styles.stepperBtnText}>–</Text>
-                    </TouchableOpacity>
-                    <View style={styles.stepperValWrapper}>
-                      <TextInput
-                        style={styles.stepperInput}
-                        value={String(age)}
-                        onChangeText={(v) => {
-                          setAge(Math.max(12, Math.min(99, parseInt(v, 10) || 25)));
-                        }}
-                        keyboardType="number-pad"
-                      />
-                      <Text style={styles.stepperUnit}>yrs</Text>
-                    </View>
-                    <TouchableOpacity style={styles.stepperBtn} onPress={() => stepAge(1)}>
-                      <Text style={styles.stepperBtnText}>+</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                {/* Weight Input */}
-                <View style={styles.metricCard} onLayout={(e) => handleCardLayout('weight', e)}>
-                  <View style={styles.metricHeaderRow}>
-                    <Text style={styles.inputLabel}>⚖️ Weight</Text>
-                    <View style={styles.unitToggleGroup}>
-                      <TouchableOpacity
-                        style={[styles.unitToggleBtn, weightUnit === 'kg' && styles.unitToggleBtnActive]}
-                        onPress={() => handleUnitToggle('kg')}
-                      >
-                        <Text style={[styles.unitToggleText, weightUnit === 'kg' && styles.unitToggleTextActive]}>kg</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.unitToggleBtn, weightUnit === 'lbs' && styles.unitToggleBtnActive]}
-                        onPress={() => handleUnitToggle('lbs')}
-                      >
-                        <Text style={[styles.unitToggleText, weightUnit === 'lbs' && styles.unitToggleTextActive]}>lbs</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  <View style={styles.stepperContainer}>
-                    <TouchableOpacity style={styles.stepperBtn} onPress={() => stepWeight(-0.5)}>
-                      <Text style={styles.stepperBtnText}>–</Text>
-                    </TouchableOpacity>
-                    <View style={styles.stepperValWrapper}>
-                      <TextInput
-                        style={styles.stepperInput}
-                        value={weightInput}
-                        onChangeText={handleWeightChange}
-                        onBlur={handleWeightBlur}
-                        keyboardType="decimal-pad"
-                        selectTextOnFocus
-                      />
-                      <Text style={styles.stepperUnit}>{weightUnit}</Text>
-                    </View>
-                    <TouchableOpacity style={styles.stepperBtn} onPress={() => stepWeight(0.5)}>
-                      <Text style={styles.stepperBtnText}>+</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                {/* Height Input */}
-                <View style={styles.metricCard} onLayout={(e) => handleCardLayout('height', e)}>
-                  <View style={styles.metricHeaderRow}>
-                    <Text style={styles.inputLabel}>📏 Height</Text>
-                    <View style={styles.unitToggleGroup}>
-                      <TouchableOpacity
-                        style={[styles.unitToggleBtn, heightUnit === 'cm' && styles.unitToggleBtnActive]}
-                        onPress={() => setHeightUnit('cm')}
-                      >
-                        <Text style={[styles.unitToggleText, heightUnit === 'cm' && styles.unitToggleTextActive]}>cm</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.unitToggleBtn, heightUnit === 'ft' && styles.unitToggleBtnActive]}
-                        onPress={() => setHeightUnit('ft')}
-                      >
-                        <Text style={[styles.unitToggleText, heightUnit === 'ft' && styles.unitToggleTextActive]}>ft/in</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  {heightUnit === 'cm' ? (
-                    <View style={styles.stepperContainer}>
-                      <TouchableOpacity style={styles.stepperBtn} onPress={() => stepHeight(-1)}>
+                    <Text style={styles.inputFieldLabel}>Age</Text>
+                    <View style={styles.stepperControl}>
+                      <TouchableOpacity style={styles.stepperBtn} onPress={() => stepAge(-1)} activeOpacity={0.6}>
                         <Text style={styles.stepperBtnText}>–</Text>
                       </TouchableOpacity>
                       <View style={styles.stepperValWrapper}>
                         <TextInput
                           style={styles.stepperInput}
-                          value={String(heightCm)}
+                          value={String(age)}
                           onChangeText={(v) => {
-                            setHeightCm(Math.max(100, Math.min(240, parseInt(v, 10) || 170)));
+                            setAge(Math.max(12, Math.min(99, parseInt(v, 10) || 25)));
                           }}
                           keyboardType="number-pad"
                         />
-                        <Text style={styles.stepperUnit}>cm</Text>
+                        <Text style={styles.stepperUnit}>years</Text>
                       </View>
-                      <TouchableOpacity style={styles.stepperBtn} onPress={() => stepHeight(1)}>
+                      <TouchableOpacity style={styles.stepperBtn} onPress={() => stepAge(1)} activeOpacity={0.6}>
                         <Text style={styles.stepperBtnText}>+</Text>
                       </TouchableOpacity>
                     </View>
-                  ) : (
-                    <View style={styles.ftInRow}>
-                      <View style={styles.ftInCol}>
-                        <TouchableOpacity style={styles.stepperMiniBtn} onPress={() => stepFeet(-1)}>
-                          <Text style={styles.stepperBtnText}>–</Text>
-                        </TouchableOpacity>
-                        <View style={styles.stepperValWrapper}>
-                          <TextInput
-                            style={styles.stepperInput}
-                            value={String(feet)}
-                            onChangeText={(v) => handleHeightFtChange(v, inches)}
-                            keyboardType="number-pad"
-                          />
-                          <Text style={styles.stepperUnit}>ft</Text>
-                        </View>
-                        <TouchableOpacity style={styles.stepperMiniBtn} onPress={() => stepFeet(1)}>
-                          <Text style={styles.stepperBtnText}>+</Text>
-                        </TouchableOpacity>
-                      </View>
+                  </View>
+                </View>
 
-                      <View style={styles.ftInCol}>
-                        <TouchableOpacity style={styles.stepperMiniBtn} onPress={() => stepInches(-1)}>
-                          <Text style={styles.stepperBtnText}>–</Text>
+                {/* Section 2: Weight & Height */}
+                <View style={styles.metricCard}>
+                  <Text style={styles.cardSectionTitle}>Height & Current Weight</Text>
+
+                  {/* Weight */}
+                  <View style={styles.metricSubSection}>
+                    <View style={styles.metricHeaderRow}>
+                      <Text style={styles.inputFieldLabel}>Current Weight</Text>
+                      <View style={styles.unitToggleGroup}>
+                        <TouchableOpacity
+                          style={[styles.unitToggleBtn, weightUnit === 'kg' && styles.unitToggleBtnActive]}
+                          onPress={() => handleUnitToggle('kg')}
+                        >
+                          <Text style={[styles.unitToggleText, weightUnit === 'kg' && styles.unitToggleTextActive]}>kg</Text>
                         </TouchableOpacity>
-                        <View style={styles.stepperValWrapper}>
-                          <TextInput
-                            style={styles.stepperInput}
-                            value={String(inches)}
-                            onChangeText={(v) => handleHeightFtChange(feet, v)}
-                            keyboardType="number-pad"
-                          />
-                          <Text style={styles.stepperUnit}>in</Text>
-                        </View>
-                        <TouchableOpacity style={styles.stepperMiniBtn} onPress={() => stepInches(1)}>
-                          <Text style={styles.stepperBtnText}>+</Text>
+                        <TouchableOpacity
+                          style={[styles.unitToggleBtn, weightUnit === 'lbs' && styles.unitToggleBtnActive]}
+                          onPress={() => handleUnitToggle('lbs')}
+                        >
+                          <Text style={[styles.unitToggleText, weightUnit === 'lbs' && styles.unitToggleTextActive]}>lbs</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
-                  )}
+
+                    <View style={styles.stepperControl}>
+                      <TouchableOpacity style={styles.stepperBtn} onPress={() => stepWeight(-0.5)} activeOpacity={0.6}>
+                        <Text style={styles.stepperBtnText}>–</Text>
+                      </TouchableOpacity>
+                      <View style={styles.stepperValWrapper}>
+                        <TextInput
+                          style={styles.stepperInput}
+                          value={weightInput}
+                          onChangeText={handleWeightChange}
+                          onBlur={handleWeightBlur}
+                          keyboardType="decimal-pad"
+                          selectTextOnFocus
+                        />
+                        <Text style={styles.stepperUnit}>{weightUnit}</Text>
+                      </View>
+                      <TouchableOpacity style={styles.stepperBtn} onPress={() => stepWeight(0.5)} activeOpacity={0.6}>
+                        <Text style={styles.stepperBtnText}>+</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* Height */}
+                  <View style={[styles.metricSubSection, { marginTop: 14 }]}>
+                    <View style={styles.metricHeaderRow}>
+                      <Text style={styles.inputFieldLabel}>Height</Text>
+                      <View style={styles.unitToggleGroup}>
+                        <TouchableOpacity
+                          style={[styles.unitToggleBtn, heightUnit === 'cm' && styles.unitToggleBtnActive]}
+                          onPress={() => setHeightUnit('cm')}
+                        >
+                          <Text style={[styles.unitToggleText, heightUnit === 'cm' && styles.unitToggleTextActive]}>cm</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.unitToggleBtn, heightUnit === 'ft' && styles.unitToggleBtnActive]}
+                          onPress={() => setHeightUnit('ft')}
+                        >
+                          <Text style={[styles.unitToggleText, heightUnit === 'ft' && styles.unitToggleTextActive]}>ft / in</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    {heightUnit === 'cm' ? (
+                      <View style={styles.stepperControl}>
+                        <TouchableOpacity style={styles.stepperBtn} onPress={() => stepHeight(-1)} activeOpacity={0.6}>
+                          <Text style={styles.stepperBtnText}>–</Text>
+                        </TouchableOpacity>
+                        <View style={styles.stepperValWrapper}>
+                          <TextInput
+                            style={styles.stepperInput}
+                            value={String(heightCm)}
+                            onChangeText={(v) => {
+                              setHeightCm(Math.max(100, Math.min(240, parseInt(v, 10) || 170)));
+                            }}
+                            keyboardType="number-pad"
+                          />
+                          <Text style={styles.stepperUnit}>cm</Text>
+                        </View>
+                        <TouchableOpacity style={styles.stepperBtn} onPress={() => stepHeight(1)} activeOpacity={0.6}>
+                          <Text style={styles.stepperBtnText}>+</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <View style={styles.ftInRow}>
+                        <View style={styles.ftInCol}>
+                          <TouchableOpacity style={styles.stepperMiniBtn} onPress={() => stepFeet(-1)} activeOpacity={0.6}>
+                            <Text style={styles.stepperBtnText}>–</Text>
+                          </TouchableOpacity>
+                          <View style={styles.stepperValWrapper}>
+                            <TextInput
+                              style={styles.stepperInput}
+                              value={String(feet)}
+                              onChangeText={(v) => handleHeightFtChange(v, inches)}
+                              keyboardType="number-pad"
+                            />
+                            <Text style={styles.stepperUnit}>ft</Text>
+                          </View>
+                          <TouchableOpacity style={styles.stepperMiniBtn} onPress={() => stepFeet(1)} activeOpacity={0.6}>
+                            <Text style={styles.stepperBtnText}>+</Text>
+                          </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.ftInCol}>
+                          <TouchableOpacity style={styles.stepperMiniBtn} onPress={() => stepInches(-1)} activeOpacity={0.6}>
+                            <Text style={styles.stepperBtnText}>–</Text>
+                          </TouchableOpacity>
+                          <View style={styles.stepperValWrapper}>
+                            <TextInput
+                              style={styles.stepperInput}
+                              value={String(inches)}
+                              onChangeText={(v) => handleHeightFtChange(feet, v)}
+                              keyboardType="number-pad"
+                            />
+                            <Text style={styles.stepperUnit}>in</Text>
+                          </View>
+                          <TouchableOpacity style={styles.stepperMiniBtn} onPress={() => stepInches(1)} activeOpacity={0.6}>
+                            <Text style={styles.stepperBtnText}>+</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    )}
+                  </View>
                 </View>
 
-                {/* Activity Level */}
-                <View onLayout={(e) => handleCardLayout('activity', e)}>
-                  <Text style={[styles.inputLabel, { marginTop: 14, marginBottom: 8 }]}>⚡ Activity Level</Text>
-                  <View style={styles.activityGrid}>
+                {/* Section 3: Activity Level */}
+                <View style={styles.metricCard}>
+                  <Text style={styles.cardSectionTitle}>Weekly Activity Level</Text>
+                  <Text style={styles.cardSectionSub}>Select the category matching your average weekly exercise</Text>
+
+                  <View style={styles.activityList}>
                     {ACTIVITIES.map((act) => {
                       const isSelected = activityLevel === act.id;
                       return (
                         <TouchableOpacity
                           key={act.id}
-                          style={[styles.activityCard, isSelected && styles.activityCardActive]}
+                          style={[styles.activityItem, isSelected && styles.activityItemActive]}
                           onPress={() => setActivityLevel(act.id)}
                           activeOpacity={0.7}
                         >
-                          <Text style={styles.activityIcon}>{act.icon}</Text>
-                          <Text style={[styles.activityTitle, isSelected && styles.activityTitleActive]}>{act.title}</Text>
+                          <View style={styles.activityTopRow}>
+                            <Text style={[styles.activityTitle, isSelected && styles.activityTitleActive]}>{act.title}</Text>
+                            <View style={[styles.activityPill, isSelected && styles.activityPillActive]}>
+                              <Text style={[styles.activityPillText, isSelected && styles.activityPillTextActive]}>{act.schedule}</Text>
+                            </View>
+                          </View>
                           <Text style={styles.activityDesc}>{act.desc}</Text>
                         </TouchableOpacity>
                       );
@@ -875,38 +775,45 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
                   </View>
                 </View>
 
-                {/* Live Target Projection Preview Card */}
-                <View style={styles.liveCalcCard}>
-                  <Text style={styles.liveCalcHeader}>📊 LIVE TARGET PROJECTION</Text>
-                  <View style={styles.calcMetricsRow}>
-                    <View style={styles.calcMetricBox}>
-                      <Text style={styles.calcMetricVal}>{calcResults.bmr}</Text>
-                      <Text style={styles.calcMetricLbl}>BMR kcal</Text>
-                    </View>
-                    <View style={styles.calcMetricBox}>
-                      <Text style={styles.calcMetricVal}>{calcResults.tdee}</Text>
-                      <Text style={styles.calcMetricLbl}>TDEE kcal</Text>
-                    </View>
-                    <View style={styles.calcMetricBox}>
-                      <Text style={[styles.calcMetricVal, { color: calcResults.bmiColor }]}>{calcResults.bmi}</Text>
-                      <Text style={styles.calcMetricLbl}>{calcResults.bmiCategory}</Text>
+                {/* Section 4: Live Target Preview */}
+                <View style={styles.previewBox}>
+                  <View style={styles.previewTopRow}>
+                    <Text style={styles.previewHeading}>ESTIMATED DAILY TARGET</Text>
+                    <View style={styles.previewGoalBadge}>
+                      <Text style={styles.previewGoalText}>{calcResults.goalLabel}</Text>
                     </View>
                   </View>
 
-                  <View style={styles.targetCaloriesHighlight}>
-                    <Text style={styles.targetCaloriesLabel}>{calcResults.goalLabel} Target</Text>
-                    <Text style={styles.targetCaloriesValue}>{calcResults.target} kcal / day</Text>
+                  <Text style={styles.previewCalorieVal}>
+                    {calcResults.target.toLocaleString()} <Text style={styles.previewCalorieUnit}>kcal / day</Text>
+                  </Text>
+
+                  <View style={styles.macroSplitRow}>
+                    <View style={styles.macroSplitItem}>
+                      <Text style={[styles.macroSplitNum, { color: colors.protein || '#10B981' }]}>{calcResults.proteinG}g</Text>
+                      <Text style={styles.macroSplitLabel}>Protein</Text>
+                    </View>
+                    <View style={styles.macroDivider} />
+                    <View style={styles.macroSplitItem}>
+                      <Text style={[styles.macroSplitNum, { color: colors.carbs || '#38BDF8' }]}>{calcResults.carbsG}g</Text>
+                      <Text style={styles.macroSplitLabel}>Carbs</Text>
+                    </View>
+                    <View style={styles.macroDivider} />
+                    <View style={styles.macroSplitItem}>
+                      <Text style={[styles.macroSplitNum, { color: colors.fatText || '#F59E0B' }]}>{calcResults.fatG}g</Text>
+                      <Text style={styles.macroSplitLabel}>Fat</Text>
+                    </View>
                   </View>
                 </View>
               </View>
             )}
           </ScrollView>
 
-          {/* Bottom Navigation Buttons */}
+          {/* Bottom Bar Navigation */}
           <View style={styles.bottomBar}>
             {step > 1 ? (
               <TouchableOpacity style={styles.backBtn} onPress={() => setStep(step - 1)}>
-                <Text style={styles.backBtnText}>← Back</Text>
+                <Text style={styles.backBtnText}>Back</Text>
               </TouchableOpacity>
             ) : (
               <View style={{ width: 80 }} />
@@ -914,7 +821,7 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
 
             {step < 4 ? (
               <TouchableOpacity style={styles.nextBtn} onPress={() => setStep(step + 1)}>
-                <Text style={styles.nextBtnText}>Next →</Text>
+                <Text style={styles.nextBtnText}>Continue</Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
@@ -923,9 +830,9 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
                 disabled={loading}
               >
                 {loading ? (
-                  <ActivityIndicator color="#221803" />
+                  <ActivityIndicator color="#181410" />
                 ) : (
-                  <Text style={styles.submitBtnText}>Save & Generate AI Plan ✨</Text>
+                  <Text style={styles.submitBtnText}>Save Goals & Continue</Text>
                 )}
               </TouchableOpacity>
             )}
@@ -939,7 +846,7 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#181410',
+    backgroundColor: '#0C0A09',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -947,180 +854,111 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: '#221D17',
+    backgroundColor: '#181410',
     borderBottomWidth: 1,
-    borderBottomColor: '#3A3128',
-  },
-  headerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerIcon: {
-    fontSize: 18,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
   },
   headerTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#F4ECDD',
+    fontWeight: '700',
+    color: '#F5F5F4',
+    letterSpacing: -0.2,
+  },
+  headerSub: {
+    fontSize: 12,
+    color: '#A8A29E',
+    marginTop: 2,
   },
   closeBtn: {
-    padding: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderRadius: 8,
   },
   closeText: {
-    color: '#A79A85',
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: '#A8A29E',
+    fontSize: 13,
+    fontWeight: '600',
   },
   progressSection: {
-    backgroundColor: '#221D17',
+    backgroundColor: '#181410',
     paddingHorizontal: 20,
-    paddingBottom: 14,
+    paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#3A3128',
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
   },
   progressTrack: {
-    height: 4,
-    backgroundColor: '#2D261F',
+    height: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 2,
     overflow: 'hidden',
     marginBottom: 8,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#E8A020',
+    backgroundColor: '#F59E0B',
     borderRadius: 2,
   },
   stepLabelsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 6,
-    paddingVertical: 2,
   },
-  stepBadge: {
-    paddingHorizontal: 4,
-    paddingVertical: 3,
-  },
-  completedStepBadge: {
-    backgroundColor: '#2D261F',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#3A3128',
-  },
-  stepLabel: {
-    fontSize: 11,
-    color: '#706555',
-    fontWeight: '600',
-  },
-  stepLabelActive: {
-    color: '#E8A020',
-  },
-  stepLabelCurrent: {
-    color: '#F4ECDD',
-    fontWeight: '700',
-  },
-  stepLabelCompleted: {
-    color: '#E8A020',
-    fontWeight: '600',
-  },
-  stepDivider: {
-    color: '#554A3D',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  stickyMetricsBar: {
-    backgroundColor: '#1E1914',
-    borderBottomWidth: 1,
-    borderBottomColor: '#3A3128',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  stickyMetricsScroll: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stickyMetricsTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#A79A85',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  stickyMetricChip: {
-    backgroundColor: '#2D261F',
-    borderWidth: 1,
-    borderColor: '#E8A020',
-    borderRadius: 8,
-    paddingHorizontal: 9,
+  stepTab: {
     paddingVertical: 4,
-    flexDirection: 'row',
-    alignItems: 'center',
+    paddingHorizontal: 6,
+    borderRadius: 6,
   },
-  stickyMetricChipText: {
-    color: '#F4ECDD',
-    fontSize: 12,
+  stepTabActive: {
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+  },
+  stepTabCompleted: {
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+  },
+  stepTabText: {
+    fontSize: 11,
+    color: '#78716C',
     fontWeight: '600',
   },
-  miniStepperChip: {
-    backgroundColor: '#2D261F',
-    borderWidth: 1,
-    borderColor: '#E8A020',
-    borderRadius: 8,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  miniChipBtn: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(232, 160, 32, 0.12)',
-    borderRadius: 5,
-  },
-  miniChipBtnText: {
-    color: '#E8A020',
-    fontSize: 15,
-    fontWeight: 'bold',
-    lineHeight: 17,
+  stepTabTextActive: {
+    color: '#F59E0B',
+    fontWeight: '700',
   },
   scroll: {
-    padding: 20,
-    paddingBottom: 40,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 36,
   },
   stepContainer: {
-    gap: 16,
+    flex: 1,
   },
   screenTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#F4ECDD',
-    marginBottom: 4,
+    fontWeight: '700',
+    color: '#F5F5F4',
+    letterSpacing: -0.3,
+    marginBottom: 6,
   },
   screenSubtitle: {
     fontSize: 13,
-    color: '#A79A85',
+    color: '#A8A29E',
     lineHeight: 18,
-    marginBottom: 10,
+    marginBottom: 20,
   },
   cardList: {
     gap: 12,
   },
   cardItem: {
-    backgroundColor: '#221D17',
+    backgroundColor: '#181410',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 14,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#3A3128',
   },
   cardItemActive: {
-    borderColor: '#E8A020',
-    backgroundColor: '#2A2219',
+    borderColor: '#F59E0B',
+    backgroundColor: 'rgba(245, 158, 11, 0.08)',
   },
   cardTopRow: {
     flexDirection: 'row',
@@ -1129,262 +967,332 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   cardLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#F4ECDD',
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#F5F5F4',
+    flex: 1,
   },
-  cardDesc: {
-    fontSize: 13,
-    color: '#A79A85',
-    lineHeight: 18,
+  cardLabelActive: {
+    color: '#F59E0B',
   },
   cardTag: {
-    backgroundColor: '#2C251D',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    paddingVertical: 3,
     paddingHorizontal: 8,
-    paddingVertical: 4,
     borderRadius: 6,
   },
   cardTagActive: {
-    backgroundColor: 'rgba(232, 160, 32, 0.2)',
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
   },
   cardTagText: {
-    color: '#A79A85',
     fontSize: 11,
     fontWeight: '600',
+    color: '#A8A29E',
   },
   cardTagTextActive: {
-    color: '#E8A020',
+    color: '#F59E0B',
+  },
+  cardDesc: {
+    fontSize: 13,
+    color: '#A8A29E',
+    lineHeight: 18,
   },
   costBadge: {
-    backgroundColor: 'rgba(123, 160, 91, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    paddingVertical: 3,
     paddingHorizontal: 8,
-    paddingVertical: 4,
     borderRadius: 6,
   },
+  costBadgeActive: {
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+  },
   costBadgeText: {
-    color: '#7BA05B',
     fontSize: 11,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    color: '#A8A29E',
+  },
+  costBadgeTextActive: {
+    color: '#F59E0B',
   },
   metricCard: {
-    backgroundColor: '#221D17',
+    backgroundColor: '#181410',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 14,
     padding: 16,
+    marginBottom: 14,
+  },
+  cardSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#F5F5F4',
+    marginBottom: 2,
+  },
+  cardSectionSub: {
+    fontSize: 12,
+    color: '#A8A29E',
+    marginBottom: 12,
+  },
+  metricSubSection: {
+    marginTop: 4,
+  },
+  genderRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+    marginBottom: 12,
+  },
+  genderBtn: {
+    flex: 1,
+    height: 42,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
     borderWidth: 1,
-    borderColor: '#3A3128',
-    marginBottom: 10,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  genderBtnActive: {
+    borderColor: '#F59E0B',
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+  },
+  genderBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#A8A29E',
+  },
+  genderBtnTextActive: {
+    color: '#F59E0B',
+    fontWeight: '700',
   },
   metricHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#F4ECDD',
-  },
-  genderRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 10,
-  },
-  genderBtn: {
-    flex: 1,
-    backgroundColor: '#181410',
-    borderWidth: 1,
-    borderColor: '#3A3128',
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  genderBtnActive: {
-    borderColor: '#E8A020',
-    backgroundColor: '#2A2219',
-  },
-  genderBtnText: {
-    color: '#A79A85',
-    fontSize: 14,
+  inputFieldLabel: {
+    fontSize: 13,
     fontWeight: '600',
-  },
-  genderBtnTextActive: {
-    color: '#E8A020',
-    fontWeight: 'bold',
+    color: '#A8A29E',
   },
   unitToggleGroup: {
     flexDirection: 'row',
-    backgroundColor: '#181410',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
     borderRadius: 8,
     padding: 2,
     borderWidth: 1,
-    borderColor: '#3A3128',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   unitToggleBtn: {
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 3,
     borderRadius: 6,
   },
   unitToggleBtnActive: {
-    backgroundColor: '#E8A020',
+    backgroundColor: '#F59E0B',
   },
   unitToggleText: {
-    color: '#A79A85',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
+    color: '#A8A29E',
   },
   unitToggleTextActive: {
-    color: '#221803',
-    fontWeight: 'bold',
+    color: '#181410',
+    fontWeight: '700',
   },
   stepperContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#181410',
+    alignItems: 'center',
+  },
+  stepperControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#3A3128',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     padding: 4,
   },
   stepperBtn: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#221D17',
-    borderRadius: 8,
-  },
-  stepperMiniBtn: {
     width: 36,
     height: 36,
-    alignItems: 'center',
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
     justifyContent: 'center',
-    backgroundColor: '#221D17',
-    borderRadius: 6,
+    alignItems: 'center',
   },
   stepperBtnText: {
-    color: '#E8A020',
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: 'bold',
+    color: '#F5F5F4',
   },
   stepperValWrapper: {
+    flex: 1,
     flexDirection: 'row',
-    alignItems: 'baseline',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 12,
     gap: 4,
   },
   stepperInput: {
-    color: '#F4ECDD',
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#F5F5F4',
     textAlign: 'center',
-    minWidth: 50,
+    minWidth: 40,
+    paddingVertical: 4,
   },
   stepperUnit: {
-    color: '#A79A85',
     fontSize: 13,
+    fontWeight: '600',
+    color: '#A8A29E',
   },
   ftInRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
   ftInCol: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#181410',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#3A3128',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     padding: 4,
   },
-  activityGrid: {
-    gap: 10,
-  },
-  activityCard: {
-    flexDirection: 'row',
+  stepperMiniBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#221D17',
-    borderRadius: 12,
-    padding: 12,
+  },
+  activityList: {
+    gap: 8,
+    marginTop: 6,
+  },
+  activityItem: {
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
     borderWidth: 1,
-    borderColor: '#3A3128',
-    gap: 12,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderRadius: 10,
+    padding: 12,
   },
-  activityCardActive: {
-    borderColor: '#E8A020',
-    backgroundColor: '#2A2219',
+  activityItemActive: {
+    borderColor: '#F59E0B',
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
   },
-  activityIcon: {
-    fontSize: 22,
+  activityTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
   },
   activityTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#F4ECDD',
-    width: 90,
+    fontWeight: '700',
+    color: '#F5F5F4',
   },
   activityTitleActive: {
-    color: '#E8A020',
+    color: '#F59E0B',
+  },
+  activityPill: {
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+  },
+  activityPillActive: {
+    backgroundColor: 'rgba(245, 158, 11, 0.25)',
+  },
+  activityPillText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#A8A29E',
+  },
+  activityPillTextActive: {
+    color: '#F59E0B',
   },
   activityDesc: {
-    flex: 1,
     fontSize: 12,
-    color: '#A79A85',
+    color: '#A8A29E',
+    lineHeight: 16,
   },
-  liveCalcCard: {
-    backgroundColor: '#221D17',
+  previewBox: {
+    backgroundColor: '#181410',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
     borderRadius: 14,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#E8A020',
-    marginTop: 10,
-    gap: 12,
+    marginTop: 4,
   },
-  liveCalcHeader: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: '#E8A020',
-    letterSpacing: 1,
-    textAlign: 'center',
-  },
-  calcMetricsRow: {
+  previewTopRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    borderBottomWidth: 1,
-    borderBottomColor: '#2D261F',
-    paddingBottom: 10,
-  },
-  calcMetricBox: {
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 8,
   },
-  calcMetricVal: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#F4ECDD',
-  },
-  calcMetricLbl: {
+  previewHeading: {
     fontSize: 11,
-    color: '#A79A85',
-    marginTop: 2,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    color: '#A8A29E',
   },
-  targetCaloriesHighlight: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(232, 160, 32, 0.12)',
-    paddingVertical: 10,
-    borderRadius: 10,
+  previewGoalBadge: {
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
   },
-  targetCaloriesLabel: {
-    fontSize: 12,
-    color: '#A79A85',
+  previewGoalText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#F59E0B',
+  },
+  previewCalorieVal: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#F5F5F4',
+    letterSpacing: -0.5,
+    marginBottom: 12,
+  },
+  previewCalorieUnit: {
+    fontSize: 14,
     fontWeight: '600',
+    color: '#A8A29E',
   },
-  targetCaloriesValue: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#E8A020',
-    marginTop: 2,
+  macroSplitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  macroSplitItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  macroSplitNum: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  macroSplitLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#A8A29E',
+  },
+  macroDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
   bottomBar: {
     flexDirection: 'row',
@@ -1392,43 +1300,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: '#221D17',
+    backgroundColor: '#181410',
     borderTopWidth: 1,
-    borderTopColor: '#3A3128',
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    gap: 12,
   },
   backBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#2C251D',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderRadius: 10,
   },
   backBtnText: {
-    color: '#A79A85',
+    color: '#F5F5F4',
     fontSize: 14,
     fontWeight: '600',
   },
   nextBtn: {
-    backgroundColor: '#E8A020',
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+    flex: 1,
+    paddingVertical: 12,
+    backgroundColor: '#F59E0B',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   nextBtnText: {
-    color: '#221803',
+    color: '#181410',
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   submitBtn: {
     flex: 1,
-    marginLeft: 12,
-    backgroundColor: '#E8A020',
     paddingVertical: 12,
+    backgroundColor: '#F59E0B',
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   submitBtnText: {
-    color: '#221803',
+    color: '#181410',
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
 });

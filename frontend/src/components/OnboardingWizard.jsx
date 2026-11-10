@@ -4,49 +4,35 @@ import { useState, useEffect, useMemo } from "react";
 import styles from "./OnboardingWizard.module.css";
 
 const GOALS = [
-  { id: "fat_loss", label: "🔥 Fat Loss", desc: "Burn body fat while maintaining muscle mass", tag: "High Protein • Deficit" },
-  { id: "weight_loss", label: "📉 Weight Loss", desc: "Steady caloric deficit for healthy weight drop", tag: "Caloric Deficit" },
-  { id: "muscle_building", label: "💪 Muscle Building", desc: "Gain lean muscle mass with surplus protein", tag: "Surplus • High Protein" },
-  { id: "muscle_maintain", label: "⚖️ Maintenance", desc: "Maintain current weight and optimize energy", tag: "Balanced Energy" },
+  { id: "fat_loss", label: "Fat Loss & Conditioning", desc: "Burn body fat while preserving lean muscle mass", tag: "20% Deficit • High Protein" },
+  { id: "muscle_building", label: "Muscle Building & Hypertrophy", desc: "Build lean muscle mass with surplus protein", tag: "12% Surplus • High Protein" },
+  { id: "weight_loss", label: "Steady Weight Loss", desc: "Consistent caloric deficit for sustainable scale reduction", tag: "15% Deficit • Moderate Protein" },
+  { id: "muscle_maintain", label: "Maintenance & Athletic Tone", desc: "Maintain current weight and optimize energy", tag: "Energy Balance" },
 ];
 
 const DIETS = [
-  { id: "veg", label: "🥦 Vegetarian", desc: "Plant foods, lentils, dairy & legumes" },
-  { id: "non_veg", label: "🍗 Non-Vegetarian", desc: "Chicken, fish, eggs & dairy" },
-  { id: "vegan", label: "🌱 Vegan", desc: "100% plant-based, no dairy or eggs" },
-  { id: "eggetarian", label: "🍳 Eggetarian", desc: "Vegetarian plus eggs" },
+  { id: "veg", label: "Vegetarian", desc: "Plant foods, lentils, dairy & legumes" },
+  { id: "non_veg", label: "Non-Vegetarian", desc: "Chicken, fish, eggs & dairy" },
+  { id: "eggetarian", label: "Eggetarian", desc: "Vegetarian plus eggs" },
+  { id: "vegan", label: "Vegan", desc: "100% plant-based, no dairy or eggs" },
 ];
 
 const BUDGETS = [
-  { id: "low_budget", label: "🪙 Pocket Friendly", desc: "Budget staples: Chana, Rajma, Eggs, Rice & Seasonal Veggies", cost: "₹100-140/day" },
-  { id: "moderate", label: "💳 Moderate", desc: "Balanced variety: Paneer, Oats, Milk, Tofu, Local Chicken", cost: "₹180-250/day" },
-  { id: "flexible", label: "🌟 Flexible", desc: "High protein & gourmet items: Whey, Fish, Nuts, Avocados", cost: "₹300+/day" },
+  { id: "low_budget", label: "Pocket Friendly", desc: "Budget staples: Chana, Rajma, Eggs, Rice & Seasonal Veggies", cost: "₹100–140/day" },
+  { id: "moderate", label: "Balanced Moderate", desc: "Everyday variety: Paneer, Oats, Milk, Tofu, Local Chicken", cost: "₹180–250/day" },
+  { id: "flexible", label: "Performance & Gourmet", desc: "High protein & gourmet: Whey, Fish, Nuts, Avocados", cost: "₹300+/day" },
 ];
 
 const ACTIVITIES = [
-  { id: "sedentary", icon: "🪑", title: "Sedentary", desc: "Desk job, little to no workout" },
-  { id: "light", icon: "🚶", title: "Light", desc: "1–3 workouts or walks/week" },
-  { id: "moderate", icon: "🏃", title: "Moderate", desc: "3–5 regular workout days/week" },
-  { id: "very_active", icon: "⚡", title: "Very Active", desc: "6–7 intense workouts/heavy training" },
+  { id: "sedentary", title: "Sedentary", desc: "Desk job, little to no workout", schedule: "0–1 workouts/wk" },
+  { id: "light", title: "Lightly Active", desc: "1–2 workouts or brisk walks/week", schedule: "1–2 workouts/wk" },
+  { id: "moderate", title: "Moderately Active", desc: "3–5 regular workout days/week", schedule: "3–5 workouts/wk" },
+  { id: "very_active", title: "Very Active", desc: "6+ intense workouts/heavy training", schedule: "6+ workouts/wk" },
 ];
 
-const getGoalName = (id) => {
-  const g = GOALS.find((item) => item.id === id);
-  if (!g) return "Goal";
-  return g.label.replace(/^[^\w]+/, "").trim();
-};
-
-const getDietName = (id) => {
-  const d = DIETS.find((item) => item.id === id);
-  if (!d) return "Diet";
-  return d.label.replace(/^[^\w]+/, "").trim();
-};
-
-const getBudgetName = (id) => {
-  const b = BUDGETS.find((item) => item.id === id);
-  if (!b) return "Budget";
-  return b.label.replace(/^[^\w]+/, "").trim();
-};
+const getGoalName = (id) => GOALS.find((item) => item.id === id)?.label.split("&")[0].trim() || "Goal";
+const getDietName = (id) => DIETS.find((item) => item.id === id)?.label || "Diet";
+const getBudgetName = (id) => BUDGETS.find((item) => item.id === id)?.label.split(" ")[0] || "Budget";
 
 export default function OnboardingWizard({ initialSettings, onComplete, onCancel }) {
   const [step, setStep] = useState(1);
@@ -289,8 +275,8 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
           {/* SCREEN 1: GOAL */}
           {step === 1 && (
             <div className={styles.stepSlide}>
-              <h2 className={styles.stepTitle}>🎯 What is your primary fitness goal?</h2>
-              <p className={styles.stepSubtitle}>We will customize your daily calories & macros based on this target.</p>
+              <h2 className={styles.stepTitle}>What is your primary fitness goal?</h2>
+              <p className={styles.stepSubtitle}>Your daily calorie and macronutrient targets will align with this objective.</p>
               
               <div className={styles.cardGrid2}>
                 {GOALS.map((g) => (
@@ -313,7 +299,7 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
           {/* SCREEN 2: DIET PREFERENCE */}
           {step === 2 && (
             <div className={styles.stepSlide}>
-              <h2 className={styles.stepTitle}>🥗 What is your dietary preference?</h2>
+              <h2 className={styles.stepTitle}>What is your dietary preference?</h2>
               <p className={styles.stepSubtitle}>AI meal suggestions will exclusively follow your food rules.</p>
               
               <div className={styles.cardGrid2}>
@@ -334,7 +320,7 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
           {/* SCREEN 3: BUDGET TIER */}
           {step === 3 && (
             <div className={styles.stepSlide}>
-              <h2 className={styles.stepTitle}>🪙 What is your daily food budget preference?</h2>
+              <h2 className={styles.stepTitle}>What is your daily food budget preference?</h2>
               <p className={styles.stepSubtitle}>Get delicious meal options optimized for local market prices.</p>
               
               <div className={styles.cardGrid3}>
@@ -356,14 +342,14 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
           {/* SCREEN 4: BODY METRICS */}
           {step === 4 && (
             <form onSubmit={handleSubmit} className={styles.stepSlide}>
-              <h2 className={styles.stepTitle}>📏 What are your body metrics?</h2>
+              <h2 className={styles.stepTitle}>Your Body Profile & Activity</h2>
               <p className={styles.stepSubtitle}>Used for BMR & TDEE calculation to determine exact macronutrient splits.</p>
 
               <div className={styles.metricsFormGrid}>
                 {/* Weight Input */}
                 <div className={styles.metricCardBox}>
                   <div className={styles.metricHeader}>
-                    <label className={styles.inputLabel}>⚖️ Current Weight</label>
+                    <label className={styles.inputLabel}>Current Weight</label>
                     <div className={styles.unitToggleGroup}>
                       <button
                         type="button"
@@ -407,7 +393,7 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
                 {/* Height Input */}
                 <div className={styles.metricCardBox}>
                   <div className={styles.metricHeader}>
-                    <label className={styles.inputLabel}>📏 Height</label>
+                    <label className={styles.inputLabel}>Height</label>
                     <div className={styles.unitToggleGroup}>
                       <button
                         type="button"
@@ -496,7 +482,7 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
 
                 {/* Age Input */}
                 <div className={styles.metricCardBox}>
-                  <label className={styles.inputLabel}>🎂 Age</label>
+                  <label className={styles.inputLabel}>Age</label>
                   <div className={styles.stepperContainer}>
                     <button type="button" className={styles.stepBtn} onClick={() => stepAge(-1)}>
                       –
@@ -521,21 +507,21 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
 
                 {/* Gender Segmented Button */}
                 <div className={styles.metricCardBox}>
-                  <label className={styles.inputLabel}>⚧ Gender</label>
+                  <label className={styles.inputLabel}>Biological Sex</label>
                   <div className={styles.genderPillGroup}>
                     <button
                       type="button"
                       className={`${styles.genderPill} ${gender === "male" ? styles.genderActive : ""}`}
                       onClick={() => setGender("male")}
                     >
-                      <span className={styles.genderIcon}>👨</span> Male
+                      Male
                     </button>
                     <button
                       type="button"
                       className={`${styles.genderPill} ${gender === "female" ? styles.genderActive : ""}`}
                       onClick={() => setGender("female")}
                     >
-                      <span className={styles.genderIcon}>👩</span> Female
+                      Female
                     </button>
                   </div>
                 </div>
@@ -543,7 +529,7 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
 
               {/* Activity Level Cards */}
               <div className={styles.activitySection}>
-                <label className={styles.inputLabel}>🏃 Daily Activity Level</label>
+                <label className={styles.inputLabel}>Weekly Activity Level</label>
                 <div className={styles.activityGrid}>
                   {ACTIVITIES.map((act) => (
                     <button
@@ -552,9 +538,8 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
                       className={`${styles.activityCard} ${activityLevel === act.id ? styles.activityActive : ""}`}
                       onClick={() => setActivityLevel(act.id)}
                     >
-                      <div className={styles.activityIcon}>{act.icon}</div>
                       <div className={styles.activityInfo}>
-                        <span className={styles.activityTitle}>{act.title}</span>
+                        <span className={styles.activityTitle}>{act.title} ({act.schedule})</span>
                         <span className={styles.activityDesc}>{act.desc}</span>
                       </div>
                       {activityLevel === act.id && <span className={styles.checkMark}>✓</span>}
@@ -566,7 +551,7 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
               {/* Live Preview Calorie & BMI Card */}
               <div className={styles.liveCalculationBox}>
                 <div className={styles.liveHeader}>
-                  <span className={styles.liveTitle}>📊 Live Metabolic Estimate</span>
+                  <span className={styles.liveTitle}>Estimated Daily Nutrition Target</span>
                   <span className={styles.bmiPill} style={{ backgroundColor: `${liveStats.bmiColor}20`, color: liveStats.bmiColor }}>
                     BMI: {liveStats.bmi} ({liveStats.bmiCategory})
                   </span>

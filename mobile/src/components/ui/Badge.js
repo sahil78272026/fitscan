@@ -88,7 +88,7 @@ export function Badge({
       <TouchableOpacity
         style={containerStyles}
         onPress={onPress}
-        activeOpacity={0.7}
+        activeOpacity={0.75}
         hitSlop={effectiveHitSlop}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel || ((typeof label === 'string' || typeof label === 'number') ? String(label) : undefined)}
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   selectedBorder: {
-    borderColor: colors.primary || '#E8A020',
+    borderColor: colors.primary || '#F59E0B',
     borderWidth: 1.5,
   },
 
@@ -148,40 +148,40 @@ const styles = StyleSheet.create({
 
   // Color variants
   variant_neutral: {
-    backgroundColor: colors.surfaceElevated || '#2C251D',
-    borderColor: colors.border || '#3A3128',
+    backgroundColor: colors.surfaceElevated || '#1A1D24',
+    borderColor: colors.border || '#222631',
   },
   variant_primary: {
-    backgroundColor: colors.primarySubtle || 'rgba(232, 160, 32, 0.12)',
-    borderColor: colors.primaryBorder || 'rgba(232, 160, 32, 0.35)',
+    backgroundColor: colors.primarySubtle || 'rgba(245, 158, 11, 0.12)',
+    borderColor: colors.primaryBorder || 'rgba(245, 158, 11, 0.28)',
   },
   variant_protein: {
-    backgroundColor: colors.proteinSubtle || 'rgba(123, 160, 91, 0.18)',
-    borderColor: 'rgba(123, 160, 91, 0.40)',
+    backgroundColor: colors.proteinSubtle || 'rgba(16, 185, 129, 0.14)',
+    borderColor: 'rgba(16, 185, 129, 0.35)',
   },
   variant_carbs: {
-    backgroundColor: colors.carbsSubtle || 'rgba(217, 164, 65, 0.18)',
-    borderColor: 'rgba(217, 164, 65, 0.40)',
+    backgroundColor: colors.carbsSubtle || 'rgba(245, 158, 11, 0.14)',
+    borderColor: 'rgba(245, 158, 11, 0.35)',
   },
   variant_fat: {
-    backgroundColor: colors.fatSubtle || 'rgba(199, 80, 47, 0.18)',
-    borderColor: 'rgba(199, 80, 47, 0.40)',
+    backgroundColor: colors.fatSubtle || 'rgba(244, 63, 94, 0.14)',
+    borderColor: 'rgba(244, 63, 94, 0.35)',
   },
   variant_success: {
-    backgroundColor: colors.successSubtle || 'rgba(123, 160, 91, 0.18)',
-    borderColor: 'rgba(123, 160, 91, 0.40)',
+    backgroundColor: colors.successSubtle || 'rgba(16, 185, 129, 0.14)',
+    borderColor: 'rgba(16, 185, 129, 0.35)',
   },
   variant_warning: {
-    backgroundColor: colors.warningSubtle || 'rgba(232, 160, 32, 0.18)',
-    borderColor: 'rgba(232, 160, 32, 0.40)',
+    backgroundColor: colors.warningSubtle || 'rgba(245, 158, 11, 0.14)',
+    borderColor: 'rgba(245, 158, 11, 0.35)',
   },
   variant_danger: {
-    backgroundColor: colors.dangerSubtle || 'rgba(199, 80, 47, 0.18)',
-    borderColor: 'rgba(199, 80, 47, 0.40)',
+    backgroundColor: colors.dangerSubtle || 'rgba(239, 68, 68, 0.14)',
+    borderColor: 'rgba(239, 68, 68, 0.35)',
   },
   variant_info: {
-    backgroundColor: colors.infoSubtle || 'rgba(66, 133, 244, 0.18)',
-    borderColor: 'rgba(66, 133, 244, 0.40)',
+    backgroundColor: colors.infoSubtle || 'rgba(56, 189, 248, 0.14)',
+    borderColor: 'rgba(56, 189, 248, 0.35)',
   },
 
   // Labels
@@ -200,31 +200,31 @@ const styles = StyleSheet.create({
   },
 
   labelVariant_neutral: {
-    color: colors.textSecondary || '#A79A85',
+    color: colors.textSecondary || '#94A3B8',
   },
   labelVariant_primary: {
-    color: colors.primary || '#E8A020',
+    color: colors.primary || '#F59E0B',
   },
   labelVariant_protein: {
-    color: colors.protein || '#7BA05B',
+    color: colors.protein || '#10B981',
   },
   labelVariant_carbs: {
-    color: colors.carbs || '#D9A441',
+    color: colors.carbs || '#F59E0B',
   },
   labelVariant_fat: {
-    color: colors.fatText || '#E57453',
+    color: colors.fatText || colors.fat || '#F43F5E',
   },
   labelVariant_success: {
-    color: colors.success || '#7BA05B',
+    color: colors.success || '#10B981',
   },
   labelVariant_warning: {
-    color: colors.warning || '#E8A020',
+    color: colors.warning || '#F59E0B',
   },
   labelVariant_danger: {
-    color: colors.dangerText || '#E57453',
+    color: colors.dangerText || colors.danger || '#EF4444',
   },
   labelVariant_info: {
-    color: colors.info || '#4285F4',
+    color: colors.info || '#38BDF8',
   },
 
   // Icon

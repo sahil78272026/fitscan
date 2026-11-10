@@ -354,6 +354,11 @@ export default function Home() {
       openPaywall("log_meal");
       return;
     }
+    if (!userSettings?.height_cm || !userSettings?.weight_kg) {
+      showToast("Please set your fitness and calorie goal before logging meals.", "error");
+      setWizardOpen(true);
+      return;
+    }
     setSubmitting(true);
     try {
       const dateStr = formatDateStr(selectedDate);
@@ -377,6 +382,11 @@ export default function Home() {
   const handleScanMealImage = async (imageFile, rawInput, mealType) => {
     if (!hasAccess) {
       openPaywall("scan_meal");
+      return;
+    }
+    if (!userSettings?.height_cm || !userSettings?.weight_kg) {
+      showToast("Please set your fitness and calorie goal before scanning meals.", "error");
+      setWizardOpen(true);
       return;
     }
     setSubmitting(true);
@@ -422,6 +432,11 @@ export default function Home() {
       openPaywall("log_meal");
       return;
     }
+    if (!userSettings?.height_cm || !userSettings?.weight_kg) {
+      showToast("Please set your fitness and calorie goal before logging meals.", "error");
+      setWizardOpen(true);
+      return;
+    }
     setTargetMealType(mealType);
     const inputEl = document.getElementById("meal-input");
     if (inputEl) {
@@ -433,6 +448,11 @@ export default function Home() {
   const handleFloatingScanClick = () => {
     if (!hasAccess) {
       openPaywall("scan_meal");
+      return;
+    }
+    if (!userSettings?.height_cm || !userSettings?.weight_kg) {
+      showToast("Please set your fitness and calorie goal before scanning meals.", "error");
+      setWizardOpen(true);
       return;
     }
     if (!isToday) {

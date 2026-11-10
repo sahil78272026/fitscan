@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import hashlib
 import io
 import json
 import logging
@@ -9,6 +10,7 @@ from PIL import Image, ImageOps
 from google import genai
 from google.genai import types, errors
 from app.config import get_settings
+from app.services.redis_service import cache_get, cache_set
 
 logger = logging.getLogger("corecontrol.gemini")
 
@@ -166,7 +168,7 @@ def detect_image_mime_type(data: bytes, fallback_mime: str = "image/jpeg") -> st
     return "image/jpeg"
 
 
-def optimize_image_for_analysis(image_bytes: bytes, original_mime: str = "image/jpeg", max_dim: int = 1280, quality: int = 85) -> tuple[bytes, str]:
+def optimize_image_for_analysis(image_bytes: bytes, original_mime: str = "image/jpeg", max_dim: int = 1024, quality: int = 80) -> tuple[bytes, str]:
     """
     Safely downscale and compress oversized images to improve Gemini upload and processing speed.
     Normalizes EXIF orientation and composites transparency on a clean white background.
@@ -219,6 +221,27 @@ async def analyze_food(raw_input: str, image_bytes: bytes | None = None, mime_ty
     Send food text and optional image to Gemini for structured calorie & macro breakdown.
     Returns dict with 'items', 'total_calories', 'total_protein', 'total_carbs', 'total_fat'.
     """
+    # 1. Compute smart semantic / perceptual SHA-256 hash cache key
+    hasher = hashlib.sha256()
+    clean_prompt = (raw_input or "").strip().lower()
+    hasher.update(clean_prompt.encode("utf-8"))
+    if image_bytes:
+        raw_bytes = extract_raw_image_bytes(image_bytes)
+        if raw_bytes and len(raw_bytes) > 0:
+            hasher.update(raw_bytes[:8192])  # Header + first 8KB
+            hasher.update(len(raw_bytes).to_bytes(8, "big"))
+            hasher.update(raw_bytes[-8192:])  # Tail 8KB
+    cache_key = f"food_analysis:{hasher.hexdigest()}"
+
+    # 2. Check cache (fails safely if Redis unavailable)
+    try:
+        cached_result = await cache_get(cache_key)
+        if cached_result and isinstance(cached_result, dict) and "items" in cached_result:
+            logger.info(f"Food analysis cache HIT for key={cache_key}")
+            return cached_result
+    except Exception as e:
+        logger.warning(f"Food analysis cache lookup failed safely for key={cache_key}: {e}")
+
     settings = get_settings()
     timeout_seconds = getattr(settings, "GEMINI_TIMEOUT_SECONDS", 35.0)
     http_opts = types.HttpOptions(timeout=int(timeout_seconds * 1000)) if timeout_seconds else None
@@ -253,6 +276,7 @@ async def analyze_food(raw_input: str, image_bytes: bytes | None = None, mime_ty
                     system_instruction=SYSTEM_PROMPT,
                     response_mime_type="application/json",
                     temperature=0.1,
+                    thinking_config=types.ThinkingConfig(thinking_budget=0),
                 ),
             ),
             timeout=timeout_seconds,
@@ -296,6 +320,12 @@ async def analyze_food(raw_input: str, image_bytes: bytes | None = None, mime_ty
         result["total_protein"] = round(_safe_float(result.get("total_protein"), total_p), 1)
         result["total_carbs"] = round(_safe_float(result.get("total_carbs"), total_c), 1)
         result["total_fat"] = round(_safe_float(result.get("total_fat"), total_f), 1)
+
+        # 3. Cache successful analysis with 7-day TTL (604800s)
+        try:
+            await cache_set(cache_key, result, ex=604800)
+        except Exception as e:
+            logger.warning(f"Food analysis cache store failed safely for key={cache_key}: {e}")
 
         logger.info(f"Gemini analyzed food -> {result['total_calories']} kcal (P: {result['total_protein']}g, C: {result['total_carbs']}g, F: {result['total_fat']}g)")
         return result

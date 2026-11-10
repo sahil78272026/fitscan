@@ -16,6 +16,7 @@ import {
   Keyboard,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, typography, spacing, radius, shadows } from '../theme';
 import { Card, Button, Badge } from '../components/ui';
 import MealDetailModal from '../components/MealDetailModal';
@@ -43,19 +44,98 @@ import MissedMealBanner from '../components/MissedMealBanner';
 import ProUpgradeModal from '../components/ProUpgradeModal';
 import useSubscription from '../hooks/useSubscription';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import { useFocusEffect } from '@react-navigation/native';
 
-const MEAL_TYPE_ICONS = {
-  breakfast: '🍳',
-  lunch: '🥗',
-  snack: '☕',
-  dinner: '🍲',
-  Breakfast: '🍳',
-  Lunch: '🥗',
-  Snack: '☕',
-  Dinner: '🍲',
-};
+// --- Semantic Vector SVG Icons (Zero Raw Emojis) ---
+
+function DumbbellIcon({ size = 20, color = colors.primary || '#F59E0B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M6 5v14M18 5v14M2 8v8M22 8v8M6 12h12"
+        stroke={color}
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function FlameIcon({ size = 16, color = colors.primary || '#F59E0B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M8.5 14.5A2.5 2.5 0 0011 17c1.38 0 2.5-1.12 2.5-2.5 0-1.63-1.07-2.91-1.5-3.5-.43.59-1.5 1.87-1.5 3.5zM12 2c-1.5 3-4.5 5.5-4.5 9.5a6.5 6.5 0 0013 0c0-4-3-6.5-4.5-9.5-1 2-2.5 3-4 0z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function AlertTriangleIcon({ size = 18, color = colors.danger || '#EF4444' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function ZapIcon({ size = 16, color = colors.primary || '#F59E0B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function SearchIcon({ size = 16, color = colors.textSecondary || '#94A3B8' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="11" cy="11" r="7" stroke={color} strokeWidth="2" />
+      <Path d="M21 21l-4.35-4.35" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+function PlateUtensilsIcon({ size = 32, color = colors.textMuted || '#64748B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth="1.8" />
+      <Circle cx="12" cy="12" r="5" stroke={color} strokeWidth="1.4" strokeDasharray="2 2" />
+      <Path d="M12 7v10" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+function CloseIcon({ size = 14, color = colors.textSecondary || '#94A3B8' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M18 6L6 18M6 6l12 12"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
 
 const getInitialMealType = () => {
   const hour = new Date().getHours();
@@ -95,7 +175,6 @@ export default function HomeScreen({ navigation, user, onLogout }) {
   // Planned Meals State
   const [loggingPlannedMeal, setLoggingPlannedMeal] = useState(null);
   const [selectedPlannedMealModal, setSelectedPlannedMealModal] = useState(null);
-
 
   // Calendar State
   const [calendarData, setCalendarData] = useState(null);
@@ -199,6 +278,17 @@ export default function HomeScreen({ navigation, user, onLogout }) {
       openPaywall('log_meal');
       return;
     }
+    if (!userSettings?.height_cm || !userSettings?.weight_kg) {
+      Alert.alert(
+        'Goal Required',
+        'Please set your fitness and calorie goal before logging meals.',
+        [
+          { text: 'Set Goal', onPress: () => setWizardOpen(true) },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+      return;
+    }
     const mealTypeLower = (plannedMeal.meal_type || 'lunch').toLowerCase();
     try {
       setLoggingPlannedMeal(mealTypeLower);
@@ -251,7 +341,6 @@ export default function HomeScreen({ navigation, user, onLogout }) {
         getAdherenceStats().then(setAdherenceStats).catch(() => null),
         getWeightHistory(30).then(setWeightData).catch(() => null),
         getSettings().then((settings) => {
-
           setUserSettings(settings);
           // Until a user fixes their metrics, it reappears:
           if (!settings?.height_cm || !settings?.weight_kg) {
@@ -334,6 +423,17 @@ export default function HomeScreen({ navigation, user, onLogout }) {
       openPaywall('log_meal');
       return;
     }
+    if (!userSettings?.height_cm || !userSettings?.weight_kg) {
+      Alert.alert(
+        'Goal Required',
+        'Please set your fitness and calorie goal before logging meals.',
+        [
+          { text: 'Set Goal', onPress: () => setWizardOpen(true) },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+      return;
+    }
     if (!rawInput.trim()) {
       Alert.alert('Empty Input', 'Please type a meal description or use photo scan.');
       return;
@@ -409,7 +509,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
       {/* Top Header */}
       <View style={[styles.topHeader, { paddingTop: topInset }, isScrolled && styles.topHeaderShadow]}>
         <View style={styles.logoRow}>
-          <Text style={styles.logoIcon}>🏋️</Text>
+          <DumbbellIcon size={22} color={colors.primary || '#F59E0B'} />
           <Text style={styles.logoText}>CoreControl</Text>
         </View>
 
@@ -430,12 +530,12 @@ export default function HomeScreen({ navigation, user, onLogout }) {
           <TouchableOpacity
             style={styles.streakHeaderPill}
             onPress={() => navigation.navigate('Streak')}
-            activeOpacity={0.7}
+            activeOpacity={0.8}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
             accessibilityLabel={`Streak: ${adherenceStats?.current_streak ?? 0} days. Tap to view streak and achievements.`}
           >
-            <Text style={styles.streakHeaderIcon}>🔥</Text>
+            <FlameIcon size={13} color={colors.primary || '#F59E0B'} />
             <Text style={styles.streakHeaderText}>
               {adherenceStats?.current_streak ?? 0}d
             </Text>
@@ -469,13 +569,22 @@ export default function HomeScreen({ navigation, user, onLogout }) {
           { useNativeDriver: true, listener: handleScroll }
         )}
         scrollEventThrottle={16}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor="#E8A020" />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              loadData();
+            }}
+            tintColor={colors.primary || '#F59E0B'}
+          />
+        }
       >
         {/* Offline / Connection Error Banner with Tap to Retry */}
         {loadError && (
           <View style={styles.errorBannerContainer}>
             <View style={styles.errorBannerLeft}>
-              <Text style={styles.errorBannerIcon}>⚠️</Text>
+              <AlertTriangleIcon size={20} color={colors.danger || '#EF4444'} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.errorBannerTitle}>Connection Error</Text>
                 <Text style={styles.errorBannerSubtitle} numberOfLines={2}>
@@ -521,9 +630,12 @@ export default function HomeScreen({ navigation, user, onLogout }) {
           accessibilityRole="button"
           accessibilityLabel={`Streak banner: ${adherenceStats?.current_streak ?? 0} day streak, ${Math.round(adherenceStats?.weekly_adherence_score ?? 0)}% weekly adherence. Tap to view details.`}
         >
-          <Text style={styles.streakBannerText}>
-            🔥 <Text style={styles.boldText}>{adherenceStats?.current_streak ?? 0}</Text> day streak
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <FlameIcon size={16} color={colors.primary || '#F59E0B'} />
+            <Text style={styles.streakBannerText}>
+              <Text style={styles.boldText}>{adherenceStats?.current_streak ?? 0}</Text> day streak
+            </Text>
+          </View>
           <Text style={styles.streakDot}>•</Text>
           <Text style={styles.streakBannerSub}>
             {Math.round(adherenceStats?.weekly_adherence_score ?? 0)}% weekly
@@ -540,7 +652,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
               <Text style={styles.nutritionBudgetSub}>
                 {isSurplus
                   ? `Over budget by ${surplusCals.toLocaleString()} kcal`
-                  : `${remainingCals.toLocaleString()} kcal remaining for today`}
+                  : `Target: ${goalCals.toLocaleString()} kcal • ${calPercent}% consumed`}
               </Text>
             </View>
             <Badge
@@ -573,7 +685,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
                     {consumedCals.toLocaleString()}
                   </Text>
                   <Text style={styles.fitRingSub}>
-                    of {goalCals.toLocaleString()} kcal target
+                    KCAL CONSUMED
                   </Text>
                   <View
                     style={[
@@ -584,7 +696,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
                     <Text
                       style={[
                         styles.deficitStatusText,
-                        isSurplus && { color: colors.dangerText || '#E57453' },
+                        isSurplus && { color: colors.dangerText || '#F87171' },
                       ]}
                     >
                       {isSurplus
@@ -618,7 +730,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
             </View>
             <View style={styles.fitStatDivider} />
             <View style={styles.fitStatItem}>
-              <Text style={[styles.fitStatVal, { color: colors.fatText || '#E57453' }]}>
+              <Text style={[styles.fitStatVal, { color: colors.fatText || '#F87171' }]}>
                 {summary?.total_fat || 0}g
               </Text>
               <Text style={styles.fitStatLbl}>
@@ -671,7 +783,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
 
             <View style={styles.miniMacroTrackItem}>
               <View style={styles.miniMacroTrackHeader}>
-                <Text style={[styles.miniMacroTrackName, { color: colors.fatText || '#E57453' }]}>Fat</Text>
+                <Text style={[styles.miniMacroTrackName, { color: colors.fatText || '#F87171' }]}>Fat</Text>
                 <Text style={styles.miniMacroTrackPct}>
                   {Math.round(((summary?.total_fat || 0) / (summary?.fat_goal || 65)) * 100)}%
                 </Text>
@@ -689,7 +801,6 @@ export default function HomeScreen({ navigation, user, onLogout }) {
               </View>
             </View>
           </View>
-
 
           {/* Quick Nutrition Insights Footer */}
           <TouchableOpacity
@@ -743,7 +854,6 @@ export default function HomeScreen({ navigation, user, onLogout }) {
             >
               {activePlan.meals.map((m, idx) => {
                 const typeLower = (m.meal_type || 'lunch').toLowerCase();
-                const icon = MEAL_TYPE_ICONS[m.meal_type] || MEAL_TYPE_ICONS[typeLower] || '🍱';
                 const logged = isPlannedMealLogged(m);
                 const isCurrentSlot = getCurrentMealIndex(activePlan.meals) === idx;
                 const isLoggingThis = loggingPlannedMeal === typeLower;
@@ -762,7 +872,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
                     {/* Header */}
                     <View style={styles.plannedCardHeader}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Text style={styles.plannedTypeTag}>{icon} {m.meal_type}</Text>
+                        <Text style={styles.plannedTypeTag}>{(m.meal_type || 'MEAL').toUpperCase()}</Text>
                         {isCurrentSlot && (
                           <Badge variant="primary" size="sm" label="Next Up" />
                         )}
@@ -780,7 +890,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
                       <Text style={styles.plannedMacroText}>
                         P: <Text style={{ color: colors.protein, fontWeight: '700' }}>{m.protein}g</Text> • C: {m.carbs}g
                       </Text>
-                      <Badge variant="warning" size="sm" icon="💰" label={costInfo.formatted} />
+                      <Badge variant="warning" size="sm" label={costInfo.formatted} />
                     </View>
 
                     {/* 1-Tap Action Button */}
@@ -788,7 +898,6 @@ export default function HomeScreen({ navigation, user, onLogout }) {
                       {logged ? (
                         <Badge
                           variant="success"
-                          icon="✓"
                           label="Logged to Diary"
                           size="md"
                           style={{ width: '100%', justifyContent: 'center' }}
@@ -799,7 +908,6 @@ export default function HomeScreen({ navigation, user, onLogout }) {
                           size="sm"
                           fullWidth
                           title="Log to Today"
-                          icon="🍴"
                           loading={isLoggingThis}
                           onPress={() => handleLogPlannedMeal(m)}
                         />
@@ -845,7 +953,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
             <View style={styles.quickLogHeaderRow}>
               <View style={styles.quickLogHeaderLeft}>
                 <View style={styles.quickLogTitleRow}>
-                  <Text style={styles.quickLogIcon}>⚡</Text>
+                  <ZapIcon size={18} color={colors.primary || '#F59E0B'} />
                   <Text style={styles.quickLogTitle}>Quick Log Meal</Text>
                 </View>
                 <Text style={styles.quickLogSubTitle}>
@@ -855,7 +963,6 @@ export default function HomeScreen({ navigation, user, onLogout }) {
               <Badge
                 variant="primary"
                 label={mealType.toUpperCase()}
-                icon={MEAL_TYPE_ICONS[mealType] || '🍽️'}
                 size="sm"
               />
             </View>
@@ -867,11 +974,11 @@ export default function HomeScreen({ navigation, user, onLogout }) {
                 isInputFocused && styles.quickLogInputFocused,
               ]}
             >
-              <Text style={styles.quickLogInputLeadingIcon}>✍️</Text>
+              <SearchIcon size={16} color={colors.textSecondary || '#94A3B8'} />
               <TextInput
                 style={styles.quickLogTextInput}
                 placeholder="e.g. 2 eggs, 1 toast with butter"
-                placeholderTextColor={colors.textSecondary || '#A79A85'}
+                placeholderTextColor={colors.textSecondary || '#94A3B8'}
                 value={rawInput}
                 onChangeText={setRawInput}
                 onFocus={() => setIsInputFocused(true)}
@@ -888,16 +995,15 @@ export default function HomeScreen({ navigation, user, onLogout }) {
                   accessibilityRole="button"
                   accessibilityLabel="Clear meal description"
                 >
-                  <Text style={styles.quickLogClearIcon}>✕</Text>
+                  <CloseIcon size={12} color={colors.textSecondary || '#94A3B8'} />
                 </TouchableOpacity>
               )}
             </View>
 
-            {/* Meal Type Pills with Emojis */}
+            {/* Meal Type Pills */}
             <View style={styles.quickLogTypeRow}>
               {['breakfast', 'lunch', 'snack', 'dinner'].map((t) => {
                 const isSelected = mealType === t;
-                const icon = MEAL_TYPE_ICONS[t] || '🍽️';
                 const label = t.charAt(0).toUpperCase() + t.slice(1);
                 return (
                   <TouchableOpacity
@@ -907,13 +1013,12 @@ export default function HomeScreen({ navigation, user, onLogout }) {
                       isSelected && styles.quickLogTypePillActive,
                     ]}
                     onPress={() => setMealType(t)}
-                    activeOpacity={0.75}
+                    activeOpacity={0.8}
                     hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
                     accessibilityRole="button"
                     accessibilityState={{ selected: isSelected }}
                     accessibilityLabel={`${label} meal`}
                   >
-                    <Text style={styles.quickLogTypePillIcon}>{icon}</Text>
                     <Text
                       style={[
                         styles.quickLogTypePillText,
@@ -928,7 +1033,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
               })}
             </View>
 
-            {/* Previously Eaten Meal Suggestions (Follow-up 4) */}
+            {/* Previously Eaten Meal Suggestions */}
             <RecentMealsChips
               recentItems={summary?.recent_items}
               currentMealType={mealType}
@@ -942,6 +1047,17 @@ export default function HomeScreen({ navigation, user, onLogout }) {
               onQuickLog={async (item) => {
                 if (!hasAccess) {
                   openPaywall('log_meal');
+                  return;
+                }
+                if (!userSettings?.height_cm || !userSettings?.weight_kg) {
+                  Alert.alert(
+                    'Goal Required',
+                    'Please set your fitness and calorie goal before logging meals.',
+                    [
+                      { text: 'Set Goal', onPress: () => setWizardOpen(true) },
+                      { text: 'Cancel', style: 'cancel' },
+                    ]
+                  );
                   return;
                 }
                 const itemMealType = (item.meal_type || mealType).toLowerCase();
@@ -968,7 +1084,6 @@ export default function HomeScreen({ navigation, user, onLogout }) {
             <View style={styles.quickLogActionRow}>
               <Button
                 title="Log Meal"
-                icon="✓"
                 onPress={handleLogMeal}
                 loading={submitting}
                 variant="primary"
@@ -981,6 +1096,17 @@ export default function HomeScreen({ navigation, user, onLogout }) {
                 onPress={() => {
                   if (!hasAccess) {
                     openPaywall('scan_meal');
+                    return;
+                  }
+                  if (!userSettings?.height_cm || !userSettings?.weight_kg) {
+                    Alert.alert(
+                      'Goal Required',
+                      'Please set your fitness and calorie goal before scanning meals.',
+                      [
+                        { text: 'Set Goal', onPress: () => setWizardOpen(true) },
+                        { text: 'Cancel', style: 'cancel' },
+                      ]
+                    );
                     return;
                   }
                   navigation.navigate('Scan', { mealDate: formatDateStr(selectedDate) });
@@ -1003,7 +1129,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
 
           {summary?.meals?.length === 0 ? (
             <View style={styles.emptyBox}>
-              <Text style={styles.emptyIcon}>🍽️</Text>
+              <PlateUtensilsIcon size={36} color={colors.textMuted || '#64748B'} />
               <Text style={styles.emptyText}>No meals logged for this date</Text>
             </View>
           ) : (
@@ -1033,7 +1159,10 @@ export default function HomeScreen({ navigation, user, onLogout }) {
             onPress={() => setPreviewImage(null)}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            <Text style={styles.imageModalCloseText}>✕ Close</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <CloseIcon size={14} color={colors.textPrimary || '#F8FAFC'} />
+              <Text style={styles.imageModalCloseText}>Close</Text>
+            </View>
           </TouchableOpacity>
           {previewImage && (
             <Image
@@ -1091,7 +1220,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background || '#181410',
+    backgroundColor: colors.background || '#08090C',
   },
   plannedMealsContainer: {
     marginBottom: spacing.cardPadding || 16,
@@ -1105,11 +1234,11 @@ const styles = StyleSheet.create({
   },
   plannedSubTitle: {
     fontSize: typography?.sizes?.xs || 11,
-    color: colors.textSecondary || '#A79A85',
+    color: colors.textSecondary || '#94A3B8',
     marginTop: 2,
   },
   viewPlanLink: {
-    color: colors.primary || '#E8A020',
+    color: colors.primary || '#F59E0B',
     fontSize: typography?.sizes?.sm || 13,
     fontWeight: '700',
   },
@@ -1121,39 +1250,41 @@ const styles = StyleSheet.create({
     width: 250,
     minHeight: 170,
     justifyContent: 'space-between',
+    backgroundColor: colors.surface || '#111318',
+    borderColor: colors.border || '#222631',
   },
   plannedCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   plannedTypeTag: {
     fontSize: typography?.sizes?.xs || 11,
     fontWeight: '700',
-    color: colors.primary || '#E8A020',
+    color: colors.primary || '#F59E0B',
   },
   plannedCals: {
     fontSize: typography?.sizes?.xs || 11,
     fontWeight: '700',
-    color: colors.textPrimary || '#F4ECDD',
+    color: colors.textPrimary || '#F8FAFC',
   },
   plannedDishName: {
     fontSize: typography?.sizes?.sm || 13,
     fontWeight: '700',
-    color: colors.textPrimary || '#F4ECDD',
-    marginBottom: 6,
+    color: colors.textPrimary || '#F8FAFC',
+    marginBottom: 8,
     minHeight: 38,
   },
   plannedMacroRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   plannedMacroText: {
     fontSize: typography?.sizes?.xs || 11,
-    color: colors.textSecondary || '#A79A85',
+    color: colors.textSecondary || '#94A3B8',
   },
   plannedActionArea: {
     minHeight: 38,
@@ -1165,13 +1296,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#1C1712',
+    backgroundColor: colors.background || '#08090C',
     borderBottomWidth: 1,
-    borderBottomColor: '#251E17',
+    borderBottomColor: colors.border || '#222631',
     zIndex: 20,
   },
   topHeaderShadow: {
-    borderBottomColor: '#3A2E1F',
+    borderBottomColor: colors.border || '#222631',
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1181,15 +1312,12 @@ const styles = StyleSheet.create({
   logoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-  },
-  logoIcon: {
-    fontSize: 22,
+    gap: 8,
   },
   logoText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#E8A020',
+    color: colors.primary || '#F59E0B',
   },
   headerCenter: {
     flex: 1,
@@ -1207,7 +1335,7 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#3A3128',
+    borderColor: colors.border || '#222631',
     overflow: 'hidden',
   },
   headerAvatarImg: {
@@ -1219,36 +1347,28 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#2C251D',
+    backgroundColor: colors.surfaceElevated || '#1A1D24',
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerAvatarText: {
-    color: '#E8A020',
+    color: colors.primary || '#F59E0B',
     fontSize: 12,
     fontWeight: 'bold',
   },
   streakHeaderPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#271D12',
+    backgroundColor: colors.primarySubtle || 'rgba(245, 158, 11, 0.12)',
     borderWidth: 1,
-    borderColor: '#E8A020',
-    borderRadius: 14,
+    borderColor: colors.primaryBorder || 'rgba(245, 158, 11, 0.28)',
+    borderRadius: radius.full || 999,
     paddingHorizontal: 10,
-    paddingVertical: 3,
+    paddingVertical: 4,
     gap: 4,
-    shadowColor: '#E8A020',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.35,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  streakHeaderIcon: {
-    fontSize: 12,
   },
   streakHeaderText: {
-    color: '#E8A020',
+    color: colors.primary || '#F59E0B',
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.2,
@@ -1256,100 +1376,56 @@ const styles = StyleSheet.create({
   streakBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#221D17',
+    backgroundColor: colors.surface || '#111318',
     borderWidth: 1,
-    borderColor: '#3A3128',
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    marginBottom: 14,
+    borderColor: colors.border || '#222631',
+    borderRadius: radius.md || 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginBottom: 16,
     gap: 8,
   },
   streakBannerText: {
-    color: '#F4ECDD',
+    color: colors.textPrimary || '#F8FAFC',
     fontSize: 13,
   },
   boldText: {
     fontWeight: 'bold',
-    color: '#E8A020',
+    color: colors.primary || '#F59E0B',
   },
   streakDot: {
-    color: '#A79A85',
+    color: colors.textSecondary || '#94A3B8',
   },
   streakBannerSub: {
-    color: '#A79A85',
+    color: colors.textSecondary || '#94A3B8',
     fontSize: 12,
     flex: 1,
   },
   streakArrow: {
-    color: '#E8A020',
+    color: colors.primary || '#F59E0B',
     fontSize: 14,
     fontWeight: 'bold',
   },
   dateLabel: {
     fontSize: 12,
-    color: '#A79A85',
-  },
-  calToggleBtn: {
-    backgroundColor: '#181410',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#3A3128',
-  },
-  calToggleBtnActive: {
-    backgroundColor: '#E8A020',
-    borderColor: '#E8A020',
-  },
-  calToggleText: {
-    color: '#F4ECDD',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  calToggleTextActive: {
-    color: '#221803',
-    fontWeight: 'bold',
-  },
-  navRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  navBtn: {
-    backgroundColor: '#2C251D',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#3A3128',
-  },
-  navBtnText: {
-    color: '#F4ECDD',
-    fontSize: 12,
-    fontWeight: '600',
+    color: colors.textSecondary || '#94A3B8',
   },
   scroll: {
     padding: 16,
   },
   card: {
-    backgroundColor: '#221D17',
-    borderRadius: 14,
+    backgroundColor: colors.surface || '#111318',
+    borderRadius: radius.lg || 16,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#3A3128',
+    borderColor: colors.border || '#222631',
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#F4ECDD',
-    marginBottom: 14,
-  },
-  calsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 14,
+    color: colors.textPrimary || '#F8FAFC',
+    marginBottom: 12,
   },
   fitRingContainer: {
     alignItems: 'center',
@@ -1360,20 +1436,17 @@ const styles = StyleSheet.create({
     width: 156,
     height: 156,
     borderRadius: 78,
-    backgroundColor: '#130F0C',
+    backgroundColor: colors.background || '#08090C',
     padding: 3,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderTopColor: '#362A1D',
-    borderLeftColor: '#281F15',
-    borderRightColor: '#281F15',
-    borderBottomColor: '#0E0A07',
-    elevation: 7,
-    shadowColor: '#E8A020',
+    borderColor: colors.border || '#222631',
+    elevation: 4,
+    shadowColor: colors.primary || '#F59E0B',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
   fitRingOuter: {
     width: 142,
@@ -1382,11 +1455,11 @@ const styles = StyleSheet.create({
     borderWidth: 7,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#17130E',
-    borderTopColor: '#FFAE2E',
-    borderLeftColor: '#E8A020',
-    borderRightColor: '#D4860D',
-    borderBottomColor: '#6B3E03',
+    backgroundColor: colors.surface || '#111318',
+    borderTopColor: colors.primary || '#F59E0B',
+    borderLeftColor: colors.primary || '#F59E0B',
+    borderRightColor: '#D97706',
+    borderBottomColor: colors.surfaceActive || '#222631',
   },
   fitRingInner: {
     width: 114,
@@ -1394,84 +1467,75 @@ const styles = StyleSheet.create({
     borderRadius: 57,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#14100C',
-    borderWidth: 1.5,
-    borderTopColor: '#090705',
-    borderLeftColor: '#100D0A',
-    borderRightColor: '#100D0A',
-    borderBottomColor: '#2C2217',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.45,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: colors.surfaceElevated || '#1A1D24',
+    borderWidth: 1,
+    borderColor: colors.border || '#222631',
   },
   fitRingValue: {
     fontSize: 26,
     fontWeight: '800',
-    color: '#F4ECDD',
+    color: colors.textPrimary || '#F8FAFC',
     letterSpacing: -0.5,
-    textShadowColor: 'rgba(0, 0, 0, 0.4)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
   },
   fitRingSub: {
-    fontSize: 11,
-    color: '#A79A85',
+    fontSize: 10,
+    color: colors.textSecondary || '#94A3B8',
     marginTop: 2,
-    fontWeight: '500',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
   },
   nutritionBudgetHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   nutritionBudgetSub: {
     fontSize: typography?.sizes?.xs || 11,
-    color: colors.textSecondary || '#A79A85',
+    color: colors.textSecondary || '#94A3B8',
     marginTop: 2,
   },
   deficitStatusPill: {
     marginTop: 4,
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 4,
     borderRadius: 8,
     borderWidth: 1,
   },
   deficitStatusDeficit: {
-    backgroundColor: 'rgba(123, 160, 91, 0.12)',
-    borderColor: 'rgba(123, 160, 91, 0.35)',
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderColor: 'rgba(16, 185, 129, 0.35)',
   },
   deficitStatusSurplus: {
-    backgroundColor: 'rgba(199, 80, 47, 0.12)',
-    borderColor: 'rgba(199, 80, 47, 0.35)',
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderColor: 'rgba(239, 68, 68, 0.35)',
   },
   deficitStatusText: {
     fontSize: 10,
     fontWeight: '700',
-    color: colors.protein || '#7BA05B',
+    color: colors.protein || '#10B981',
   },
   nutritionCardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1A1510',
+    backgroundColor: colors.surfaceElevated || '#1A1D24',
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 9,
-    marginTop: 10,
+    paddingVertical: 8,
+    marginTop: 12,
     borderWidth: 1,
-    borderColor: '#2B2218',
+    borderColor: colors.border || '#222631',
   },
   fitStatsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingVertical: 10,
-    marginTop: 4,
+    paddingVertical: 12,
+    marginTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#2B2319',
+    borderTopColor: colors.borderSubtle || 'rgba(255, 255, 255, 0.08)',
   },
   fitStatItem: {
     alignItems: 'center',
@@ -1480,22 +1544,22 @@ const styles = StyleSheet.create({
   fitStatVal: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#F4ECDD',
+    color: colors.textPrimary || '#F8FAFC',
     marginBottom: 2,
   },
   fitStatLbl: {
     fontSize: 11,
-    color: '#A79A85',
+    color: colors.textSecondary || '#94A3B8',
   },
   fitStatDivider: {
     width: 1,
-    height: 22,
-    backgroundColor: '#2E251B',
+    height: 24,
+    backgroundColor: colors.borderSubtle || 'rgba(255, 255, 255, 0.08)',
   },
   miniMacroTracksContainer: {
     paddingTop: 8,
     paddingBottom: 4,
-    gap: 6,
+    gap: 8,
   },
   miniMacroTrackItem: {
     marginBottom: 4,
@@ -1504,7 +1568,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 3,
+    marginBottom: 4,
   },
   miniMacroTrackName: {
     fontSize: 11,
@@ -1513,23 +1577,22 @@ const styles = StyleSheet.create({
   miniMacroTrackPct: {
     fontSize: 10,
     fontWeight: '700',
-    color: colors.textSecondary || '#A79A85',
+    color: colors.textSecondary || '#94A3B8',
   },
   miniMacroTrackBg: {
     height: 4,
     borderRadius: 2,
-    backgroundColor: colors.surfaceElevated || '#2C251D',
+    backgroundColor: colors.surfaceElevated || '#1A1D24',
     overflow: 'hidden',
   },
   miniMacroTrackFill: {
     height: 4,
     borderRadius: 2,
   },
-
   fitFooterLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   fitStatusDot: {
     width: 6,
@@ -1538,152 +1601,20 @@ const styles = StyleSheet.create({
   },
   fitFooterHint: {
     fontSize: 11,
-    color: '#A79A85',
+    color: colors.textSecondary || '#94A3B8',
     fontWeight: '500',
   },
   fitFooterArrow: {
     fontSize: 13,
-    color: '#E8A020',
+    color: colors.primary || '#F59E0B',
     fontWeight: 'bold',
-  },
-  calCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#181410',
-    borderWidth: 4,
-    borderColor: '#E8A020',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  calCircleVal: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#F4ECDD',
-  },
-  calCircleSub: {
-    fontSize: 10,
-    color: '#A79A85',
-  },
-  calsDetails: {
-    flex: 1,
-    marginLeft: 20,
-    gap: 12,
-  },
-  calStatBox: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  calStatVal: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#F4ECDD',
-  },
-  calStatLbl: {
-    fontSize: 13,
-    color: '#A79A85',
-  },
-  barBg: {
-    height: 8,
-    backgroundColor: '#2C251D',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  barFill: {
-    height: '100%',
-    backgroundColor: '#E8A020',
-    borderRadius: 4,
-  },
-  macroBlock: {
-    marginBottom: 12,
-  },
-  macroHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  macroName: {
-    fontSize: 13,
-    color: '#F4ECDD',
-  },
-  macroValue: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#F4ECDD',
-  },
-  input: {
-    backgroundColor: '#2C251D',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#3A3128',
-    color: '#F4ECDD',
-    padding: 12,
-    fontSize: 14,
-    marginBottom: 12,
-  },
-  typeRow: {
-    flexDirection: 'row',
-    gap: 6,
-    marginBottom: 14,
-  },
-  typeBtn: {
-    flex: 1,
-    backgroundColor: '#2C251D',
-    borderRadius: 6,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#3A3128',
-  },
-  typeBtnActive: {
-    backgroundColor: '#E8A020',
-    borderColor: '#E8A020',
-  },
-  typeBtnText: {
-    color: '#A79A85',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  typeBtnTextActive: {
-    color: '#221803',
-  },
-  actionBtnRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  submitBtn: {
-    flex: 1,
-    backgroundColor: '#E8A020',
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  submitBtnText: {
-    color: '#221803',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  scanBtn: {
-    backgroundColor: '#2C251D',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#3A3128',
-  },
-  scanBtnText: {
-    color: '#F4ECDD',
-    fontSize: 14,
-    fontWeight: '600',
   },
   quickLogCard: {
-    padding: spacing.cardPadding ? spacing.cardPadding + 4 : 20,
-    marginBottom: spacing.cardPadding ? spacing.cardPadding + 6 : 22,
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.lg || 18,
+    padding: 20,
+    marginBottom: 16,
+    backgroundColor: colors.surface || '#111318',
+    borderColor: colors.border || '#222631',
+    borderRadius: 18,
     borderWidth: 1,
     ...(shadows.sm || {}),
   },
@@ -1703,58 +1634,47 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 4,
   },
-  quickLogIcon: {
-    fontSize: 16,
-  },
   quickLogTitle: {
     fontSize: typography?.sizes?.md || 16,
     fontWeight: '700',
-    color: colors.textPrimary,
+    color: colors.textPrimary || '#F8FAFC',
     letterSpacing: -0.2,
   },
   quickLogSubTitle: {
     fontSize: typography?.sizes?.xs || 12,
-    color: colors.textSecondary,
+    color: colors.textSecondary || '#94A3B8',
     lineHeight: 16,
   },
   quickLogInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceElevated,
+    backgroundColor: colors.surfaceElevated || '#1A1D24',
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: colors.border || '#222631',
     borderRadius: radius.md || 12,
-    paddingHorizontal: 14,
-    minHeight: 50,
+    paddingHorizontal: 16,
+    minHeight: 48,
     marginBottom: 16,
   },
   quickLogInputFocused: {
-    borderColor: colors.primary,
-    backgroundColor: colors.surfaceActive || colors.surfaceElevated,
-  },
-  quickLogInputLeadingIcon: {
-    fontSize: 15,
-    marginRight: 10,
+    borderColor: colors.primary || '#F59E0B',
+    backgroundColor: colors.surfaceActive || '#222631',
   },
   quickLogTextInput: {
     flex: 1,
-    color: colors.textPrimary,
+    color: colors.textPrimary || '#F8FAFC',
     fontSize: typography?.sizes?.base || 14,
     paddingVertical: 12,
+    marginLeft: 8,
   },
   quickLogClearBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.surface,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.surface || '#111318',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 6,
-  },
-  quickLogClearIcon: {
-    color: colors.textSecondary,
-    fontSize: 12,
-    fontWeight: '700',
   },
   quickLogTypeRow: {
     flexDirection: 'row',
@@ -1767,29 +1687,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    backgroundColor: colors.surfaceElevated,
+    backgroundColor: colors.surfaceElevated || '#1A1D24',
     borderRadius: radius.pill || 999,
-    paddingVertical: 7,
-    paddingHorizontal: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     minHeight: 36,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.border || '#222631',
   },
   quickLogTypePillActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.primary || '#F59E0B',
+    borderColor: colors.primary || '#F59E0B',
     ...(shadows.primaryGlow || {}),
   },
-  quickLogTypePillIcon: {
-    fontSize: 11,
-  },
   quickLogTypePillText: {
-    color: colors.textSecondary,
+    color: colors.textSecondary || '#94A3B8',
     fontSize: 12,
     fontWeight: '600',
   },
   quickLogTypePillTextActive: {
-    color: colors.textOnPrimary || '#221803',
+    color: colors.textOnPrimary || '#08090C',
     fontWeight: '700',
   },
   quickLogActionRow: {
@@ -1800,240 +1717,24 @@ const styles = StyleSheet.create({
   quickLogBtnFlex: {
     flex: 1,
   },
-  weightRow: {
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'center',
-  },
-  weightBtn: {
-    backgroundColor: '#E8A020',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  weightBtnText: {
-    color: '#221803',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
   mealsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
-  mealCountBadge: {
-    fontSize: 12,
-    color: '#A79A85',
-    backgroundColor: '#2C251D',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
   emptyBox: {
     alignItems: 'center',
-    paddingVertical: 20,
-  },
-  emptyIcon: {
-    fontSize: 32,
-    marginBottom: 8,
+    paddingVertical: 24,
+    gap: 12,
   },
   emptyText: {
-    color: '#A79A85',
+    color: colors.textSecondary || '#94A3B8',
     fontSize: 13,
-  },
-  mealItem: {
-    backgroundColor: '#181410',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#3A3128',
-  },
-  mealItemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  mealTypeBadge: {
-    color: '#E8A020',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  mealTimeText: {
-    color: '#A79A85',
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  mealCals: {
-    color: '#7BA05B',
-    fontSize: 13,
-    fontWeight: 'bold',
-  },
-  mealInputText: {
-    color: '#F4ECDD',
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  mealMacroSub: {
-    color: '#A79A85',
-    fontSize: 12,
-  },
-  mealHeaderRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  deleteHeaderBtn: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: 'rgba(199, 80, 47, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteHeaderBtnText: {
-    color: '#E06D53',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  deleteBtn: {
-    marginTop: 8,
-    alignSelf: 'flex-end',
-  },
-  deleteText: {
-    color: '#C7502F',
-    fontSize: 12,
-  },
-  mealContentRow: {
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'flex-start',
-  },
-  mealIconPlaceholder: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    backgroundColor: '#262019',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#3A3128',
-  },
-  mealIconPlaceholderText: {
-    fontSize: 20,
-  },
-  mealThumbContainer: {
-    borderRadius: 10,
-    overflow: 'hidden',
-    backgroundColor: '#2C251D',
-    borderWidth: 1,
-    borderColor: '#3A3128',
-    position: 'relative',
-  },
-  mealThumb: {
-    width: 58,
-    height: 58,
-    borderRadius: 10,
-  },
-  mealThumbZoomBadge: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-    borderRadius: 6,
-    paddingHorizontal: 3,
-    paddingVertical: 1,
-  },
-  mealThumbZoomIcon: {
-    fontSize: 9,
-  },
-  mealImageBannerContainer: {
-    marginTop: 10,
-    borderRadius: 10,
-    overflow: 'hidden',
-    backgroundColor: '#2C251D',
-    borderWidth: 1,
-    borderColor: '#3A3128',
-    position: 'relative',
-  },
-  mealImageBanner: {
-    width: '100%',
-    height: 150,
-  },
-  mealImageBannerOverlay: {
-    position: 'absolute',
-    bottom: 6,
-    right: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.72)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-  },
-  mealImageBannerText: {
-    color: '#F4ECDD',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  mealFoodItemsBox: {
-    marginTop: 10,
-    backgroundColor: '#1E1914',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#2E261E',
-  },
-  mealFoodItemsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  mealFoodItemsHeaderTitle: {
-    color: '#A79A85',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-  },
-  mealFoodItemsCount: {
-    color: '#E8A020',
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  mealFoodItemRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  mealFoodItemLeft: {
-    flex: 1,
-    marginRight: 8,
-  },
-  mealFoodItemName: {
-    color: '#F4ECDD',
-    fontSize: 12.5,
-    fontWeight: '600',
-  },
-  mealFoodItemMacros: {
-    color: '#A79A85',
-    fontSize: 10.5,
-    marginTop: 1,
-  },
-  mealFoodItemCals: {
-    color: '#7BA05B',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  mealTextCol: {
-    flex: 1,
   },
   imageModalBg: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.92)',
+    backgroundColor: 'rgba(8, 9, 12, 0.94)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -2043,13 +1744,15 @@ const styles = StyleSheet.create({
     top: Platform.OS === 'ios' ? 54 : 32,
     right: 20,
     zIndex: 10,
-    backgroundColor: '#2C251D',
+    backgroundColor: colors.surfaceElevated || '#1A1D24',
+    borderWidth: 1,
+    borderColor: colors.border || '#222631',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
   },
   imageModalCloseText: {
-    color: '#F4ECDD',
+    color: colors.textPrimary || '#F8FAFC',
     fontWeight: 'bold',
     fontSize: 14,
   },
@@ -2059,11 +1762,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   errorBannerContainer: {
-    backgroundColor: '#2A1C16',
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
     borderWidth: 1,
-    borderColor: '#E57453',
+    borderColor: colors.danger || '#EF4444',
     borderRadius: 12,
-    padding: 14,
+    padding: 16,
     marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -2074,33 +1777,29 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-  },
-  errorBannerIcon: {
-    fontSize: 20,
+    gap: 12,
   },
   errorBannerTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#F4ECDD',
+    color: colors.textPrimary || '#F8FAFC',
     marginBottom: 2,
   },
   errorBannerSubtitle: {
     fontSize: 12,
-    color: '#E57453',
+    color: colors.dangerText || '#F87171',
     lineHeight: 16,
   },
   retryButton: {
-    backgroundColor: '#E8A020',
+    backgroundColor: colors.primary || '#F59E0B',
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 8,
     alignSelf: 'center',
   },
   retryButtonText: {
-    color: '#181410',
+    color: colors.textOnPrimary || '#08090C',
     fontSize: 13,
     fontWeight: '700',
   },
 });
-

@@ -57,7 +57,7 @@ export function Card({
       <TouchableOpacity
         style={cardStyles}
         onPress={onPress}
-        activeOpacity={0.8}
+        activeOpacity={0.85}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         accessibilityHint={accessibilityHint}
@@ -86,30 +86,41 @@ const styles = StyleSheet.create({
   },
 
   variant_default: {
-    backgroundColor: colors.surface || '#221D17',
+    backgroundColor: colors.surface || '#111318',
     borderWidth: 1,
-    borderColor: colors.border || '#3A3128',
+    borderColor: colors.border || '#222631',
     ...(shadows.sm || {}),
   },
   variant_elevated: {
-    backgroundColor: colors.surfaceElevated || '#2C251D',
+    backgroundColor: colors.surfaceElevated || '#1A1D24',
     borderWidth: 1,
-    borderColor: colors.borderSubtle || '#2D261F',
+    borderColor: colors.borderSubtle || 'rgba(255, 255, 255, 0.08)',
     ...(shadows.md || {}),
   },
   variant_highlight: {
-    backgroundColor: colors.surface || '#221D17',
+    backgroundColor: colors.surface || '#111318',
     borderWidth: 1.5,
-    borderColor: colors.primaryBorder || 'rgba(232, 160, 32, 0.35)',
+    borderColor: colors.primaryBorder || 'rgba(245, 158, 11, 0.35)',
     ...(shadows.primaryGlow || shadows.sm || {}),
+  },
+  variant_glass: {
+    backgroundColor: colors.surfaceGlass || 'rgba(17, 19, 24, 0.85)',
+    borderWidth: 1,
+    borderColor: colors.borderSubtle || 'rgba(255, 255, 255, 0.08)',
+  },
+  variant_emerald: {
+    backgroundColor: colors.surface || '#111318',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.30)',
+    ...(shadows.emeraldGlow || shadows.sm || {}),
   },
   variant_outlined: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: colors.border || '#3A3128',
+    borderColor: colors.border || '#222631',
   },
   variant_flat: {
-    backgroundColor: colors.surface || '#221D17',
+    backgroundColor: colors.surface || '#111318',
     borderWidth: 0,
   },
 });

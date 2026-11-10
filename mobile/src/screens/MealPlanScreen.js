@@ -23,14 +23,14 @@ import ProUpgradeModal from '../components/ProUpgradeModal';
 import useSubscription from '../hooks/useSubscription';
 
 const MEAL_TYPE_ICONS = {
-  breakfast: '🍳',
-  lunch: '🥗',
-  snack: '☕',
-  dinner: '🍲',
-  Breakfast: '🍳',
-  Lunch: '🥗',
-  Snack: '☕',
-  Dinner: '🍲',
+  breakfast: '',
+  lunch: '',
+  snack: '',
+  dinner: '',
+  Breakfast: '',
+  Lunch: '',
+  Snack: '',
+  Dinner: '',
 };
 
 export default function MealPlanScreen({ navigation }) {
@@ -139,6 +139,17 @@ export default function MealPlanScreen({ navigation }) {
   const handleLogMeal = async (meal) => {
     if (!hasAccess) {
       openPaywall('log_meal');
+      return;
+    }
+    if (!userSettings?.height_cm || !userSettings?.weight_kg) {
+      Alert.alert(
+        'Goal Required',
+        'Please set your fitness and calorie goal before logging meals.',
+        [
+          { text: 'Set Goal', onPress: () => navigation.navigate('Profile') },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
       return;
     }
     const mealTypeLower = (meal.meal_type || 'lunch').toLowerCase();
@@ -573,50 +584,25 @@ export default function MealPlanScreen({ navigation }) {
             <View style={styles.sectionHeaderRow}>
               <View>
                 <Text style={styles.sectionTitle}>Daily Meal Schedule & Swaps</Text>
-                <Text style={styles.sectionSub}>Drag ⠿ to reorder • Tap card for full recipe • Tap ⇅ to swap</Text>
+                <Text style={styles.sectionSub}>Tap card for recipe details • Tap ⇅ to swap slots</Text>
               </View>
               <Badge variant="neutral" label={`${selectedPlan.meals?.length || 0} Slots`} size="sm" />
             </View>
 
-            {/* Differentiated, Concise Meal Cards with Drag & Drop */}
+            {/* Differentiated, Concise Meal Cards */}
             {selectedPlan.meals && selectedPlan.meals.length > 0 ? (
               selectedPlan.meals.map((m, idx) => {
                 const typeLower = (m.meal_type || 'lunch').toLowerCase();
-                const icon = MEAL_TYPE_ICONS[m.meal_type] || MEAL_TYPE_ICONS[typeLower] || '🍱';
                 const costInfo = estimateMealCost(m, selectedPlan, userSettings);
                 const logged = isMealLoggedToday(m);
                 const isLoggingThis = loggingMealType === typeLower;
                 const priority = getMealPriority(m);
-                const isDragging = draggingIndex === idx;
-                const isHoverTarget = hoverTargetIndex === idx && draggingIndex !== null && !isDragging;
 
                 return (
-                  <Animated.View
+                  <View
                     key={idx}
-                    {...panResponders[idx]?.panHandlers}
-                    onLayout={(e) => {
-                      itemLayoutsRef.current[idx] = e.nativeEvent.layout;
-                    }}
-                    style={[
-                      styles.cardWrapper,
-                      isDragging && styles.cardWrapperDragging,
-                      isDragging && {
-                        transform: [{ translateY: panY }, { scale: scaleAnim }],
-                        zIndex: 9999,
-                        elevation: 12,
-                      },
-                      isHoverTarget && styles.cardWrapperHoverTarget,
-                    ]}
+                    style={styles.cardWrapper}
                   >
-                    {/* Real-time drop target indicator/preview on hovered slot */}
-                    {isHoverTarget && (
-                      <View style={styles.dropPreviewBanner}>
-                        <Text style={styles.dropPreviewText}>
-                          {draggingIndex < idx ? '⇣ Move here (swap slots)' : '⇡ Move here (swap slots)'}
-                        </Text>
-                      </View>
-                    )}
-
                     <TouchableOpacity
                       activeOpacity={0.88}
                       onPress={() => setActiveMeal(m)}
@@ -633,7 +619,7 @@ export default function MealPlanScreen({ navigation }) {
                       <View style={styles.conciseTopRow}>
                         <View style={styles.conciseTypeCluster}>
                           <View style={styles.mealSlotPill}>
-                            <Text style={styles.mealSlotPillText}>{icon} {m.meal_type}</Text>
+                            <Text style={styles.mealSlotPillText}>{m.meal_type}</Text>
                           </View>
                           <View
                             style={[
@@ -665,24 +651,6 @@ export default function MealPlanScreen({ navigation }) {
                           <View style={styles.conciseCalPill}>
                             <Text style={styles.conciseCalText}>{m.calories} kcal</Text>
                           </View>
-
-                          {/* Dedicated Drag Grip Handle */}
-                          <View
-                            style={[
-                              styles.dragHandleGrip,
-                              isDragging && styles.dragHandleGripActive,
-                            ]}
-                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Drag handle for ${m.dish_name}. Drag anywhere on the card to reorder.`}
-                          >
-                            <Text style={[styles.dragHandleIcon, isDragging && styles.dragHandleIconActive]}>
-                              ⠿
-                            </Text>
-                            <Text style={[styles.dragHandleLabel, isDragging && styles.dragHandleLabelActive]}>
-                              {isDragging ? 'DRAGGING' : 'DRAG'}
-                            </Text>
-                          </View>
                         </View>
                       </View>
 
@@ -706,7 +674,7 @@ export default function MealPlanScreen({ navigation }) {
                         <Text style={styles.tapRecipeHint}>Recipe & Checklist ›</Text>
                       </View>
 
-                      {/* Compact Action Footer: ⇅ Swap Slot, Micro-Arrows & 1-Tap Log */}
+                      {/* Compact Action Footer: ⇅ Swap Slot & 1-Tap Log */}
                       <View style={styles.conciseActionRow}>
                         <View style={styles.reorderActionsGroup}>
                           <TouchableOpacity
@@ -721,45 +689,11 @@ export default function MealPlanScreen({ navigation }) {
                           >
                             <Text style={styles.swapAffordanceText}>⇅ Swap Slot</Text>
                           </TouchableOpacity>
-
-                          {/* Quick Step Micro-Arrows */}
-                          <View style={styles.quickStepArrows}>
-                            {idx > 0 && (
-                              <TouchableOpacity
-                                style={styles.microArrowBtn}
-                                onPress={(e) => {
-                                  e.stopPropagation?.();
-                                  handleSwapMeals(idx, idx - 1);
-                                }}
-                                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                                accessibilityRole="button"
-                                accessibilityLabel={`Move ${m.dish_name} up`}
-                                disabled={isSwapping}
-                              >
-                                <Text style={styles.microArrowText}>▲ Up</Text>
-                              </TouchableOpacity>
-                            )}
-                            {idx < selectedPlan.meals.length - 1 && (
-                              <TouchableOpacity
-                                style={styles.microArrowBtn}
-                                onPress={(e) => {
-                                  e.stopPropagation?.();
-                                  handleSwapMeals(idx, idx + 1);
-                                }}
-                                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                                accessibilityRole="button"
-                                accessibilityLabel={`Move ${m.dish_name} down`}
-                                disabled={isSwapping}
-                              >
-                                <Text style={styles.microArrowText}>▼ Down</Text>
-                              </TouchableOpacity>
-                            )}
-                          </View>
                         </View>
 
                         {logged ? (
                           <View style={styles.actionLoggedBox}>
-                            <Text style={styles.actionLoggedText}>✓ In Diary</Text>
+                            <Text style={styles.actionLoggedText}>✓ Logged</Text>
                           </View>
                         ) : (
                           <TouchableOpacity
@@ -776,13 +710,13 @@ export default function MealPlanScreen({ navigation }) {
                             {isLoggingThis ? (
                               <ActivityIndicator size="small" color="#221803" />
                             ) : (
-                              <Text style={styles.quickMarkEatenText}>🍴 Mark Eaten</Text>
+                              <Text style={styles.quickMarkEatenText}>Log Meal</Text>
                             )}
                           </TouchableOpacity>
                         )}
                       </View>
                     </TouchableOpacity>
-                  </Animated.View>
+                  </View>
                 );
               })
             ) : (

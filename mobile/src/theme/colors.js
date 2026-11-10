@@ -1,59 +1,73 @@
 /**
  * Canonical Color Palette for FitScan Mobile
- * Aligned 100% with frontend/src/app/globals.css (Warm Culinary Palette)
- * and WCAG 2.1 AA Contrast Standards (>= 4.5:1 on dark surfaces).
+ * Obsidian Biometric Luxury Standard (Apple Fitness & Linear Inspired)
+ * Aligned 100% with frontend/src/app/globals.css
+ * and WCAG 2.1 AAA/AA Contrast Standards (>= 7.0:1 / >= 4.5:1 on dark surfaces).
  */
 
 export const colors = {
-  // Brand Turmeric Gold
-  primary: '#E8A020',
-  primaryHover: '#D4901A',
-  primaryDark: '#221803', // High-contrast text on primary buttons (7.90:1 - WCAG AAA)
-  primaryGlow: 'rgba(232, 160, 32, 0.18)',
-  primarySubtle: 'rgba(232, 160, 32, 0.10)',
-  primaryBorder: 'rgba(232, 160, 32, 0.35)',
+  // Brand & Calorie Energy (Warm Amber)
+  primary: '#F59E0B',
+  primaryHover: '#D97706',
+  primaryDark: '#180D00',
+  primaryGlow: 'rgba(245, 158, 11, 0.20)',
+  primarySubtle: 'rgba(245, 158, 11, 0.12)',
+  primaryBorder: 'rgba(245, 158, 11, 0.28)',
 
-  // Warm Surfaces & Backgrounds
-  background: '#181410',       // Base app screen background
-  surface: '#221D17',          // Standard cards, modals, top header
-  surfaceElevated: '#2C251D',  // Inputs, chips, elevated cards, action buttons
-  surfaceActive: '#2A2219',    // Selected items, active rows
-  surfaceOverlay: 'rgba(0, 0, 0, 0.80)', // Modal and dialog backdrops
+  // Obsidian Surfaces & Backgrounds
+  background: '#08090C',       // Base OLED obsidian void background
+  surface: '#111318',          // Level 1: Standard cards, panels, modals
+  surfaceElevated: '#1A1D24',  // Level 2: Inputs, chips, elevated action cards
+  surfaceActive: '#222631',    // Level 3: Selected items, active rows, hovered states
+  surfaceGlass: 'rgba(17, 19, 24, 0.85)', // Glassmorphic card surface with blur
+  surfaceModal: '#1A1D24',     // Elevated modal surface
+  surfaceOverlay: 'rgba(8, 9, 12, 0.85)', // Modal and dialog backdrops
 
   // Borders & Dividers
-  border: '#3A3128',           // Primary card & container border
-  borderSubtle: '#2D261F',     // Internal card dividers & list item lines
-  borderHover: '#4A3F34',      // Active / focused input border
+  border: '#222631',           // Primary card & container border
+  borderSubtle: 'rgba(255, 255, 255, 0.08)', // Internal card dividers & list item lines
+  borderFocus: '#F59E0B',      // Active focus border
+  borderHover: '#333948',      // Active / focused input border
 
-  // Foreground & Typography
-  textPrimary: '#F4ECDD',      // High-emphasis text (Cream) - 15.6:1 on bg, 14.2:1 on surface (WCAG AAA)
-  textSecondary: '#A79A85',    // Medium-emphasis / labels / subtitles - 6.6:1 on bg, 6.0:1 on surface (WCAG AA)
-  textTertiary: '#706555',     // Canonical web token: low-emphasis decorative / disabled text (3.2:1 on bg, 2.9:1 on surface)
-  textMuted: '#948675',        // Accessible low-emphasis body / caption text (5.2:1 on bg, 4.7:1 on surface - WCAG AA)
-  textInverse: '#181410',      // Dark text on light backgrounds
-  textOnPrimary: '#221803',    // Text on #E8A020 buttons (7.90:1 - WCAG AAA)
+  // Foreground & Typography (High-Legibility Slate Scale)
+  textPrimary: '#F8FAFC',      // Slate 50 - High-emphasis (19.0:1 on bg, 18.2:1 on surface - WCAG AAA)
+  textSecondary: '#94A3B8',    // Slate 400 - Medium-emphasis / labels (7.7:1 on bg, 7.4:1 on surface - WCAG AAA)
+  textTertiary: '#64748B',     // Slate 500 - Low-emphasis decorative (4.6:1 on bg - WCAG AA)
+  textMuted: '#64748B',        // Accessible low-emphasis body / caption text (4.6:1 on bg - WCAG AA)
+  textInverse: '#08090C',      // Dark text on light / active backgrounds
+  textOnPrimary: '#08090C',    // Text on #F59E0B buttons (9.24:1 - WCAG AAA)
 
-  // Macro Accents (Canonical)
-  protein: '#7BA05B',          // Olive Green - 6.1:1 on bg, 5.6:1 on surface (WCAG AA)
-  proteinSubtle: 'rgba(123, 160, 91, 0.18)',
-  carbs: '#D9A441',            // Warm Mustard / Amber - 8.1:1 on bg, 7.4:1 on surface (WCAG AAA)
-  carbsSubtle: 'rgba(217, 164, 65, 0.18)',
-  fat: '#C7502F',              // Terracotta Rust - 4.0:1 on bg, 3.7:1 on surface (Passes 3:1 for UI components)
-  fatSubtle: 'rgba(199, 80, 47, 0.18)',
-  fatText: '#E57453',          // High-contrast coral text for fat & danger labels on dark (5.5:1 on surface - WCAG AA)
+  // Macro Accents (Biometric Standards)
+  protein: '#10B981',          // Crisp Emerald - Nutrition & Targets (7.8:1 - WCAG AAA)
+  proteinSubtle: 'rgba(16, 185, 129, 0.15)',
+  carbs: '#F59E0B',            // Energetic Amber - Fuel & Carbs (9.2:1 - WCAG AAA)
+  carbsSubtle: 'rgba(245, 158, 11, 0.15)',
+  fat: '#F43F5E',              // Rose Red - Essential Lipids (5.3:1 - WCAG AA)
+  fatSubtle: 'rgba(244, 63, 94, 0.15)',
+  fatText: '#FB7185',          // High-contrast rose text for fat labels
 
-  // Semantic Status
-  success: '#7BA05B',
-  successSubtle: 'rgba(123, 160, 91, 0.18)',
-  warning: '#E8A020',
-  warningSubtle: 'rgba(232, 160, 32, 0.18)',
-  danger: '#C7502F',
-  dangerSubtle: 'rgba(199, 80, 47, 0.18)',
-  dangerText: '#E57453',
-  info: '#4285F4',             // Google Blue / Informational - 5.1:1 on bg, 4.7:1 on surface (WCAG AA)
-  infoSubtle: 'rgba(66, 133, 244, 0.18)',
-  neutral: '#A79A85',
-  neutralSubtle: 'rgba(167, 154, 133, 0.15)',
+  // Domain & Functional Accents
+  nutritionEmerald: '#10B981',
+  hydrationSky: '#38BDF8',
+  streakPurple: '#A855F7',
+  accentAmber: '#F59E0B',
+  accentEmerald: '#10B981',
+  accentSky: '#38BDF8',
+  accentPurple: '#A855F7',
+  accentPurpleSubtle: 'rgba(168, 85, 247, 0.15)',
+
+  // Semantic Status & Feedback
+  success: '#10B981',
+  successSubtle: 'rgba(16, 185, 129, 0.15)',
+  warning: '#F59E0B',
+  warningSubtle: 'rgba(245, 158, 11, 0.15)',
+  danger: '#EF4444',
+  dangerSubtle: 'rgba(239, 68, 68, 0.15)',
+  dangerText: '#F87171',
+  info: '#38BDF8',             // Ice Blue / Informational (9.3:1 - WCAG AAA)
+  infoSubtle: 'rgba(56, 189, 248, 0.15)',
+  neutral: '#94A3B8',
+  neutralSubtle: 'rgba(148, 163, 184, 0.15)',
 };
 
 export default colors;

@@ -16,7 +16,7 @@ const ADAPTIVE_FOOD_DB = [
     fat: 16,
     diet: 'veg',
     slot: 'dinner',
-    tag: '⚡ High Protein',
+    tag: 'High Protein',
     meal_type: 'dinner',
   },
   {
@@ -28,7 +28,7 @@ const ADAPTIVE_FOOD_DB = [
     fat: 8,
     diet: 'veg',
     slot: 'snack',
-    tag: '🥛 Clean Protein',
+    tag: 'Clean Protein',
     meal_type: 'snack',
   },
   {
@@ -40,7 +40,7 @@ const ADAPTIVE_FOOD_DB = [
     fat: 5,
     diet: 'veg',
     slot: 'lunch',
-    tag: '💪 Hypertrophy',
+    tag: 'Hypertrophy',
     meal_type: 'lunch',
   },
   {
@@ -52,7 +52,7 @@ const ADAPTIVE_FOOD_DB = [
     fat: 2,
     diet: 'veg',
     slot: 'snack',
-    tag: '🌾 High Fiber',
+    tag: 'High Fiber',
     meal_type: 'snack',
   },
   {
@@ -64,7 +64,7 @@ const ADAPTIVE_FOOD_DB = [
     fat: 6,
     diet: 'veg',
     slot: 'lunch',
-    tag: '🥣 Balanced',
+    tag: 'Balanced',
     meal_type: 'lunch',
   },
   {
@@ -76,7 +76,7 @@ const ADAPTIVE_FOOD_DB = [
     fat: 6,
     diet: 'veg',
     slot: 'breakfast',
-    tag: '☀️ Morning Power',
+    tag: 'Morning Power',
     meal_type: 'breakfast',
   },
 
@@ -90,7 +90,7 @@ const ADAPTIVE_FOOD_DB = [
     fat: 10,
     diet: 'vegan',
     slot: 'dinner',
-    tag: '🌱 100% Plant',
+    tag: '100% Plant',
     meal_type: 'dinner',
   },
   {
@@ -102,7 +102,7 @@ const ADAPTIVE_FOOD_DB = [
     fat: 5,
     diet: 'vegan',
     slot: 'snack',
-    tag: '🥑 Lean Snack',
+    tag: 'Lean Snack',
     meal_type: 'snack',
   },
   {
@@ -114,7 +114,7 @@ const ADAPTIVE_FOOD_DB = [
     fat: 8,
     diet: 'vegan',
     slot: 'lunch',
-    tag: '🌾 Micronutrient Rich',
+    tag: 'Micronutrient Rich',
     meal_type: 'lunch',
   },
   {
@@ -126,7 +126,7 @@ const ADAPTIVE_FOOD_DB = [
     fat: 12,
     diet: 'vegan',
     slot: 'dinner',
-    tag: '⚡ Plant Muscle',
+    tag: 'Plant Muscle',
     meal_type: 'dinner',
   },
   {
@@ -138,7 +138,7 @@ const ADAPTIVE_FOOD_DB = [
     fat: 10,
     diet: 'vegan',
     slot: 'breakfast',
-    tag: '☀️ Omega-3',
+    tag: 'Omega-3',
     meal_type: 'breakfast',
   },
 
@@ -152,7 +152,7 @@ const ADAPTIVE_FOOD_DB = [
     fat: 6,
     diet: 'eggetarian',
     slot: 'snack',
-    tag: '🥚 Bioavailable',
+    tag: 'Bioavailable',
     meal_type: 'snack',
   },
   {
@@ -164,7 +164,7 @@ const ADAPTIVE_FOOD_DB = [
     fat: 12,
     diet: 'eggetarian',
     slot: 'dinner',
-    tag: '🍳 Classic Protein',
+    tag: 'Classic Protein',
     meal_type: 'dinner',
   },
   {
@@ -176,7 +176,7 @@ const ADAPTIVE_FOOD_DB = [
     fat: 4,
     diet: 'eggetarian',
     slot: 'breakfast',
-    tag: '⚡ Lean & Clean',
+    tag: 'Lean & Clean',
     meal_type: 'breakfast',
   },
 
@@ -190,7 +190,7 @@ const ADAPTIVE_FOOD_DB = [
     fat: 5,
     diet: 'non_veg',
     slot: 'dinner',
-    tag: '⚡ Pure Protein',
+    tag: 'Pure Protein',
     meal_type: 'dinner',
   },
   {
@@ -202,7 +202,7 @@ const ADAPTIVE_FOOD_DB = [
     fat: 4,
     diet: 'non_veg',
     slot: 'lunch',
-    tag: '🐟 Lean Catch',
+    tag: 'Lean Catch',
     meal_type: 'lunch',
   },
   {
@@ -214,7 +214,7 @@ const ADAPTIVE_FOOD_DB = [
     fat: 14,
     diet: 'non_veg',
     slot: 'lunch',
-    tag: '🌯 High Energy',
+    tag: 'High Energy',
     meal_type: 'lunch',
   },
   {
@@ -226,7 +226,7 @@ const ADAPTIVE_FOOD_DB = [
     fat: 10,
     diet: 'non_veg',
     slot: 'dinner',
-    tag: '🥗 Low Carb',
+    tag: 'Low Carb',
     meal_type: 'dinner',
   },
 ];
@@ -250,24 +250,24 @@ export function getGreetingDetails({
 
   // Time segment
   let greeting = 'Good morning';
-  let icon = '☀️';
+  let icon = 'sunrise';
   let timePeriod = 'morning';
 
   if (hour >= 5 && hour < 12) {
     greeting = 'Good morning';
-    icon = '☀️';
+    icon = 'sunrise';
     timePeriod = 'morning';
   } else if (hour >= 12 && hour < 17) {
     greeting = 'Good afternoon';
-    icon = '🌤️';
+    icon = 'sun';
     timePeriod = 'afternoon';
-  } else if (hour >= 17 && hour < 22) {
+  } else if (hour >= 17 && hour < 21) {
     greeting = 'Good evening';
-    icon = '🌙';
+    icon = 'sunset';
     timePeriod = 'evening';
   } else {
     greeting = 'Night owl';
-    icon = '✨';
+    icon = 'moon';
     timePeriod = 'night';
   }
 
@@ -335,36 +335,36 @@ export function getActiveMilestones({
   if (currentStreak === 30) {
     milestones.push({
       id: 'streak_30',
-      title: '30-Day Legend Streak! 🏆',
+      title: '30-Day Legend Streak!',
       subtitle: '30 consecutive days of logging! You belong to the top 1% of consistent athletes.',
-      icon: '🏆',
+      icon: '30D',
       variant: 'celebration',
       priority: 1,
     });
   } else if (currentStreak === 15) {
     milestones.push({
       id: 'streak_15',
-      title: '15-Day Macro Master! 🎯',
+      title: '15-Day Macro Master!',
       subtitle: 'Two straight weeks of dedication. Tracking is now an automatic habit.',
-      icon: '🎯',
+      icon: '15D',
       variant: 'celebration',
       priority: 1,
     });
   } else if (currentStreak === 7) {
     milestones.push({
       id: 'streak_7',
-      title: '7-Day Warrior Streak! ⚡',
+      title: '7-Day Warrior Streak!',
       subtitle: 'One full week of disciplined tracking unlocked. Phenomenal momentum!',
-      icon: '⚡',
+      icon: '7D',
       variant: 'celebration',
       priority: 1,
     });
   } else if (currentStreak === 3) {
     milestones.push({
       id: 'streak_3',
-      title: '3-Day Warmup Streak! 🔥',
+      title: '3-Day Warmup Streak!',
       subtitle: '3 days in a row logged. The hardest part is starting — keep rolling!',
-      icon: '🔥',
+      icon: '3D',
       variant: 'celebration',
       priority: 1,
     });
@@ -374,36 +374,36 @@ export function getActiveMilestones({
   if (currentStreak === 2) {
     milestones.push({
       id: 'streak_up_3',
-      title: '1 Day from 3-Day Warmup! 🔥',
+      title: '1 Day from 3-Day Warmup!',
       subtitle: 'Log your meals today to unlock your first streak badge.',
-      icon: '🔥',
+      icon: '3D',
       variant: 'upcoming',
       priority: 2,
     });
   } else if (currentStreak === 6) {
     milestones.push({
       id: 'streak_up_7',
-      title: '1 Day from 7-Day Warrior! ⚡',
+      title: '1 Day from 7-Day Warrior!',
       subtitle: 'Log today to reach a full 7-day streak and claim your warrior badge!',
-      icon: '⚡',
+      icon: '7D',
       variant: 'upcoming',
       priority: 2,
     });
   } else if (currentStreak === 14) {
     milestones.push({
       id: 'streak_up_15',
-      title: '1 Day from Macro Master! 🎯',
+      title: '1 Day from Macro Master!',
       subtitle: 'One more day to hit the 15-day streak milestone.',
-      icon: '🎯',
+      icon: '15D',
       variant: 'upcoming',
       priority: 2,
     });
   } else if (currentStreak === 29) {
     milestones.push({
       id: 'streak_up_30',
-      title: '1 Day from 30-Day Legend! 🏆',
+      title: '1 Day from 30-Day Legend!',
       subtitle: 'The 30-day pinnacle is right in front of you. Finish strong today!',
-      icon: '🏆',
+      icon: '30D',
       variant: 'upcoming',
       priority: 2,
     });
@@ -415,9 +415,9 @@ export function getActiveMilestones({
   if (proteinGoal > 0 && proteinConsumed >= proteinGoal) {
     milestones.push({
       id: 'protein_achieved',
-      title: 'Protein Target Smashed! 🎯',
+      title: 'Protein Target Smashed!',
       subtitle: `${proteinConsumed}g protein logged today (Goal: ${proteinGoal}g). Muscles fully fueled!`,
-      icon: '🎯',
+      icon: 'PRO',
       variant: 'macro_success',
       priority: 3,
     });
@@ -430,18 +430,18 @@ export function getActiveMilestones({
     if ((goalType === 'fat_loss' || goalType === 'weight_loss') && net <= -1.0) {
       milestones.push({
         id: 'weight_loss_milestone',
-        title: `Weight Milestone: ${Math.abs(net)} kg Down! 📉`,
+        title: `Weight Milestone: ${Math.abs(net)} kg Down!`,
         subtitle: 'Consistent caloric deficit confirmed on the scale. Outstanding progress!',
-        icon: '📉',
+        icon: '-1KG',
         variant: 'celebration',
         priority: 2,
       });
     } else if (goalType === 'muscle_building' && net >= 1.0) {
       milestones.push({
         id: 'weight_gain_milestone',
-        title: `Weight Milestone: +${net} kg Lean Gain! 📈`,
+        title: `Weight Milestone: +${net} kg Lean Gain!`,
         subtitle: 'Controlled hypertrophy surplus reflected on the scale. Great job!',
-        icon: '📈',
+        icon: '+1KG',
         variant: 'celebration',
         priority: 2,
       });

@@ -67,17 +67,17 @@ export function Button({
   const getSpinnerColor = () => {
     switch (variant) {
       case 'primary':
-        return colors.textOnPrimary || '#221803';
+        return colors.textOnPrimary || '#08090C';
       case 'danger':
         return '#FFFFFF';
       case 'outline':
       case 'ghost':
-        return colors.primary || '#E8A020';
+        return colors.primary || '#F59E0B';
       case 'subtleDanger':
-        return colors.dangerText || colors.danger || '#E57453';
+        return colors.dangerText || colors.danger || '#EF4444';
       case 'secondary':
       default:
-        return colors.textPrimary || '#F4ECDD';
+        return colors.textPrimary || '#F8FAFC';
     }
   };
 
@@ -88,7 +88,7 @@ export function Button({
     <TouchableOpacity
       style={containerStyles}
       onPress={isInteractive ? onPress : undefined}
-      activeOpacity={0.75}
+      activeOpacity={0.8}
       disabled={!isInteractive}
       hitSlop={hitSlop}
       accessibilityRole="button"
@@ -178,31 +178,35 @@ const styles = StyleSheet.create({
 
   // Variant styles
   variant_primary: {
-    backgroundColor: colors.primary || '#E8A020',
+    backgroundColor: colors.primary || '#F59E0B',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.16)',
     ...(shadows.primaryGlow || shadows.sm),
   },
   variant_secondary: {
-    backgroundColor: colors.surfaceElevated || '#2C251D',
+    backgroundColor: colors.surfaceElevated || '#1A1D24',
     borderWidth: 1,
-    borderColor: colors.border || '#3A3128',
+    borderColor: colors.border || '#222631',
     ...(shadows.sm || {}),
   },
   variant_outline: {
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(245, 158, 11, 0.04)',
     borderWidth: 1.5,
-    borderColor: colors.primaryBorder || colors.primary || '#E8A020',
+    borderColor: colors.primaryBorder || colors.primary || '#F59E0B',
   },
   variant_ghost: {
     backgroundColor: 'transparent',
   },
   variant_danger: {
-    backgroundColor: colors.danger || '#C7502F',
+    backgroundColor: colors.danger || '#EF4444',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
     ...(shadows.sm || {}),
   },
   variant_subtleDanger: {
-    backgroundColor: colors.dangerSubtle || 'rgba(199, 80, 47, 0.15)',
+    backgroundColor: colors.dangerSubtle || 'rgba(239, 68, 68, 0.15)',
     borderWidth: 1,
-    borderColor: colors.danger || '#C7502F',
+    borderColor: 'rgba(239, 68, 68, 0.35)',
   },
 
   // Text labels
@@ -221,22 +225,22 @@ const styles = StyleSheet.create({
   },
 
   labelVariant_primary: {
-    color: colors.textOnPrimary || '#221803',
+    color: colors.textOnPrimary || '#08090C',
   },
   labelVariant_secondary: {
-    color: colors.textPrimary || '#F4ECDD',
+    color: colors.textPrimary || '#F8FAFC',
   },
   labelVariant_outline: {
-    color: colors.primary || '#E8A020',
+    color: colors.primary || '#F59E0B',
   },
   labelVariant_ghost: {
-    color: colors.primary || '#E8A020',
+    color: colors.primary || '#F59E0B',
   },
   labelVariant_danger: {
     color: '#FFFFFF',
   },
   labelVariant_subtleDanger: {
-    color: colors.dangerText || '#E57453',
+    color: colors.dangerText || colors.danger || '#EF4444',
   },
 
   // Icons
