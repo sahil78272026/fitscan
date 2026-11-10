@@ -5,17 +5,28 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { getSettings, selectMealPlan, swapMealPlan } from "@/lib/api";
+import ProUpgradeModal from "@/components/ProUpgradeModal";
+import { useSubscription } from "@/hooks/useSubscription";
 import styles from "./page.module.css";
 
 const MEAL_TYPE_ICONS = {
-  Breakfast: "🍳",
-  Lunch: "🥗",
-  Snack: "☕",
-  Dinner: "🍲",
+  Breakfast: "•",
+  Lunch: "•",
+  Snack: "•",
+  Dinner: "•",
 };
 
 export default function MealPlanPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
+  const {
+    hasAccess,
+    isPro,
+    trialDaysRemaining,
+    isPaywallOpen,
+    openPaywall,
+    closePaywall,
+    refreshSubscription,
+  } = useSubscription();
   const router = useRouter();
 
   const [userSettings, setUserSettings] = useState(null);
@@ -104,6 +115,12 @@ export default function MealPlanPage() {
 
   // Execute meal slot swapping (persisting to React state immediately and backend)
   const executeSwap = async (sourceIndex, targetIndex) => {
+    if (!hasAccess) {
+      setSwapMenuOpenIndex(null);
+      openPaywall("swap_meal");
+      return;
+    }
+
     if (!selectedPlan?.meals || !selectedPlan.meals[sourceIndex] || !selectedPlan.meals[targetIndex]) return;
     if (sourceIndex === targetIndex) {
       setSwapMenuOpenIndex(null);
@@ -140,7 +157,7 @@ export default function MealPlanPage() {
       selected_meal_plan: updatedPlan,
     }));
 
-    showToast(`Swapped ${sourceMealType} with ${targetMealType}! 🔄`);
+    showToast(`Swapped ${sourceMealType} with ${targetMealType}`);
     setIsSwapping(true);
     setSwapMenuOpenIndex(null);
 
@@ -149,11 +166,18 @@ export default function MealPlanPage() {
       try {
         await swapMealPlan(sourceMealType, targetMealType, updatedPlan);
       } catch (err) {
+        if (err.status === 402 || err.code === "TRIAL_EXPIRED") {
+          throw err;
+        }
         await selectMealPlan(updatedPlan);
       }
     } catch (err) {
       // Revert if remote persistence failed
       setUserSettings(prevSettings);
+      if (err.status === 402 || err.code === "TRIAL_EXPIRED") {
+        openPaywall("trial_expired");
+        return;
+      }
       showToast(err.message || "Failed to persist meal swap", "error");
     } finally {
       setIsSwapping(false);
@@ -306,7 +330,6 @@ export default function MealPlanPage() {
         {!selectedPlan ? (
           /* Empty State if no meal plan active */
           <div className={styles.emptyCard}>
-            <span className={styles.emptyIcon}>📋</span>
             <h2 className={styles.emptyTitle}>No Active Meal Plan Selected</h2>
             <p className={styles.emptyText}>
               Complete your onboarding metrics and select an AI-generated meal plan to view your full daily nutrition schedule.
@@ -322,14 +345,14 @@ export default function MealPlanPage() {
               <div className={styles.blueprintHeaderRow}>
                 <div className={styles.blueprintBadgeGroup}>
                   <span className={styles.blueprintArchitectBadge}>
-                    📐 MASTER NUTRITION BLUEPRINT
+                    MASTER NUTRITION BLUEPRINT
                   </span>
                   <span className={styles.activePlanBadge}>
-                    ✨ Active Plan
+                    Active Plan
                   </span>
                   {userSettings?.can_change_plan === false && (
                     <span className={styles.cooldownBadge}>
-                      ⏳ Next change in {userSettings.hours_until_next_plan_change || 1}h
+                      Next change in {userSettings.hours_until_next_plan_change || 1}h
                     </span>
                   )}
                 </div>
@@ -346,7 +369,7 @@ export default function MealPlanPage() {
                   </span>
                   {selectedPlan.estimated_cost && (
                     <span className={`${styles.metaPill} ${styles.costMetaPill}`}>
-                      💰 {selectedPlan.estimated_cost}
+                      {selectedPlan.estimated_cost}
                     </span>
                   )}
                 </div>
@@ -366,7 +389,6 @@ export default function MealPlanPage() {
                 <div className={`${styles.telemetryCard} ${styles.caloriesTelemetry}`}>
                   <div className={styles.telemetryTop}>
                     <span className={styles.telemetryLabel}>Daily Calories</span>
-                    <span className={styles.telemetryIcon}>🔥</span>
                   </div>
                   <span className={styles.telemetryValue}>
                     {selectedPlan.daily_calories || userSettings?.calorie_goal} <small>kcal</small>
@@ -379,7 +401,6 @@ export default function MealPlanPage() {
                 <div className={`${styles.telemetryCard} ${styles.proteinTelemetry}`}>
                   <div className={styles.telemetryTop}>
                     <span className={styles.telemetryLabel}>Target Protein</span>
-                    <span className={styles.telemetryIcon}>⚡</span>
                   </div>
                   <span className={styles.telemetryValue}>
                     {selectedPlan.protein_g || userSettings?.protein_goal} <small>g</small>
@@ -392,7 +413,6 @@ export default function MealPlanPage() {
                 <div className={`${styles.telemetryCard} ${styles.carbsTelemetry}`}>
                   <div className={styles.telemetryTop}>
                     <span className={styles.telemetryLabel}>Target Carbs</span>
-                    <span className={styles.telemetryIcon}>🌾</span>
                   </div>
                   <span className={styles.telemetryValue}>
                     {selectedPlan.carbs_g || userSettings?.carbs_goal} <small>g</small>
@@ -405,7 +425,6 @@ export default function MealPlanPage() {
                 <div className={`${styles.telemetryCard} ${styles.fatTelemetry}`}>
                   <div className={styles.telemetryTop}>
                     <span className={styles.telemetryLabel}>Target Fat</span>
-                    <span className={styles.telemetryIcon}>🥑</span>
                   </div>
                   <span className={styles.telemetryValue}>
                     {selectedPlan.fat_g || userSettings?.fat_goal} <small>g</small>
@@ -418,7 +437,6 @@ export default function MealPlanPage() {
 
               {/* Pro-Tip Reorder & Swap Banner */}
               <div className={styles.swapHintBanner}>
-                <span className={styles.swapHintIcon}>💡</span>
                 <span className={styles.swapHintText}>
                   <strong>Drag & Drop to Swap Slots:</strong> Grab any meal card by the <code>⠿</code> handle to swap its slot (e.g. Breakfast ⇄ Lunch), or tap <strong>⇄ Swap Slot</strong> for 1-click reordering.
                 </span>
@@ -444,7 +462,7 @@ export default function MealPlanPage() {
                     onClick={handleDownloadMealPlan}
                     title="Print or Save as PDF"
                   >
-                    📥 Export Blueprint PDF
+                    Export Blueprint PDF
                   </button>
                   <button
                     type="button"
@@ -452,7 +470,7 @@ export default function MealPlanPage() {
                     onClick={handleDownloadTextPlan}
                     title="Download as clean text file"
                   >
-                    📄 Text Plan
+                    Text Plan
                   </button>
                 </div>
               </div>
@@ -461,7 +479,7 @@ export default function MealPlanPage() {
               <div className={styles.mealsContainer}>
                 {selectedPlan.meals && selectedPlan.meals.length > 0 ? (
                   selectedPlan.meals.map((meal, idx) => {
-                    const icon = MEAL_TYPE_ICONS[meal.meal_type] || "🍱";
+                    const icon = MEAL_TYPE_ICONS[meal.meal_type] || "•";
                     const priority = getMealPriority(meal);
                     const isDragging = draggedMealIndex === idx;
                     const isDropTarget = dropTargetIndex === idx && draggedMealIndex !== idx;
@@ -469,14 +487,14 @@ export default function MealPlanPage() {
                     const isSwapMenuOpen = swapMenuOpenIndex === idx;
 
                     // Compute priority-specific visual elements
-                    let priorityBadgeText = "🌾 Balanced Staple";
+                    let priorityBadgeText = "Balanced Staple";
                     let priorityClass = styles.cardPriorityMedium;
 
                     if (priority === "high") {
-                      priorityBadgeText = "⚡ Main Recovery Anchor";
+                      priorityBadgeText = "Main Recovery Anchor";
                       priorityClass = styles.cardPriorityHigh;
                     } else if (priority === "low") {
-                      priorityBadgeText = "☕ Light Fuel / Snack";
+                      priorityBadgeText = "Light Fuel / Snack";
                       priorityClass = styles.cardPriorityLow;
                     }
 
@@ -548,7 +566,7 @@ export default function MealPlanPage() {
                                         onClick={() => executeSwap(idx, targetIdx)}
                                       >
                                         <span className={styles.swapDropdownIcon}>
-                                          {MEAL_TYPE_ICONS[targetM.meal_type] || "🍱"}
+                                          {MEAL_TYPE_ICONS[targetM.meal_type] || "•"}
                                         </span>
                                         <span className={styles.swapDropdownText}>
                                           <strong>{targetM.meal_type}</strong>: {targetM.dish_name}
@@ -572,7 +590,7 @@ export default function MealPlanPage() {
                             <h4 className={styles.dishName}>{meal.dish_name}</h4>
                             {priority === "high" && (
                               <span className={styles.prominentProteinPill}>
-                                🔥 {meal.protein}g Protein Anchor
+                                {meal.protein}g Protein Anchor
                               </span>
                             )}
                           </div>
@@ -663,7 +681,7 @@ export default function MealPlanPage() {
                 className={styles.secondaryBtn}
                 onClick={handleDownloadMealPlan}
               >
-                📥 Export Complete Plan
+                Export Complete Plan
               </button>
               <Link href="/profile" className={styles.primaryBtn}>
                 Change Plan in Profile
@@ -672,6 +690,18 @@ export default function MealPlanPage() {
           </>
         )}
       </div>
+
+      {/* Hard Paywall Pro Upgrade Modal */}
+      <ProUpgradeModal
+        isOpen={isPaywallOpen}
+        onClose={closePaywall}
+        daysRemaining={trialDaysRemaining}
+        currentTier={isPro ? "pro" : "free"}
+        onSuccess={() => {
+          refreshSubscription();
+          fetchSettings();
+        }}
+      />
     </main>
   );
 }

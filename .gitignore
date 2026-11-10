@@ -11,6 +11,7 @@ _agents/
 _agent/
 PROJECT.md
 AGENTS.md
+ACTIVE_TASK.md
 
 # ─── Secrets & Credentials (never commit these) ───────────
 .env
@@ -107,4 +108,4 @@ scripts/resize_*.py
 scripts/telegram_agent_bridge.py
 scripts/
 docs/
-tests/
+/tests/

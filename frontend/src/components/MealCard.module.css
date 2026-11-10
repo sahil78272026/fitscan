@@ -1,33 +1,42 @@
 .card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 1rem;
-  padding: 0.85rem 1.15rem;
+  background: rgba(24, 20, 16, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 0.95rem 1.25rem;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
   flex-shrink: 0;
 }
 
+.card:active {
+  transform: scale(0.985);
+}
+
 .cardPriorityHigh {
-  border: 1px solid #E8A020;
-  border-left: 4.5px solid #E8A020;
-  box-shadow: 0 4px 16px rgba(232, 160, 32, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-left: 4.5px solid #F59E0B;
+  box-shadow: 0 8px 24px -4px rgba(245, 158, 11, 0.2), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
 }
 
 .cardPriorityMedium {
   border: 1px solid rgba(16, 185, 129, 0.35);
-  border-left: 4.5px solid #10b981;
+  border-left: 4.5px solid #10B981;
+  box-shadow: 0 8px 24px -4px rgba(16, 185, 129, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
 }
 
 .cardPriorityLow {
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-left: 3.5px solid rgba(156, 163, 175, 0.4);
+  border-left: 3.5px solid rgba(168, 162, 158, 0.5);
 }
 
 .card:hover {
-  border-color: var(--color-border-hover);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
 }
 
 .card.deleting {

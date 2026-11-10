@@ -48,15 +48,17 @@ async def create_meal(
 
     # Create food items
     for item_data in analysis.get("items", []):
+        if not isinstance(item_data, dict):
+            continue
         food_item = FoodItem(
             meal_id=meal.id,
-            name=item_data["name"],
-            quantity=item_data.get("quantity", 1.0),
-            unit=item_data.get("unit", "serving"),
-            calories=item_data.get("calories", 0),
-            protein=item_data.get("protein", 0.0),
-            carbs=item_data.get("carbs", 0.0),
-            fat=item_data.get("fat", 0.0),
+            name=str(item_data.get("name") or "Food item").strip() or "Food item",
+            quantity=float(item_data.get("quantity") or 1.0),
+            unit=str(item_data.get("unit") or "serving").strip() or "serving",
+            calories=int(item_data.get("calories", 0) or 0),
+            protein=float(item_data.get("protein") or 0.0),
+            carbs=float(item_data.get("carbs") or 0.0),
+            fat=float(item_data.get("fat") or 0.0),
         )
         db.add(food_item)
 

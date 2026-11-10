@@ -31,7 +31,7 @@ from app.services.meal_service import (
 )
 from app.services.gemini_service import generate_multiple_meal_plans
 from app.services.redis_service import cache_delete
-from app.middleware.auth import get_current_user
+from app.middleware.auth import get_current_user, require_active_subscription
 
 logger = logging.getLogger("corecontrol.routers.settings")
 
@@ -91,7 +91,7 @@ async def set_morning_briefing_preferences(
 
 @router.post("/meal-plans/suggest")
 async def suggest_meal_plans(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_active_subscription),
     db: AsyncSession = Depends(get_db),
 ):
     """Generate 3 distinct candidate meal plans based on user's current settings."""
@@ -127,7 +127,7 @@ async def suggest_meal_plans(
 @router.put("/meal-plan/select", response_model=SettingsResponse)
 async def select_meal_plan(
     payload: SelectMealPlanPayload,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_active_subscription),
     db: AsyncSession = Depends(get_db),
 ):
     """Save the user's selected meal plan and update active macro targets."""
@@ -138,7 +138,7 @@ async def select_meal_plan(
 @router.post("/meal-plan/swap", response_model=SettingsResponse)
 async def swap_meal_plan(
     payload: MealPlanSwapRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_active_subscription),
     db: AsyncSession = Depends(get_db),
 ):
     """

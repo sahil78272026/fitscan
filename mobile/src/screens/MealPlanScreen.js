@@ -19,6 +19,8 @@ import MealDetailModal from '../components/MealDetailModal';
 import { getSettings, getDailySummary, logMeal, selectMealPlan, swapMealPlan } from '../services/api';
 import { estimateMealCost } from '../utils/mealCostEstimator';
 import { exportMealPlanPdf } from '../utils/mealPlanPdfGenerator';
+import ProUpgradeModal from '../components/ProUpgradeModal';
+import useSubscription from '../hooks/useSubscription';
 
 const MEAL_TYPE_ICONS = {
   breakfast: '🍳',
@@ -32,6 +34,16 @@ const MEAL_TYPE_ICONS = {
 };
 
 export default function MealPlanScreen({ navigation }) {
+  const {
+    isPro,
+    trialDaysRemaining,
+    hasAccess,
+    refreshSubscription,
+    openPaywall,
+    closePaywall,
+    isPaywallOpen,
+  } = useSubscription();
+
   const [userSettings, setUserSettings] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [todayMeals, setTodayMeals] = useState([]);
@@ -79,8 +91,9 @@ export default function MealPlanScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
+      refreshSubscription();
       loadData();
-    }, [loadData])
+    }, [loadData, refreshSubscription])
   );
 
   // Safely parse selected_meal_plan (handles JSON string or dict)
@@ -124,6 +137,10 @@ export default function MealPlanScreen({ navigation }) {
 
   // 1-Tap Log Meal Action
   const handleLogMeal = async (meal) => {
+    if (!hasAccess) {
+      openPaywall('log_meal');
+      return;
+    }
     const mealTypeLower = (meal.meal_type || 'lunch').toLowerCase();
     try {
       setLoggingMealType(mealTypeLower);
@@ -136,13 +153,17 @@ export default function MealPlanScreen({ navigation }) {
       }
 
       Alert.alert(
-        'Meal Logged! 🎉',
+        'Meal Logged',
         `${meal.dish_name} (${meal.calories} kcal) has been logged to today's diary.`
       );
       if (activeMeal) {
         setActiveMeal(null);
       }
     } catch (err) {
+      if (err.status === 402 || err.code === 'TRIAL_EXPIRED') {
+        openPaywall('log_meal');
+        return;
+      }
       Alert.alert('Logging Failed', err.message || 'Unable to log meal to diary.');
     } finally {
       setLoggingMealType(null);
@@ -186,6 +207,10 @@ export default function MealPlanScreen({ navigation }) {
 
   const handleSwapMeals = useCallback(
     async (sourceIdx, targetIdx, { isDrag = false } = {}) => {
+      if (!hasAccess) {
+        openPaywall('swap_meals');
+        return;
+      }
       if (isSwapping || sourceIdx === targetIdx || !selectedPlan?.meals) return;
       if (sourceIdx < 0 || sourceIdx >= selectedPlan.meals.length) return;
       if (targetIdx < 0 || targetIdx >= selectedPlan.meals.length) return;
@@ -227,19 +252,23 @@ export default function MealPlanScreen({ navigation }) {
         }
         if (!isDrag) {
           Alert.alert(
-            'Meals Swapped! ⇅',
+            'Meals Swapped',
             `Swapped ${sourceMeal.dish_name} (${sourceMeal.meal_type}) with ${targetMeal.dish_name} (${targetMeal.meal_type}).`
           );
         }
       } catch (err) {
         console.warn('Meal swap API error:', err);
         setUserSettings(prevSettings);
+        if (err.status === 402 || err.code === 'TRIAL_EXPIRED') {
+          openPaywall('swap_meals');
+          return;
+        }
         Alert.alert('Swap Error', err.message || 'Failed to persist swapped meal plan.');
       } finally {
         setIsSwapping(false);
       }
     },
-    [isSwapping, selectedPlan, userSettings]
+    [hasAccess, isSwapping, openPaywall, selectedPlan, userSettings]
   );
 
   const updateHoverTarget = useCallback(
@@ -870,6 +899,15 @@ export default function MealPlanScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* Monetization Paywall Modal */}
+      <ProUpgradeModal
+        visible={isPaywallOpen}
+        onClose={closePaywall}
+        daysRemaining={trialDaysRemaining}
+        currentTier={isPro ? 'pro' : 'free'}
+        onSuccess={refreshSubscription}
+      />
     </SafeAreaView>
   );
 }

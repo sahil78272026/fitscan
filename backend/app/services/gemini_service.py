@@ -1,10 +1,13 @@
 import asyncio
 import base64
+import io
 import json
 import logging
 import time
+import httpx
+from PIL import Image, ImageOps
 from google import genai
-from google.genai import types
+from google.genai import types, errors
 from app.config import get_settings
 
 logger = logging.getLogger("corecontrol.gemini")
@@ -100,23 +103,48 @@ Rules:
 """
 
 
+def _safe_int(val, default: int = 0) -> int:
+    if val is None:
+        return default
+    try:
+        return int(float(val))
+    except (ValueError, TypeError):
+        return default
+
+
+def _safe_float(val, default: float = 0.0) -> float:
+    if val is None:
+        return default
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return default
+
+
 def extract_raw_image_bytes(data: bytes) -> bytes:
     if not data:
         return data
+    clean = data.strip()
     # Strip data URI header if present (e.g. data:image/jpeg;base64,...)
-    if data.startswith(b"data:") and b"," in data:
+    if clean.startswith(b"data:") and b"," in clean:
         try:
-            _, b64_part = data.split(b",", 1)
-            return base64.b64decode(b64_part)
+            _, b64_part = clean.split(b",", 1)
+            b64_clean = b64_part.strip()
+            pad = len(b64_clean) % 4
+            if pad:
+                b64_clean += b"=" * (4 - pad)
+            return base64.b64decode(b64_clean)
         except Exception:
             pass
-    # If Base64 string bytes (JPEG starts with /9j/, PNG with iVBORw, WebP with UklGR)
-    if data.startswith(b"/9j/") or data.startswith(b"iVBORw") or data.startswith(b"UklGR"):
+    # If Base64 string bytes (JPEG starts with /9j/, PNG with iVBORw, WebP with UklGR, GIF with R0lGOD)
+    if clean.startswith(b"/9j/") or clean.startswith(b"iVBORw") or clean.startswith(b"UklGR") or clean.startswith(b"R0lGOD"):
         try:
-            return base64.b64decode(data)
+            pad = len(clean) % 4
+            to_decode = clean + (b"=" * (4 - pad)) if pad else clean
+            return base64.b64decode(to_decode)
         except Exception:
             pass
-    return data
+    return clean
 
 
 def detect_image_mime_type(data: bytes, fallback_mime: str = "image/jpeg") -> str:
@@ -138,22 +166,79 @@ def detect_image_mime_type(data: bytes, fallback_mime: str = "image/jpeg") -> st
     return "image/jpeg"
 
 
+def optimize_image_for_analysis(image_bytes: bytes, original_mime: str = "image/jpeg", max_dim: int = 1280, quality: int = 85) -> tuple[bytes, str]:
+    """
+    Safely downscale and compress oversized images to improve Gemini upload and processing speed.
+    Normalizes EXIF orientation and composites transparency on a clean white background.
+    Falls back cleanly to original image bytes if Pillow encounters an unknown/unsupported format.
+    """
+    if not image_bytes or len(image_bytes) < 64:
+        return image_bytes, original_mime
+    try:
+        with Image.open(io.BytesIO(image_bytes)) as img:
+            exif = img.getexif()
+            orientation = exif.get(0x0112, 1) if exif else 1
+            has_exif_rotation = orientation not in (1, None)
+
+            w, h = img.size
+            is_oversized = max(w, h) > max_dim
+            is_overweight = len(image_bytes) > 1024 * 1024
+            is_transparent = img.mode in ("RGBA", "LA") or ("transparency" in img.info)
+            is_non_rgb = img.mode != "RGB"
+
+            needs_processing = is_oversized or is_overweight or has_exif_rotation or is_transparent or is_non_rgb
+
+            if not needs_processing:
+                return image_bytes, original_mime
+
+            if has_exif_rotation:
+                transposed = ImageOps.exif_transpose(img)
+                img = transposed if transposed is not None else img
+
+            if is_oversized:
+                img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
+
+            if is_transparent:
+                rgba = img.convert("RGBA")
+                bg = Image.new("RGB", rgba.size, (255, 255, 255))
+                bg.paste(rgba, mask=rgba.split()[-1])
+                img = bg
+            elif img.mode != "RGB":
+                img = img.convert("RGB")
+
+            out = io.BytesIO()
+            img.save(out, format="JPEG", quality=quality, optimize=True)
+            return out.getvalue(), "image/jpeg"
+    except Exception:
+        pass
+    return image_bytes, original_mime
+
+
 async def analyze_food(raw_input: str, image_bytes: bytes | None = None, mime_type: str = "image/jpeg") -> dict:
     """
     Send food text and optional image to Gemini for structured calorie & macro breakdown.
     Returns dict with 'items', 'total_calories', 'total_protein', 'total_carbs', 'total_fat'.
     """
     settings = get_settings()
-    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    timeout_seconds = getattr(settings, "GEMINI_TIMEOUT_SECONDS", 35.0)
+    http_opts = types.HttpOptions(timeout=int(timeout_seconds * 1000)) if timeout_seconds else None
+    client = genai.Client(api_key=settings.GEMINI_API_KEY, http_options=http_opts)
 
     contents = []
     if image_bytes:
         raw_bytes = extract_raw_image_bytes(image_bytes)
-        safe_mime = detect_image_mime_type(raw_bytes, mime_type)
-        logger.info(f"Analyzing image: received_len={len(image_bytes)}, decoded_len={len(raw_bytes)}, mime={safe_mime}")
-        contents.append(
-            types.Part.from_bytes(data=raw_bytes, mime_type=safe_mime)
-        )
+        if raw_bytes and len(raw_bytes) > 0:
+            safe_mime = detect_image_mime_type(raw_bytes, mime_type)
+            optimized_bytes, safe_mime = await asyncio.to_thread(
+                optimize_image_for_analysis, raw_bytes, safe_mime
+            )
+            logger.info(
+                f"Analyzing image: received_len={len(image_bytes)}, processed_len={len(optimized_bytes)}, mime={safe_mime}"
+            )
+            if optimized_bytes and len(optimized_bytes) > 0:
+                contents.append(
+                    types.Part.from_bytes(data=optimized_bytes, mime_type=safe_mime)
+                )
     
     prompt_text = raw_input if raw_input and raw_input.strip() else "Analyze the food in this image and provide complete calorie & macro breakdown."
     contents.append(prompt_text)
@@ -170,45 +255,65 @@ async def analyze_food(raw_input: str, image_bytes: bytes | None = None, mime_ty
                     temperature=0.1,
                 ),
             ),
-            timeout=10.0,
+            timeout=timeout_seconds,
         )
         duration = time.perf_counter() - start_time
         logger.info(f"Gemini API call (analyze_food) completed in {duration:.2f}s ({duration * 1000:.0f}ms)")
 
         result = _parse_json_from_text(response.text)
+        if not isinstance(result, dict):
+            result = {"items": []}
 
-        # Ensure defaults if keys are missing
-        if "items" not in result:
-            result["items"] = []
+        raw_items = result.get("items")
+        if not isinstance(raw_items, list):
+            raw_items = []
 
         total_cal = 0
         total_p = 0.0
         total_c = 0.0
         total_f = 0.0
 
-        for item in result["items"]:
-            item["calories"] = int(item.get("calories", 0))
-            item["protein"] = float(item.get("protein", 0.0))
-            item["carbs"] = float(item.get("carbs", 0.0))
-            item["fat"] = float(item.get("fat", 0.0))
+        sanitized_items = []
+        for item in raw_items:
+            if not isinstance(item, dict):
+                continue
+            item["name"] = str(item.get("name") or "Food item").strip() or "Food item"
+            item["quantity"] = _safe_float(item.get("quantity"), 1.0)
+            item["unit"] = str(item.get("unit") or "serving").strip() or "serving"
+            item["calories"] = _safe_int(item.get("calories"), 0)
+            item["protein"] = _safe_float(item.get("protein"), 0.0)
+            item["carbs"] = _safe_float(item.get("carbs"), 0.0)
+            item["fat"] = _safe_float(item.get("fat"), 0.0)
             
             total_cal += item["calories"]
             total_p += item["protein"]
             total_c += item["carbs"]
             total_f += item["fat"]
+            sanitized_items.append(item)
 
-        result["total_calories"] = int(result.get("total_calories", total_cal))
-        result["total_protein"] = round(float(result.get("total_protein", total_p)), 1)
-        result["total_carbs"] = round(float(result.get("total_carbs", total_c)), 1)
-        result["total_fat"] = round(float(result.get("total_fat", total_f)), 1)
+        result["items"] = sanitized_items
+        result["total_calories"] = _safe_int(result.get("total_calories"), total_cal)
+        result["total_protein"] = round(_safe_float(result.get("total_protein"), total_p), 1)
+        result["total_carbs"] = round(_safe_float(result.get("total_carbs"), total_c), 1)
+        result["total_fat"] = round(_safe_float(result.get("total_fat"), total_f), 1)
 
         logger.info(f"Gemini analyzed food -> {result['total_calories']} kcal (P: {result['total_protein']}g, C: {result['total_carbs']}g, F: {result['total_fat']}g)")
         return result
 
-    except (asyncio.TimeoutError, TimeoutError) as e:
+    except (asyncio.TimeoutError, TimeoutError, httpx.TimeoutException) as e:
         duration = time.perf_counter() - start_time
         logger.error(f"Gemini API call (analyze_food) timed out after {duration:.2f}s: {e}")
-        raise TimeoutError("AI food scanning service timed out after 10.0s")
+        raise TimeoutError(f"AI food scanning service timed out after {timeout_seconds:.1f}s")
+    except errors.APIError as e:
+        duration = time.perf_counter() - start_time
+        err_msg = str(e).lower()
+        err_code = getattr(e, "code", None)
+        err_status = str(getattr(e, "status", "")).upper()
+        if err_code in (408, 504) or "DEADLINE_EXCEEDED" in err_status or "deadline exceeded" in err_msg or "timed out" in err_msg:
+            logger.error(f"Gemini API upstream timeout after {duration:.2f}s (code={err_code}, status={err_status}): {e}")
+            raise TimeoutError(f"AI food scanning service timed out after {timeout_seconds:.1f}s")
+        logger.error(f"Gemini API error (analyze_food) after {duration:.2f}s (code={err_code}): {e}")
+        raise
     except json.JSONDecodeError as e:
         duration = time.perf_counter() - start_time
         logger.error(f"Failed to parse Gemini response as JSON after {duration:.2f}s: {e}")
@@ -223,19 +328,33 @@ import re
 
 def _parse_json_from_text(text: str) -> dict:
     """Extract and parse JSON object from raw Gemini text response."""
+    if not text or not isinstance(text, str) or not text.strip():
+        raise ValueError("AI returned an empty response. Please try again.")
     clean_text = text.strip()
 
     # Search for markdown fenced code blocks ```json ... ```
-    match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", clean_text, re.DOTALL)
+    match = re.search(r"```(?:json)?\s*(.*?)\s*```", clean_text, re.DOTALL)
     if match:
-        clean_text = match.group(1)
+        clean_text = match.group(1).strip()
     else:
-        # Search for first { to last }
-        match = re.search(r"(\{.*\})", clean_text, re.DOTALL)
+        # Search for first { to last } or first [ to last ]
+        match = re.search(r"(\{.*\}|\[.*\])", clean_text, re.DOTALL)
         if match:
-            clean_text = match.group(1)
+            clean_text = match.group(1).strip()
 
-    return json.loads(clean_text)
+    try:
+        data = json.loads(clean_text)
+    except json.JSONDecodeError:
+        # Strip trailing commas common in LLM outputs: e.g. {"a": 1,} or [1, 2,]
+        sanitized = re.sub(r",\s*([}\]])", r"\1", clean_text)
+        data = json.loads(sanitized)
+
+    if isinstance(data, list):
+        data = {"items": data}
+    elif not isinstance(data, dict):
+        raise ValueError("AI returned non-dictionary JSON.")
+
+    return data
 
 
 MULTIPLE_MEAL_PLANS_PROMPT = """You are an expert sports nutritionist and budget culinary advisor.

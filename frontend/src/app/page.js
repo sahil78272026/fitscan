@@ -16,6 +16,8 @@ import MealPlanSelector from "@/components/MealPlanSelector";
 import MissedMealBanner from "@/components/MissedMealBanner";
 import MorningBriefingCard from "@/components/MorningBriefingCard";
 import FloatingScanButton from "@/components/FloatingScanButton";
+import ProUpgradeModal from "@/components/ProUpgradeModal";
+import { useSubscription } from "@/hooks/useSubscription";
 import {
   getDailySummary,
   getMorningBriefing,
@@ -46,6 +48,15 @@ function isSameDay(d1, d2) {
 
 export default function Home() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const {
+    hasAccess,
+    isPro,
+    trialDaysRemaining,
+    isPaywallOpen,
+    openPaywall,
+    closePaywall,
+    refreshSubscription,
+  } = useSubscription();
   const router = useRouter();
 
   const today = useMemo(() => new Date(), []);
@@ -183,12 +194,22 @@ export default function Home() {
       setUserSettings(updatedSettings);
       setWizardOpen(false);
 
+      if (!hasAccess) {
+        openPaywall("meal_plan");
+        return;
+      }
+
       // Open Plan Selector & fetch AI suggestions
       setPlanSelectorOpen(true);
-      showToast("Metrics updated! Generating meal plans... ✨");
+      showToast("Metrics updated! Generating meal plans...");
       const plansData = await getSuggestedMealPlans();
       setSuggestedPlans(plansData);
     } catch (err) {
+      if (err.status === 402 || err.code === "TRIAL_EXPIRED") {
+        setWizardOpen(false);
+        openPaywall("meal_plan");
+        return;
+      }
       showToast(err.message || "Failed to save goals", "error");
     }
   };
@@ -199,9 +220,14 @@ export default function Home() {
       const updated = await selectMealPlan(chosenPlan);
       setUserSettings(updated);
       setPlanSelectorOpen(false);
-      showToast(`Activated plan: ${chosenPlan.title}! 🎯`);
+      showToast(`Activated plan: ${chosenPlan.title}`);
       fetchSummary(selectedDate);
     } catch (err) {
+      if (err.status === 402 || err.code === "TRIAL_EXPIRED") {
+        setPlanSelectorOpen(false);
+        openPaywall("meal_plan");
+        return;
+      }
       showToast(err.message || "Failed to activate meal plan", "error");
     }
   };
@@ -324,6 +350,10 @@ export default function Home() {
   };
 
   const handleLogMeal = async (rawInput, mealType) => {
+    if (!hasAccess) {
+      openPaywall("log_meal");
+      return;
+    }
     setSubmitting(true);
     try {
       const dateStr = formatDateStr(selectedDate);
@@ -332,8 +362,12 @@ export default function Home() {
       await fetchSummary(selectedDate);
       await fetchStats();
       await fetchCalendar(calendarYear, calendarMonth);
-      showToast("Meal logged & macros updated! 🎉");
+      showToast("Meal logged & macros updated!");
     } catch (err) {
+      if (err.status === 402 || err.code === "TRIAL_EXPIRED") {
+        openPaywall("trial_expired");
+        return;
+      }
       showToast(err.message || "Failed to log meal", "error");
     } finally {
       setSubmitting(false);
@@ -341,6 +375,10 @@ export default function Home() {
   };
 
   const handleScanMealImage = async (imageFile, rawInput, mealType) => {
+    if (!hasAccess) {
+      openPaywall("scan_meal");
+      return;
+    }
     setSubmitting(true);
     try {
       const dateStr = formatDateStr(selectedDate);
@@ -355,8 +393,12 @@ export default function Home() {
       await fetchSummary(selectedDate);
       await fetchStats();
       await fetchCalendar(calendarYear, calendarMonth);
-      showToast("Photo analyzed & meal logged! 📷✨");
+      showToast("Photo analyzed & meal logged!");
     } catch (err) {
+      if (err.status === 402 || err.code === "TRIAL_EXPIRED") {
+        openPaywall("trial_expired");
+        return;
+      }
       showToast(err.message || "Failed to analyze food photo", "error");
     } finally {
       setSubmitting(false);
@@ -376,6 +418,10 @@ export default function Home() {
   };
 
   const handleTriggerMealLog = (mealType) => {
+    if (!hasAccess) {
+      openPaywall("log_meal");
+      return;
+    }
     setTargetMealType(mealType);
     const inputEl = document.getElementById("meal-input");
     if (inputEl) {
@@ -385,6 +431,10 @@ export default function Home() {
   };
 
   const handleFloatingScanClick = () => {
+    if (!hasAccess) {
+      openPaywall("scan_meal");
+      return;
+    }
     if (!isToday) {
       setSelectedDate(today);
     }
@@ -520,7 +570,7 @@ export default function Home() {
                   transition: "opacity 0.25s ease, transform 0.25s ease",
                 }}
               >
-                <span>🔥 <strong>{adherenceStats.current_streak}</strong> day streak</span>
+                <span><strong>{adherenceStats.current_streak}</strong> day streak</span>
                 <span className={styles.streakDot}>•</span>
                 <span>{adherenceStats.weekly_adherence_score}% weekly</span>
                 <span className={styles.streakArrow}>→</span>
@@ -591,7 +641,6 @@ export default function Home() {
 
               {summary?.meals?.length === 0 ? (
                 <div className={styles.emptyState}>
-                  <span className={styles.emptyIcon}>🍽️</span>
                   <p className={styles.emptyText}>
                     {isToday ? "No meals logged yet today" : "No meals logged on this day"}
                   </p>
@@ -609,7 +658,7 @@ export default function Home() {
                         className={styles.scanFirstMealBtn}
                         onClick={handleFloatingScanClick}
                       >
-                        📸 Scan Photo
+                        Scan Photo
                       </button>
                     </div>
                   ) : null}
@@ -634,6 +683,18 @@ export default function Home() {
           isLoading={submitting}
         />
       )}
+
+      {/* Hard Paywall Pro Upgrade Modal */}
+      <ProUpgradeModal
+        isOpen={isPaywallOpen}
+        onClose={closePaywall}
+        daysRemaining={trialDaysRemaining}
+        currentTier={isPro ? "pro" : "free"}
+        onSuccess={() => {
+          refreshSubscription();
+          fetchSummary(selectedDate);
+        }}
+      />
     </main>
   );
 }

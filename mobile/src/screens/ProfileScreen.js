@@ -21,8 +21,21 @@ import OnboardingModal from '../components/OnboardingModal';
 import MealPlanSelectorModal from '../components/MealPlanSelectorModal';
 import ConfirmPlanChangeModal from '../components/ConfirmPlanChangeModal';
 import SafeActionModal from '../components/SafeActionModal';
+import ProUpgradeModal from '../components/ProUpgradeModal';
+import useSubscription from '../hooks/useSubscription';
 
 export default function ProfileScreen({ navigation, user, onLogout }) {
+  const {
+    isPro,
+    trialDaysRemaining,
+    isTrialActive,
+    hasAccess,
+    refreshSubscription,
+    openPaywall,
+    closePaywall,
+    isPaywallOpen,
+  } = useSubscription(user);
+
   const [userSettings, setUserSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -49,10 +62,15 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
 
   useEffect(() => {
     fetchSettings();
-  }, []);
+    refreshSubscription();
+  }, [refreshSubscription]);
 
   const handleOpenPlanSelector = () => {
-    if (userSettings && userSettings.can_change_plan === false) {
+    if (!hasAccess) {
+      openPaywall('meal_plan_rotation');
+      return;
+    }
+    if (userSettings && userSettings.can_change_plan === false && !isPro) {
       const hours = userSettings.hours_until_next_plan_change || 1;
       Alert.alert(
         'Daily Meal Plan Limit',
@@ -70,6 +88,10 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
   };
 
   const handleOpenWizard = () => {
+    if (!hasAccess) {
+      openPaywall('meal_plan_wizard');
+      return;
+    }
     setWizardOpen(true);
   };
 
@@ -220,6 +242,15 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
         }}
       />
 
+      {/* Monetization Paywall Modal */}
+      <ProUpgradeModal
+        visible={isPaywallOpen}
+        onClose={closePaywall}
+        daysRemaining={trialDaysRemaining}
+        currentTier={isPro ? 'pro' : 'free'}
+        onSuccess={refreshSubscription}
+      />
+
       {/* Navigation Header */}
       <ScreenHeader
         title="Profile & Goals"
@@ -234,7 +265,7 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
             accessibilityRole="button"
             accessibilityLabel="View Meal Plan Schedule"
           >
-            <Text style={styles.mealPlanBtnText}>📋 Schedule</Text>
+            <Text style={styles.mealPlanBtnText}>Schedule</Text>
           </TouchableOpacity>
         }
       />
@@ -258,18 +289,64 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
           <View style={styles.userInfo}>
             <View style={styles.userHeaderRow}>
               <Text style={styles.userName}>{user?.name || 'CoreControl User'}</Text>
+              {isPro && (
+                <View style={styles.proCrownBadge}>
+                  <Text style={styles.proCrownBadgeText}>PRO</Text>
+                </View>
+              )}
             </View>
             <Text style={styles.userPhone}>{user?.email || user?.phone || 'Account Active'}</Text>
+
+            {/* Subscription & Trial Status Badge */}
+            <View style={styles.subStatusRow}>
+              <View
+                style={[
+                  styles.subBadge,
+                  isPro
+                    ? styles.subBadgePro
+                    : isTrialActive
+                    ? styles.subBadgeTrial
+                    : styles.subBadgeExpired,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.subBadgeText,
+                    isPro
+                      ? styles.subBadgeTextPro
+                      : isTrialActive
+                      ? styles.subBadgeTextTrial
+                      : styles.subBadgeTextExpired,
+                  ]}
+                >
+                  {isPro
+                    ? 'Pro Member'
+                    : isTrialActive
+                    ? `Free Trial: ${trialDaysRemaining} day${trialDaysRemaining === 1 ? '' : 's'} remaining`
+                    : 'Trial Expired'}
+                </Text>
+              </View>
+
+              {!isPro && (
+                <TouchableOpacity
+                  style={styles.upgradeBtnTrigger}
+                  onPress={() => openPaywall('profile_badge')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.upgradeBtnTriggerText}>Upgrade →</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         </Card>
 
         {/* Active Selected Meal Plan Section */}
         <Card variant="highlight" style={styles.activePlanCard}>
           <View style={styles.planBadgeRow}>
-            <Badge label="Active Meal Plan" icon="✨" variant="primary" size="sm" />
+            <Badge label="Active Meal Plan" variant="primary" size="sm" />
             {userSettings?.can_change_plan === false && (
               <Badge
-                label={`⏳ Cooldown: ${userSettings.hours_until_next_plan_change || 1}h left`}
+                label={`Cooldown: ${userSettings.hours_until_next_plan_change || 1}h left`}
                 variant="warning"
                 size="sm"
               />
@@ -593,6 +670,65 @@ const styles = StyleSheet.create({
     color: '#A79A85',
     fontSize: 11,
     fontWeight: '600',
+  },
+  proCrownBadge: {
+    backgroundColor: '#E8A020',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  proCrownBadgeText: {
+    color: '#221803',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  subStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 8,
+  },
+  subBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  subBadgePro: {
+    backgroundColor: 'rgba(232, 160, 32, 0.12)',
+    borderColor: '#E8A020',
+  },
+  subBadgeTrial: {
+    backgroundColor: 'rgba(59, 130, 246, 0.12)',
+    borderColor: '#3B82F6',
+  },
+  subBadgeExpired: {
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderColor: '#EF4444',
+  },
+  subBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  subBadgeTextPro: {
+    color: '#E8A020',
+  },
+  subBadgeTextTrial: {
+    color: '#60A5FA',
+  },
+  subBadgeTextExpired: {
+    color: '#F87171',
+  },
+  upgradeBtnTrigger: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: '#E8A020',
+  },
+  upgradeBtnTriggerText: {
+    color: '#221803',
+    fontSize: 11,
+    fontWeight: '700',
   },
   userPhone: {
     fontSize: 13,

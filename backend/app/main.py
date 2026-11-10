@@ -37,10 +37,10 @@ def get_rate_limit_key(request: Request) -> str:
 
 limiter = Limiter(key_func=get_rate_limit_key)
 
-from app.routers import auth, meals, daily_summary, settings, calendar, stats, weight, steps, health
+from app.routers import auth, meals, daily_summary, settings, calendar, stats, weight, steps, health, subscription, coupons, payments
 
 # Import models so they're registered with Base.metadata
-from app.models import User, Meal, FoodItem, UserSettings, WeightLog, StepLog  # noqa: F401
+from app.models import User, Meal, FoodItem, UserSettings, WeightLog, StepLog, PaymentOrder, Coupon, CouponRedemption  # noqa: F401
 
 app_settings = get_settings()
 
@@ -75,6 +75,8 @@ async def init_db_schema(conn):
         ("user_settings", "workout_time", "VARCHAR(50) DEFAULT 'evening'"),
         ("user_settings", "selected_meal_plan", "TEXT"),
         ("user_settings", "subscription_tier", "VARCHAR(20) DEFAULT 'free'"),
+        ("user_settings", "subscription_status", "VARCHAR(30) DEFAULT 'trial_active'"),
+        ("user_settings", "subscription_expires_at", "TIMESTAMP WITH TIME ZONE"),
         ("user_settings", "last_plan_change_at", "TIMESTAMP WITH TIME ZONE"),
         ("user_settings", "morning_briefing_enabled", "INTEGER DEFAULT 1"),
         ("user_settings", "morning_briefing_start_hour", "INTEGER DEFAULT 6"),
@@ -220,4 +222,7 @@ app.include_router(stats.router)
 app.include_router(weight.router)
 app.include_router(steps.router)
 app.include_router(health.router)
+app.include_router(subscription.router)
+app.include_router(coupons.router)
+app.include_router(payments.router)
 

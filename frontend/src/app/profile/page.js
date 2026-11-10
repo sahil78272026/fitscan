@@ -9,6 +9,8 @@ import OnboardingWizard from "@/components/OnboardingWizard";
 import MealPlanSelector from "@/components/MealPlanSelector";
 import WeightChart from "@/components/WeightChart";
 import ConfirmPlanChangeModal from "@/components/ConfirmPlanChangeModal";
+import ProUpgradeModal from "@/components/ProUpgradeModal";
+import { useSubscription } from "@/hooks/useSubscription";
 import {
   getSettings,
   updateUserGoals,
@@ -25,6 +27,16 @@ import styles from "./page.module.css";
 
 export default function ProfilePage() {
   const { isAuthenticated, loading: authLoading, user, logout } = useAuth();
+  const {
+    hasAccess,
+    isPro,
+    isTrialActive,
+    trialDaysRemaining,
+    isPaywallOpen,
+    openPaywall,
+    closePaywall,
+    refreshSubscription,
+  } = useSubscription();
   const router = useRouter();
 
   const [userSettings, setUserSettings] = useState(null);
@@ -105,13 +117,23 @@ export default function ProfilePage() {
       setUserSettings(updatedSettings);
       setWizardOpen(false);
 
+      if (!hasAccess) {
+        openPaywall("plan_change");
+        return;
+      }
+
       // Open Plan Selector & fetch AI suggestions
       setPlanSelectorOpen(true);
-      showToast("Metrics updated! Generating meal plans... ✨");
+      showToast("Metrics updated! Generating meal plans...");
 
       const plansData = await getSuggestedMealPlans();
       setSuggestedPlans(plansData);
     } catch (err) {
+      if (err.status === 402 || err.code === "TRIAL_EXPIRED") {
+        setWizardOpen(false);
+        openPaywall("plan_change");
+        return;
+      }
       showToast(err.message || "Failed to save goals", "error");
     }
   };
@@ -122,8 +144,13 @@ export default function ProfilePage() {
       const updated = await selectMealPlan(chosenPlan);
       setUserSettings(updated);
       setPlanSelectorOpen(false);
-      showToast(`Activated plan: ${chosenPlan.title}! 🎯`);
+      showToast(`Activated plan: ${chosenPlan.title}`);
     } catch (err) {
+      if (err.status === 402 || err.code === "TRIAL_EXPIRED") {
+        setPlanSelectorOpen(false);
+        openPaywall("trial_expired");
+        return;
+      }
       showToast(err.message || "Failed to activate meal plan", "error");
     }
   };
@@ -133,7 +160,7 @@ export default function ProfilePage() {
     try {
       await updateCalorieGoal(newGoal);
       await fetchSettings();
-      showToast("Calorie goal updated! 🎯");
+      showToast("Calorie goal updated");
     } catch (err) {
       showToast("Failed to update calorie goal", "error");
     }
@@ -171,6 +198,10 @@ export default function ProfilePage() {
   };
 
   const handleOpenPlanSelector = () => {
+    if (!hasAccess) {
+      openPaywall("plan_change");
+      return;
+    }
     if (userSettings && userSettings.can_change_plan === false) {
       const hours = userSettings.hours_until_next_plan_change || 1;
       showToast(`Meal plans can be updated once every 24 hours. Next change available in ${hours} hour(s).`, "info");
@@ -181,6 +212,11 @@ export default function ProfilePage() {
   };
 
   const handleConfirmPlanChange = () => {
+    if (!hasAccess) {
+      setConfirmChangeModalOpen(false);
+      openPaywall("plan_change");
+      return;
+    }
     setConfirmChangeModalOpen(false);
     setSuggestedPlans(null); // Clear previous cache so fresh plans are generated
     setPlanSelectorOpen(true);
@@ -195,7 +231,7 @@ export default function ProfilePage() {
       await logWeight(weightKg);
       await fetchSettings();
       await fetchWeightHistory(timeframe);
-      showToast("Weight logged successfully! ⚖️");
+      showToast("Weight logged successfully");
     } catch (err) {
       showToast(err.message || "Failed to log weight", "error");
     }
@@ -278,6 +314,57 @@ export default function ProfilePage() {
               <h2 className={styles.userName}>{user?.name || "CoreControl User"}</h2>
             </div>
             <p className={styles.userPhone}>{user?.email || user?.phone || "Account Active"}</p>
+
+            {/* Subscription & Trial Status Badge */}
+            <div style={{ marginTop: "0.5rem", display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  padding: "0.25rem 0.65rem",
+                  borderRadius: "999px",
+                  border: isPro
+                    ? "1px solid rgba(232, 160, 32, 0.45)"
+                    : isTrialActive
+                    ? "1px solid rgba(123, 160, 91, 0.45)"
+                    : "1px solid rgba(199, 80, 47, 0.45)",
+                  background: isPro
+                    ? "rgba(232, 160, 32, 0.12)"
+                    : isTrialActive
+                    ? "rgba(123, 160, 91, 0.12)"
+                    : "rgba(199, 80, 47, 0.12)",
+                  color: isPro ? "#E8A020" : isTrialActive ? "#7BA05B" : "#C7502F",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                }}
+              >
+                {isPro
+                  ? "Pro Member"
+                  : isTrialActive
+                  ? `Free Trial: ${trialDaysRemaining} day${trialDaysRemaining !== 1 ? "s" : ""} remaining`
+                  : "Trial Expired"}
+              </span>
+
+              {!isPro && (
+                <button
+                  type="button"
+                  onClick={() => openPaywall("profile")}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "var(--color-primary, #E8A020)",
+                    fontSize: "0.78rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    textDecoration: "underline",
+                    padding: "0",
+                  }}
+                >
+                  Upgrade to Pro →
+                </button>
+              )}
+            </div>
           </div>
         </section>
 
@@ -296,7 +383,7 @@ export default function ProfilePage() {
                       borderColor: "rgba(234, 88, 12, 0.35)",
                     }}
                   >
-                    ⏳ Next change in {userSettings.hours_until_next_plan_change || 1}h
+                    Next change in {userSettings.hours_until_next_plan_change || 1}h
                   </span>
                 )}
               </div>
@@ -437,6 +524,18 @@ export default function ProfilePage() {
           </span>
         </section>
       </div>
+
+      {/* Hard Paywall Pro Upgrade Modal */}
+      <ProUpgradeModal
+        isOpen={isPaywallOpen}
+        onClose={closePaywall}
+        daysRemaining={trialDaysRemaining}
+        currentTier={isPro ? "pro" : "free"}
+        onSuccess={() => {
+          refreshSubscription();
+          fetchSettings();
+        }}
+      />
     </main>
   );
 }

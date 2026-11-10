@@ -22,7 +22,6 @@ import MealDetailModal from '../components/MealDetailModal';
 import MealCard from '../components/MealCard';
 import DynamicGreetingHeader from '../components/DynamicGreetingHeader';
 import ContextualMilestoneCard from '../components/ContextualMilestoneCard';
-import GoalInsightsCard from '../components/GoalInsightsCard';
 import { estimateMealCost } from '../utils/mealCostEstimator';
 import {
   getDailySummary,
@@ -41,6 +40,8 @@ import MorningBriefingCard from '../components/MorningBriefingCard';
 import OnboardingModal from '../components/OnboardingModal';
 import MealPlanSelectorModal from '../components/MealPlanSelectorModal';
 import MissedMealBanner from '../components/MissedMealBanner';
+import ProUpgradeModal from '../components/ProUpgradeModal';
+import useSubscription from '../hooks/useSubscription';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useFocusEffect } from '@react-navigation/native';
@@ -67,6 +68,16 @@ const getInitialMealType = () => {
 export default function HomeScreen({ navigation, user, onLogout }) {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? 12 : 0);
+
+  const {
+    isPro,
+    trialDaysRemaining,
+    hasAccess,
+    refreshSubscription,
+    openPaywall,
+    closePaywall,
+    isPaywallOpen,
+  } = useSubscription(user);
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [summary, setSummary] = useState(null);
@@ -184,6 +195,10 @@ export default function HomeScreen({ navigation, user, onLogout }) {
   };
 
   const handleLogPlannedMeal = async (plannedMeal) => {
+    if (!hasAccess) {
+      openPaywall('log_meal');
+      return;
+    }
     const mealTypeLower = (plannedMeal.meal_type || 'lunch').toLowerCase();
     try {
       setLoggingPlannedMeal(mealTypeLower);
@@ -191,13 +206,17 @@ export default function HomeScreen({ navigation, user, onLogout }) {
       await logMeal(plannedMeal.dish_name, mealTypeLower, dateStr);
       await loadData();
       Alert.alert(
-        'Logged to Today! 🎉',
+        'Logged to Today',
         `${plannedMeal.dish_name} (${plannedMeal.calories} kcal) added to your diary.`
       );
       if (selectedPlannedMealModal) {
         setSelectedPlannedMealModal(null);
       }
     } catch (err) {
+      if (err.status === 402 || err.code === 'TRIAL_EXPIRED') {
+        openPaywall('log_meal');
+        return;
+      }
       Alert.alert('Logging Failed', err.message || 'Failed to log planned meal.');
     } finally {
       setLoggingPlannedMeal(null);
@@ -305,11 +324,16 @@ export default function HomeScreen({ navigation, user, onLogout }) {
 
   useFocusEffect(
     useCallback(() => {
+      refreshSubscription();
       loadData();
-    }, [loadData])
+    }, [loadData, refreshSubscription])
   );
 
   const handleLogMeal = async () => {
+    if (!hasAccess) {
+      openPaywall('log_meal');
+      return;
+    }
     if (!rawInput.trim()) {
       Alert.alert('Empty Input', 'Please type a meal description or use photo scan.');
       return;
@@ -321,8 +345,12 @@ export default function HomeScreen({ navigation, user, onLogout }) {
       await logMeal(rawInput.trim(), mealType, dateStr);
       setRawInput('');
       await loadData();
-      Alert.alert('Success! 🎉', 'Meal logged and macros updated.');
+      Alert.alert('Success', 'Meal logged and macros updated.');
     } catch (err) {
+      if (err.status === 402 || err.code === 'TRIAL_EXPIRED') {
+        openPaywall('log_meal');
+        return;
+      }
       Alert.alert('Error', err.message || 'Failed to log meal');
     } finally {
       setSubmitting(false);
@@ -688,59 +716,6 @@ export default function HomeScreen({ navigation, user, onLogout }) {
           </TouchableOpacity>
         </View>
 
-        {/* Macro Progress Bars */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Macronutrients</Text>
-          
-          {/* Protein */}
-          <View style={styles.macroBlock}>
-            <View style={styles.macroHeader}>
-              <Text style={styles.macroName}>Protein</Text>
-              <Text style={styles.macroValue}>
-                {summary?.total_protein || 0}g / {summary?.protein_goal || 150}g
-              </Text>
-            </View>
-            <View style={styles.barBg}>
-              <View style={[styles.barFill, { width: `${Math.min(((summary?.total_protein || 0) / (summary?.protein_goal || 150)) * 100, 100)}%`, backgroundColor: colors.protein }]} />
-            </View>
-          </View>
-
-          {/* Carbs */}
-          <View style={styles.macroBlock}>
-            <View style={styles.macroHeader}>
-              <Text style={styles.macroName}>Carbs</Text>
-              <Text style={styles.macroValue}>
-                {summary?.total_carbs || 0}g / {summary?.carbs_goal || 200}g
-              </Text>
-            </View>
-            <View style={styles.barBg}>
-              <View style={[styles.barFill, { width: `${Math.min(((summary?.total_carbs || 0) / (summary?.carbs_goal || 200)) * 100, 100)}%`, backgroundColor: colors.carbs }]} />
-            </View>
-          </View>
-
-          {/* Fat */}
-          <View style={styles.macroBlock}>
-            <View style={styles.macroHeader}>
-              <Text style={styles.macroName}>Fat</Text>
-              <Text style={styles.macroValue}>
-                {summary?.total_fat || 0}g / {summary?.fat_goal || 65}g
-              </Text>
-            </View>
-            <View style={styles.barBg}>
-              <View style={[styles.barFill, { width: `${Math.min(((summary?.total_fat || 0) / (summary?.fat_goal || 65)) * 100, 100)}%`, backgroundColor: colors.fat }]} />
-            </View>
-          </View>
-        </View>
-
-        {/* Goal Insights & Adaptive Suggestions */}
-        <GoalInsightsCard
-          summary={summary}
-          userSettings={userSettings}
-          onSelectSuggestion={(item) => {
-            setRawInput(item.name);
-          }}
-        />
-
         {/* Today's Planned Meals Quick-Access Widget */}
         {isToday && activePlan?.meals?.length > 0 && (
           <View style={styles.plannedMealsContainer}>
@@ -965,14 +940,22 @@ export default function HomeScreen({ navigation, user, onLogout }) {
                 });
               }}
               onQuickLog={async (item) => {
+                if (!hasAccess) {
+                  openPaywall('log_meal');
+                  return;
+                }
                 const itemMealType = (item.meal_type || mealType).toLowerCase();
                 try {
                   setSubmitting(true);
                   const dateStr = formatDateStr(selectedDate);
                   await logMeal(item.name, itemMealType, dateStr);
                   await loadData();
-                  Alert.alert('Meal Logged! 🎉', `${item.name} added to today's diary.`);
+                  Alert.alert('Meal Logged', `${item.name} added to today's diary.`);
                 } catch (err) {
+                  if (err.status === 402 || err.code === 'TRIAL_EXPIRED') {
+                    openPaywall('log_meal');
+                    return;
+                  }
                   Alert.alert('Logging Failed', err.message || 'Failed to log meal.');
                 } finally {
                   setSubmitting(false);
@@ -995,8 +978,13 @@ export default function HomeScreen({ navigation, user, onLogout }) {
               />
               <Button
                 title="Scan Photo"
-                icon="📸"
-                onPress={() => navigation.navigate('Scan', { mealDate: formatDateStr(selectedDate) })}
+                onPress={() => {
+                  if (!hasAccess) {
+                    openPaywall('scan_meal');
+                    return;
+                  }
+                  navigation.navigate('Scan', { mealDate: formatDateStr(selectedDate) });
+                }}
                 variant="secondary"
                 size="md"
                 style={styles.quickLogBtnFlex}
@@ -1086,6 +1074,15 @@ export default function HomeScreen({ navigation, user, onLogout }) {
         isLogging={loggingPlannedMeal === (selectedPlannedMealModal?.meal_type || '').toLowerCase()}
         onLogMeal={handleLogPlannedMeal}
         onClose={() => setSelectedPlannedMealModal(null)}
+      />
+
+      {/* Monetization Paywall Modal */}
+      <ProUpgradeModal
+        visible={isPaywallOpen}
+        onClose={closePaywall}
+        daysRemaining={trialDaysRemaining}
+        currentTier={isPro ? 'pro' : 'free'}
+        onSuccess={refreshSubscription}
       />
     </SafeAreaView>
   );
@@ -1682,18 +1679,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   quickLogCard: {
-    padding: spacing.cardPadding || 16,
-    marginBottom: spacing.cardPadding || 16,
+    padding: spacing.cardPadding ? spacing.cardPadding + 4 : 20,
+    marginBottom: spacing.cardPadding ? spacing.cardPadding + 6 : 22,
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: radius.lg || 16,
+    borderRadius: radius.lg || 18,
+    borderWidth: 1,
     ...(shadows.sm || {}),
   },
   quickLogHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   quickLogHeaderLeft: {
     flex: 1,
@@ -1702,8 +1700,8 @@ const styles = StyleSheet.create({
   quickLogTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 2,
+    gap: 8,
+    marginBottom: 4,
   },
   quickLogIcon: {
     fontSize: 16,
@@ -1712,11 +1710,12 @@ const styles = StyleSheet.create({
     fontSize: typography?.sizes?.md || 16,
     fontWeight: '700',
     color: colors.textPrimary,
+    letterSpacing: -0.2,
   },
   quickLogSubTitle: {
-    fontSize: typography?.sizes?.xs || 11,
+    fontSize: typography?.sizes?.xs || 12,
     color: colors.textSecondary,
-    lineHeight: 15,
+    lineHeight: 16,
   },
   quickLogInputWrapper: {
     flexDirection: 'row',
@@ -1724,10 +1723,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated,
     borderWidth: 1.5,
     borderColor: colors.border,
-    borderRadius: radius.md || 10,
-    paddingHorizontal: 12,
-    minHeight: 48,
-    marginBottom: 12,
+    borderRadius: radius.md || 12,
+    paddingHorizontal: 14,
+    minHeight: 50,
+    marginBottom: 16,
   },
   quickLogInputFocused: {
     borderColor: colors.primary,
@@ -1735,13 +1734,13 @@ const styles = StyleSheet.create({
   },
   quickLogInputLeadingIcon: {
     fontSize: 15,
-    marginRight: 8,
+    marginRight: 10,
   },
   quickLogTextInput: {
     flex: 1,
     color: colors.textPrimary,
     fontSize: typography?.sizes?.base || 14,
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   quickLogClearBtn: {
     width: 32,
@@ -1759,20 +1758,20 @@ const styles = StyleSheet.create({
   },
   quickLogTypeRow: {
     flexDirection: 'row',
-    gap: 6,
-    marginBottom: 10,
+    gap: 8,
+    marginBottom: 16,
   },
   quickLogTypePill: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
+    gap: 4,
     backgroundColor: colors.surfaceElevated,
-    borderRadius: 18,
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    minHeight: 32,
+    borderRadius: radius.pill || 999,
+    paddingVertical: 7,
+    paddingHorizontal: 6,
+    minHeight: 36,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -1786,7 +1785,7 @@ const styles = StyleSheet.create({
   },
   quickLogTypePillText: {
     color: colors.textSecondary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
   },
   quickLogTypePillTextActive: {
@@ -1795,7 +1794,8 @@ const styles = StyleSheet.create({
   },
   quickLogActionRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
+    marginTop: 4,
   },
   quickLogBtnFlex: {
     flex: 1,

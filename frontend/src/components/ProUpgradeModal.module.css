@@ -1,7 +1,7 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: var(--color-surface-overlay, rgba(0, 0, 0, 0.80));
+  background: var(--color-surface-overlay, rgba(0, 0, 0, 0.82));
   backdrop-filter: blur(16px);
   z-index: 2000;
   display: flex;
@@ -104,10 +104,13 @@
   }
 }
 
-.proCrown {
+.proCrownIcon {
   position: relative;
-  font-size: 2rem;
   z-index: 1;
+  color: var(--color-primary, #E8A020);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .title {
@@ -126,7 +129,9 @@
 
 .cooldownNotice {
   color: var(--color-primary, #E8A020);
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   background: var(--color-primary-glow, rgba(232, 160, 32, 0.15));
   border: 1px solid rgba(232, 160, 32, 0.3);
   padding: 0.35rem 0.75rem;
@@ -153,9 +158,12 @@
 }
 
 .featureIcon {
-  font-size: 1.15rem;
+  color: var(--color-primary, #E8A020);
   flex-shrink: 0;
-  margin-top: 1px;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .featureText strong {
@@ -178,7 +186,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
 }
 
 .pricingCard {
@@ -274,13 +282,141 @@
   color: var(--color-text-secondary, #A79A85);
 }
 
+.strikePrice {
+  text-decoration: line-through;
+  color: var(--color-text-tertiary, #706555);
+  font-size: 0.88rem;
+  margin-right: 0.35rem;
+}
+
+.freePriceTag {
+  color: var(--color-protein, #7BA05B);
+  font-weight: 800;
+  font-size: 1.15rem;
+}
+
+/* Coupon Section */
+.couponSection {
+  background: var(--color-surface-elevated, #2C251D);
+  border: 1px solid var(--color-border, #3A3128);
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.couponHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #A79A85);
+  margin-bottom: 0.6rem;
+}
+
+.couponInputRow {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.couponInput {
+  flex: 1;
+  background: var(--color-surface, #221D17);
+  border: 1px solid var(--color-border, #3A3128);
+  border-radius: 10px;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.88rem;
+  color: var(--color-text-primary, #F4ECDD);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.couponInput:focus {
+  border-color: var(--color-primary, #E8A020);
+}
+
+.applyCouponBtn {
+  background: var(--color-surface-active, #2A2219);
+  border: 1px solid var(--color-border-hover, #4A3F34);
+  color: var(--color-text-primary, #F4ECDD);
+  padding: 0.55rem 1rem;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.applyCouponBtn:hover:not(:disabled) {
+  background: var(--color-primary, #E8A020);
+  color: var(--color-text-on-primary, #221803);
+  border-color: var(--color-primary, #E8A020);
+}
+
+.applyCouponBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.couponAppliedBanner {
+  margin-top: 0.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(123, 160, 91, 0.12);
+  border: 1px solid rgba(123, 160, 91, 0.35);
+  border-radius: 8px;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.78rem;
+  color: var(--color-protein, #7BA05B);
+}
+
+.couponBannerContent {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.removeCouponBtn {
+  background: none;
+  border: none;
+  color: var(--color-text-tertiary, #706555);
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.removeCouponBtn:hover {
+  color: var(--color-danger, #C7502F);
+}
+
+.couponError {
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--color-danger, #C7502F);
+}
+
+/* Error Message */
 .errorMessage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
   font-size: 0.82rem;
   color: var(--color-danger, #C7502F);
   text-align: center;
   margin-bottom: 0.75rem;
 }
 
+/* Upgrade Buttons */
 .upgradeBtn {
   width: 100%;
   padding: 0.9rem;
@@ -293,6 +429,10 @@
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 4px 18px var(--color-primary-glow, rgba(232, 160, 32, 0.25));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .upgradeBtn:hover:not(:disabled) {
@@ -305,7 +445,39 @@
   cursor: not-allowed;
 }
 
+.freeAccessBtn {
+  width: 100%;
+  padding: 0.9rem;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(135deg, var(--color-protein, #7BA05B) 0%, #5C7F40 100%);
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 18px rgba(123, 160, 91, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.freeAccessBtn:hover:not(:disabled) {
+  box-shadow: 0 6px 24px rgba(123, 160, 91, 0.55);
+  transform: translateY(-1px);
+}
+
+.freeAccessBtn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .guaranteeNote {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
   text-align: center;
   font-size: 0.74rem;
   color: var(--color-text-tertiary, #706555);
@@ -318,6 +490,10 @@
 }
 
 .proActiveMessage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   font-size: 0.95rem;
   color: var(--color-protein, #7BA05B);
   margin-bottom: 1.25rem;

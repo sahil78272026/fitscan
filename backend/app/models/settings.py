@@ -25,6 +25,8 @@ class UserSettings(Base):
     workout_time = Column(String(50), nullable=True, default="evening")
     selected_meal_plan = Column(Text, nullable=True)
     subscription_tier = Column(String(20), nullable=True, default="free")
+    subscription_status = Column(String(30), nullable=True, default="trial_active")
+    subscription_expires_at = Column(DateTime(timezone=True), nullable=True)
     last_plan_change_at = Column(DateTime(timezone=True), nullable=True)
     morning_briefing_enabled = Column(Integer, nullable=True, default=1)  # 1 = true, 0 = false (SQLite/PG compat)
     morning_briefing_start_hour = Column(Integer, nullable=True, default=6)  # 6 AM

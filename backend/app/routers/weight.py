@@ -10,7 +10,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.weight import WeightLog
 from app.services.meal_service import get_or_create_settings
-from app.middleware.auth import get_current_user
+from app.middleware.auth import get_current_user, require_active_subscription
 
 logger = logging.getLogger("corecontrol.routers.weight")
 
@@ -41,7 +41,7 @@ class WeightHistoryResponse(BaseModel):
 @router.post("", response_model=WeightLogResponse)
 async def log_weight(
     payload: WeightLogPayload,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_active_subscription),
     db: AsyncSession = Depends(get_db),
 ):
     """Log or update body weight for a given date (validated to 25–300 kg)."""
@@ -156,7 +156,7 @@ async def get_weight_history(
 @router.delete("/{log_id}")
 async def delete_weight_log(
     log_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_active_subscription),
     db: AsyncSession = Depends(get_db),
 ):
     """Delete a specific weight entry."""

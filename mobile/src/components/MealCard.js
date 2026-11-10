@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,6 +9,7 @@ import {
   Platform,
   UIManager,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, typography, spacing, radius, shadows } from '../theme';
 import { Badge } from './ui/Badge';
 
@@ -16,11 +17,11 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const MEAL_TYPE_ICONS = {
-  breakfast: '🌅',
-  lunch: '☀️',
-  dinner: '🌙',
-  snack: '🍿',
+const MEAL_TYPE_COLORS = {
+  breakfast: '#F59E0B',
+  lunch: '#38BDF8',
+  dinner: '#A855F7',
+  snack: '#10B981',
 };
 
 export function getMealPriority(meal) {
@@ -29,12 +30,12 @@ export function getMealPriority(meal) {
   const calories = Number(meal?.total_calories || meal?.calories || 0);
 
   if (type === 'dinner' || protein >= 35 || calories >= 550) {
-    return { label: '⚡ Recovery Anchor', variant: 'primary' };
+    return { label: 'Recovery Anchor', variant: 'primary' };
   }
   if (type === 'snack' || calories < 300) {
-    return { label: '☕ Snack', variant: 'neutral' };
+    return { label: 'Light Snack', variant: 'neutral' };
   }
-  return { label: '🌾 Balanced', variant: 'protein' };
+  return { label: 'Balanced', variant: 'protein' };
 }
 
 export default function MealCard({
@@ -45,8 +46,27 @@ export default function MealCard({
   defaultExpanded = false,
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
+  const [localUri, setLocalUri] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!meal?.image_url && meal?.id) {
+      AsyncStorage.getItem(`fitscan_local_meal_img_${meal.id}`)
+        .then((uri) => {
+          if (isMounted && uri) setLocalUri(uri);
+        })
+        .catch(() => {});
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [meal?.image_url, meal?.id]);
 
   if (!meal) return null;
+
+  const activeImageUrl = meal.image_url || localUri;
+  const mealTypeKey = (meal.meal_type || 'lunch').toLowerCase();
+  const categoryColor = MEAL_TYPE_COLORS[mealTypeKey] || colors.primary || '#F59E0B';
 
   const dateVal = meal.logged_at || meal.created_at;
   let mealTimeStr = '';
@@ -81,7 +101,7 @@ export default function MealCard({
   const foodItems = Array.isArray(meal.food_items) ? meal.food_items : [];
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { borderLeftColor: categoryColor }]}>
       <TouchableOpacity
         activeOpacity={0.88}
         onPress={toggleExpand}
@@ -90,27 +110,27 @@ export default function MealCard({
         accessibilityLabel={`${meal.meal_type || 'Meal'} card, tap to ${expanded ? 'collapse' : 'expand'}`}
       >
         <View style={styles.topRow}>
-          {/* Left: Thumbnail / Icon */}
-          {meal.image_url ? (
+          {/* Left: Thumbnail / Minimalist Type Badge */}
+          {activeImageUrl ? (
             <TouchableOpacity
               onPress={(e) => {
                 e.stopPropagation();
-                if (onPreviewImage) onPreviewImage(meal.image_url);
+                if (onPreviewImage) onPreviewImage(activeImageUrl);
               }}
               activeOpacity={0.8}
               style={styles.thumbWrapper}
               accessibilityRole="button"
               accessibilityLabel="View full meal photo"
             >
-              <Image source={{ uri: meal.image_url }} style={styles.thumb} resizeMode="cover" />
+              <Image source={{ uri: activeImageUrl }} style={styles.thumb} resizeMode="cover" />
               <View style={styles.zoomBadge}>
-                <Text style={styles.zoomBadgeText}>🔍</Text>
+                <Text style={styles.zoomBadgeText}>VIEW</Text>
               </View>
             </TouchableOpacity>
           ) : (
-            <View style={styles.iconPlaceholder}>
-              <Text style={styles.iconPlaceholderText}>
-                {MEAL_TYPE_ICONS[meal.meal_type] || '🍽️'}
+            <View style={[styles.typeBadgePlaceholder, { borderColor: `${categoryColor}44` }]}>
+              <Text style={[styles.typeBadgeLetter, { color: categoryColor }]}>
+                {mealTypeKey.charAt(0).toUpperCase()}
               </Text>
             </View>
           )}
@@ -183,17 +203,17 @@ export default function MealCard({
       {expanded && (
         <View style={styles.expandedBody}>
           {/* Prominent Image Banner */}
-          {meal.image_url ? (
+          {activeImageUrl ? (
             <TouchableOpacity
-              onPress={() => onPreviewImage && onPreviewImage(meal.image_url)}
+              onPress={() => onPreviewImage && onPreviewImage(activeImageUrl)}
               activeOpacity={0.9}
               style={styles.imageBannerContainer}
               accessibilityRole="button"
               accessibilityLabel="View enlarged meal photo"
             >
-              <Image source={{ uri: meal.image_url }} style={styles.imageBanner} resizeMode="cover" />
+              <Image source={{ uri: activeImageUrl }} style={styles.imageBanner} resizeMode="cover" />
               <View style={styles.imageBannerOverlay}>
-                <Text style={styles.imageBannerText}>📸 Tap to enlarge photo</Text>
+                <Text style={styles.imageBannerText}>Tap to enlarge photo</Text>
               </View>
             </TouchableOpacity>
           ) : null}

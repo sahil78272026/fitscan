@@ -1,6 +1,7 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api";
 export const ENABLE_API_LOGGING = process.env.NODE_ENV !== "production";
 const REQUEST_TIMEOUT_MS = 15000;
+export const SCAN_REQUEST_TIMEOUT_MS = 45000;
 
 export function createNetworkError(originalError) {
   const error = new Error("Unable to connect to server. Please check your internet connection.");
@@ -76,7 +77,8 @@ async function request(endpoint, options = {}, requireAuth = true) {
     }
   }
 
-  const res = await fetchWithTimeout(url, { ...options, headers });
+  const timeoutMs = options.timeoutMs || REQUEST_TIMEOUT_MS;
+  const res = await fetchWithTimeout(url, { ...options, headers }, timeoutMs);
 
   // Handle 401 — redirect to login
   if (res.status === 401) {
@@ -90,8 +92,16 @@ async function request(endpoint, options = {}, requireAuth = true) {
   }
 
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: "Something went wrong" }));
-    throw new Error(error.detail || `HTTP ${res.status}`);
+    const errorData = await res.json().catch(() => ({ detail: "Something went wrong" }));
+    const message =
+      typeof errorData.detail === "string"
+        ? errorData.detail
+        : errorData.detail?.message || `HTTP ${res.status}`;
+    const err = new Error(message);
+    err.status = res.status;
+    err.data = errorData;
+    err.code = (typeof errorData.detail === "object" && errorData.detail?.code) || errorData.code || null;
+    throw err;
   }
 
   // 204 No Content (e.g., DELETE)
@@ -99,7 +109,7 @@ async function request(endpoint, options = {}, requireAuth = true) {
   return res.json();
 }
 
-async function requestForm(endpoint, formData) {
+async function requestForm(endpoint, formData, timeoutMs = REQUEST_TIMEOUT_MS) {
   const url = `${API_BASE}${endpoint}`;
   const headers = {};
   const token = getToken();
@@ -111,7 +121,7 @@ async function requestForm(endpoint, formData) {
     method: "POST",
     headers,
     body: formData,
-  });
+  }, timeoutMs);
 
   if (res.status === 401) {
     if (typeof window !== "undefined") {
@@ -124,8 +134,16 @@ async function requestForm(endpoint, formData) {
   }
 
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: "Something went wrong" }));
-    throw new Error(error.detail || `HTTP ${res.status}`);
+    const errorData = await res.json().catch(() => ({ detail: "Something went wrong" }));
+    const message =
+      typeof errorData.detail === "string"
+        ? errorData.detail
+        : errorData.detail?.message || `HTTP ${res.status}`;
+    const err = new Error(message);
+    err.status = res.status;
+    err.data = errorData;
+    err.code = (typeof errorData.detail === "object" && errorData.detail?.code) || errorData.code || null;
+    throw err;
   }
 
   return res.json();
@@ -202,6 +220,7 @@ export async function logMeal(rawInput, mealType, mealDate = null, imageUrl = nu
   return request("/meals", {
     method: "POST",
     body: JSON.stringify(body),
+    timeoutMs: SCAN_REQUEST_TIMEOUT_MS,
   });
 }
 
@@ -213,7 +232,7 @@ export async function scanMealImage(imageFile, rawInput = "", mealType = "lunch"
   if (mealDate) formData.append("meal_date", mealDate);
   if (imageUrl) formData.append("image_url", imageUrl);
 
-  return requestForm("/meals/scan-image", formData);
+  return requestForm("/meals/scan-image", formData, SCAN_REQUEST_TIMEOUT_MS);
 }
 
 export async function getMealRecommendations() {
@@ -321,5 +340,52 @@ export async function updateMorningBriefingPreferences(preferences) {
     body: JSON.stringify(preferences),
   });
 }
+
+// --- Subscription & Paywall ---
+
+export async function getSubscriptionStatus() {
+  return request("/subscription/status");
+}
+
+// --- Dynamic Coupons ---
+
+export async function validateCoupon(code, planType = "annual") {
+  return request("/coupons/validate", {
+    method: "POST",
+    body: JSON.stringify({ code, plan_type: planType }),
+  });
+}
+
+export async function redeemCoupon(code, planType = "annual") {
+  return request("/coupons/redeem", {
+    method: "POST",
+    body: JSON.stringify({ code, plan_type: planType }),
+  });
+}
+
+// --- Razorpay Payments ---
+
+export async function getPricingPlans() {
+  return request("/payments/plans");
+}
+
+export async function createPaymentOrder(planId, couponCode = null) {
+  const body = { plan_id: planId };
+  if (couponCode) {
+    body.coupon_code = couponCode;
+  }
+  return request("/payments/razorpay/create-order", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function verifyPaymentSignature(payload) {
+  return request("/payments/razorpay/verify-payment", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 
 

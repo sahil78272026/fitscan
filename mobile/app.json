@@ -3,7 +3,7 @@
     "name": "CoreControl",
     "slug": "fitscan-mobile",
     "scheme": "fitscan",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "orientation": "portrait",
     "icon": "./assets/corecontrol_logo.png",
     "userInterfaceStyle": "dark",
@@ -28,7 +28,7 @@
       },
       "package": "com.fitscan.wellness",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 7,
+      "versionCode": 8,
       "permissions": [
         "ACTIVITY_RECOGNITION",
         "CAMERA",

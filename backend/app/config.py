@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     # Gemini
     GEMINI_API_KEY: str
     GEMINI_MODEL: str = "gemini-2.0-flash"
+    GEMINI_TIMEOUT_SECONDS: float = 35.0
 
     # JWT
     JWT_SECRET: str = "dev-secret-change-in-production"
@@ -35,6 +36,13 @@ class Settings(BaseSettings):
     # Upstash Redis
     UPSTASH_REDIS_REST_URL: str = ""
     UPSTASH_REDIS_REST_TOKEN: str = ""
+
+    # Razorpay Settings
+    RAZORPAY_KEY_ID: str = ""
+    RAZORPAY_KEY_SECRET: str = ""
+    RAZORPAY_WEBHOOK_SECRET: str = ""
+    RAZORPAY_MOCK_MODE: bool = False
+    RAZORPAY_CURRENCY: str = "INR"
 
     # Misc
     LOG_LEVEL: str = "INFO"
@@ -81,6 +89,21 @@ class Settings(BaseSettings):
 
             if self.DEV_OTP and self.DEV_OTP.strip():
                 raise ValueError("In production (APP_ENV='production'), DEV_OTP must be empty.")
+
+            if self.RAZORPAY_MOCK_MODE:
+                raise ValueError("In production (APP_ENV='production'), RAZORPAY_MOCK_MODE cannot be True.")
+
+            clean_rp_key = (self.RAZORPAY_KEY_ID or "").strip()
+            if not clean_rp_key or clean_rp_key.startswith("rzp_test_replace"):
+                raise ValueError(
+                    "In production (APP_ENV='production'), RAZORPAY_KEY_ID must not be empty or start with 'rzp_test_replace'."
+                )
+
+            clean_rp_secret = (self.RAZORPAY_KEY_SECRET or "").strip()
+            if not clean_rp_secret or clean_rp_secret.startswith("rzp_test_replace"):
+                raise ValueError(
+                    "In production (APP_ENV='production'), RAZORPAY_KEY_SECRET must not be empty or start with 'rzp_test_replace'."
+                )
         return self
 
 

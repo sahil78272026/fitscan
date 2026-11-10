@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models.user import User
 from app.models.step import StepLog
-from app.middleware.auth import get_current_user
+from app.middleware.auth import get_current_user, require_active_subscription
 
 logger = logging.getLogger("corecontrol.routers.steps")
 
@@ -47,7 +47,7 @@ def calculate_step_calories(steps: int) -> float:
 @router.post("", response_model=StepLogResponse)
 async def log_steps(
     payload: StepLogPayload,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_active_subscription),
     db: AsyncSession = Depends(get_db),
 ):
     """Log or update step count for a given date."""

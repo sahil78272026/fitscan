@@ -17,9 +17,21 @@ import { logMeal, scanMealImage, scanMealImageBase64 } from '../services/api';
 import { uploadMealImageToFirebase, auth } from '../services/firebase';
 import { ScreenHeader, Button } from '../components/ui';
 import { colors, spacing, typography, radius } from '../theme';
+import ProUpgradeModal from '../components/ProUpgradeModal';
+import useSubscription from '../hooks/useSubscription';
 
 export default function ScanMealScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
+  const {
+    isPro,
+    trialDaysRemaining,
+    hasAccess,
+    refreshSubscription,
+    openPaywall,
+    closePaywall,
+    isPaywallOpen,
+  } = useSubscription();
+
   const [imageUri, setImageUri] = useState(null);
   const [photoBase64, setPhotoBase64] = useState(null);
   const [rawInput, setRawInput] = useState('');
@@ -29,6 +41,10 @@ export default function ScanMealScreen({ navigation, route }) {
   const mealDate = route?.params?.mealDate || null;
 
   const pickImage = async () => {
+    if (!hasAccess) {
+      openPaywall('scan_meal');
+      return;
+    }
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
@@ -58,6 +74,10 @@ export default function ScanMealScreen({ navigation, route }) {
   };
 
   const takePhoto = async () => {
+    if (!hasAccess) {
+      openPaywall('scan_meal');
+      return;
+    }
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
@@ -86,6 +106,11 @@ export default function ScanMealScreen({ navigation, route }) {
   };
 
   const handleLogMeal = async () => {
+    if (!hasAccess) {
+      openPaywall('scan_meal');
+      return;
+    }
+
     if (!rawInput.trim() && !imageUri && !photoBase64) {
       if (Platform.OS === 'web') {
         alert('Please describe your meal or select an image.');
@@ -119,12 +144,16 @@ export default function ScanMealScreen({ navigation, route }) {
       }
 
       if (Platform.OS === 'web') {
-        alert('Meal Logged! 🎉 AI calorie analysis completed.');
+        alert('Meal Logged! AI calorie analysis completed.');
       } else {
-        Alert.alert('Meal Logged! 🎉', 'AI calorie analysis completed.');
+        Alert.alert('Meal Logged', 'AI calorie analysis completed.');
       }
       navigation.goBack();
     } catch (err) {
+      if (err.status === 402 || err.code === 'TRIAL_EXPIRED') {
+        openPaywall('scan_meal');
+        return;
+      }
       if (Platform.OS === 'web') {
         alert('Error: ' + (err.message || 'Failed to log meal'));
       } else {
@@ -219,6 +248,15 @@ export default function ScanMealScreen({ navigation, route }) {
           />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Monetization Paywall Modal */}
+      <ProUpgradeModal
+        visible={isPaywallOpen}
+        onClose={closePaywall}
+        daysRemaining={trialDaysRemaining}
+        currentTier={isPro ? 'pro' : 'free'}
+        onSuccess={refreshSubscription}
+      />
     </View>
   );
 }

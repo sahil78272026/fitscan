@@ -18,6 +18,7 @@ let API_BASE_URL = getInitialApiUrl();
 
 export const ENABLE_API_LOGGING = __DEV__;
 const REQUEST_TIMEOUT_MS = 15000;
+export const SCAN_REQUEST_TIMEOUT_MS = 45000;
 
 export function createNetworkError(originalError) {
   const error = new Error('Unable to connect to server. Please check your internet connection.');
@@ -101,7 +102,8 @@ async function request(endpoint, options = {}, requireAuth = true) {
     }
   }
 
-  const res = await fetchWithTimeout(url, { ...options, headers });
+  const timeoutMs = options.timeoutMs || REQUEST_TIMEOUT_MS;
+  const res = await fetchWithTimeout(url, { ...options, headers }, timeoutMs);
 
   if (res.status === 401) {
     await AsyncStorage.removeItem('fitscan_token');
@@ -110,8 +112,16 @@ async function request(endpoint, options = {}, requireAuth = true) {
   }
 
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: 'Something went wrong' }));
-    throw new Error(error.detail || `HTTP ${res.status}`);
+    const errorData = await res.json().catch(() => ({ detail: 'Something went wrong' }));
+    const message =
+      typeof errorData.detail === 'string'
+        ? errorData.detail
+        : errorData.detail?.message || `HTTP ${res.status}`;
+    const err = new Error(message);
+    err.status = res.status;
+    err.data = errorData;
+    err.code = (typeof errorData.detail === 'object' && errorData.detail?.code) || errorData.code || null;
+    throw err;
   }
 
   if (res.status === 204) return null;
@@ -225,6 +235,7 @@ export async function logMeal(rawInput, mealType, mealDate = null, imageUrl = nu
   return request('/meals', {
     method: 'POST',
     body: JSON.stringify(body),
+    timeoutMs: SCAN_REQUEST_TIMEOUT_MS,
   });
 }
 
@@ -240,6 +251,7 @@ export async function scanMealImageBase64(photoBase64, rawInput = '', mealType =
   return request('/meals/scan-image-base64', {
     method: 'POST',
     body: JSON.stringify(body),
+    timeoutMs: SCAN_REQUEST_TIMEOUT_MS,
   });
 }
 
@@ -271,7 +283,7 @@ export async function scanMealImage(imageUri, rawInput = '', mealType = 'lunch',
     method: 'POST',
     headers,
     body: formData,
-  });
+  }, SCAN_REQUEST_TIMEOUT_MS);
 
   if (res.status === 401) {
     await AsyncStorage.removeItem('fitscan_token');
@@ -280,8 +292,16 @@ export async function scanMealImage(imageUri, rawInput = '', mealType = 'lunch',
   }
 
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: 'Something went wrong' }));
-    throw new Error(error.detail || `HTTP ${res.status}`);
+    const errorData = await res.json().catch(() => ({ detail: 'Something went wrong' }));
+    const message =
+      typeof errorData.detail === 'string'
+        ? errorData.detail
+        : errorData.detail?.message || `HTTP ${res.status}`;
+    const err = new Error(message);
+    err.status = res.status;
+    err.data = errorData;
+    err.code = (typeof errorData.detail === 'object' && errorData.detail?.code) || errorData.code || null;
+    throw err;
   }
 
   return res.json();
@@ -427,5 +447,49 @@ export async function updateMorningBriefingPreferences(preferences) {
     body: JSON.stringify(preferences),
   });
 }
+
+// --- Subscription & Paywall ---
+export async function getSubscriptionStatus() {
+  return request('/subscription/status');
+}
+
+// --- Dynamic Coupons ---
+export async function validateCoupon(code, planType = 'annual') {
+  return request('/coupons/validate', {
+    method: 'POST',
+    body: JSON.stringify({ code, plan_type: planType }),
+  });
+}
+
+export async function redeemCoupon(code, planType = 'annual') {
+  return request('/coupons/redeem', {
+    method: 'POST',
+    body: JSON.stringify({ code, plan_type: planType }),
+  });
+}
+
+// --- Razorpay Payments ---
+export async function getPricingPlans() {
+  return request('/payments/plans');
+}
+
+export async function createPaymentOrder(planId, couponCode = null) {
+  const body = { plan_id: planId };
+  if (couponCode) {
+    body.coupon_code = couponCode;
+  }
+  return request('/payments/razorpay/create-order', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function verifyPaymentSignature(payload) {
+  return request('/payments/razorpay/verify-payment', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 
 

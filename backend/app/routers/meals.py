@@ -2,6 +2,7 @@ import asyncio
 import base64
 import logging
 from typing import Optional
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,7 +25,7 @@ from app.services.meal_service import (
     get_or_create_settings,
 )
 from app.services.gemini_service import recommend_curated_meals, _get_fallback_meal_recommendations
-from app.middleware.auth import get_current_user
+from app.middleware.auth import get_current_user, require_active_subscription
 from app.main import limiter
 
 logger = logging.getLogger("corecontrol.routers.meals")
@@ -37,7 +38,7 @@ router = APIRouter(prefix="/api/meals", tags=["Meals"])
 async def log_meal(
     request: Request,
     payload: MealCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_active_subscription),
     db: AsyncSession = Depends(get_db),
 ):
     """Log a new meal with text input. Text is analyzed by Gemini AI for calorie & macro breakdown."""
@@ -55,7 +56,7 @@ async def log_meal(
         raise
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
-    except (asyncio.TimeoutError, TimeoutError) as e:
+    except (asyncio.TimeoutError, TimeoutError, httpx.TimeoutException) as e:
         logger.error(f"AI food analysis timed out in log_meal: {e}")
         return JSONResponse(
             status_code=504,
@@ -82,7 +83,7 @@ async def log_meal(
 async def scan_meal_image_base64(
     request: Request,
     payload: ScanImageBase64Request,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_active_subscription),
     db: AsyncSession = Depends(get_db),
 ):
     """Log a meal using Base64 encoded food image JSON payload supporting JPEG, PNG, WebP, GIF, and HEIC."""
@@ -101,10 +102,18 @@ async def scan_meal_image_base64(
         elif "," in b64_str:
             b64_str = b64_str.split(",", 1)[1]
 
+        b64_clean = b64_str.strip()
         try:
-            image_bytes = base64.b64decode(b64_str)
-        except Exception as decode_err:
-            raise HTTPException(status_code=422, detail=f"Invalid base64 image encoding: {decode_err}")
+            image_bytes = base64.b64decode(b64_clean, validate=True)
+        except Exception:
+            pad = len(b64_clean) % 4
+            if pad:
+                try:
+                    image_bytes = base64.b64decode(b64_clean + ("=" * (4 - pad)), validate=True)
+                except Exception as decode_err:
+                    raise HTTPException(status_code=422, detail=f"Invalid base64 image encoding: {decode_err}")
+            else:
+                raise HTTPException(status_code=422, detail="Invalid base64 image encoding")
 
         if not image_bytes or len(image_bytes) == 0:
             raise HTTPException(status_code=422, detail="Decoded image data is empty")
@@ -126,7 +135,7 @@ async def scan_meal_image_base64(
         raise
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
-    except (asyncio.TimeoutError, TimeoutError) as e:
+    except (asyncio.TimeoutError, TimeoutError, httpx.TimeoutException) as e:
         logger.error(f"AI image scanning timed out (base64): {e}")
         return JSONResponse(
             status_code=504,
@@ -157,7 +166,7 @@ async def scan_meal_image(
     meal_type: str = Form("lunch"),
     meal_date: Optional[str] = Form(None),
     image_url: Optional[str] = Form(None),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_active_subscription),
     db: AsyncSession = Depends(get_db),
 ):
     """Log a meal using multipart form upload supporting JPEG, PNG, WebP, GIF, and HEIC formats."""
@@ -193,7 +202,7 @@ async def scan_meal_image(
         raise
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
-    except (asyncio.TimeoutError, TimeoutError) as e:
+    except (asyncio.TimeoutError, TimeoutError, httpx.TimeoutException) as e:
         logger.error(f"AI image scanning timed out (multipart): {e}")
         return JSONResponse(
             status_code=504,
@@ -219,7 +228,7 @@ async def scan_meal_image(
 @limiter.limit("5/minute")
 async def get_meal_recommendations(
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_active_subscription),
     db: AsyncSession = Depends(get_db),
 ):
     """Fetch curated market meal recommendations matched to user budget, diet preference, and macro targets."""
@@ -255,7 +264,7 @@ async def get_meals_today(
 @router.delete("/{meal_id}", status_code=204)
 async def remove_meal(
     meal_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_active_subscription),
     db: AsyncSession = Depends(get_db),
 ):
     """Delete a meal by ID (must be owned by current user)."""
@@ -268,7 +277,7 @@ async def remove_meal(
 async def update_meal_endpoint(
     meal_id: int,
     payload: MealUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_active_subscription),
     db: AsyncSession = Depends(get_db),
 ):
     """
