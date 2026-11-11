@@ -3,7 +3,7 @@
     "name": "CoreControl",
     "slug": "fitscan-mobile",
     "scheme": "fitscan",
-    "version": "1.0.8",
+    "version": "1.0.10",
     "orientation": "portrait",
     "icon": "./assets/corecontrol_logo.png",
     "userInterfaceStyle": "dark",

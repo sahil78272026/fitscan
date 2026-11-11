@@ -1,5 +1,5 @@
 .card {
-  background: rgba(24, 20, 16, 0.75);
+  background: var(--color-surface, #111318);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -58,7 +58,15 @@
 }
 
 .icon {
-  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--color-surface-elevated, #1A1D24);
+  color: var(--color-text-secondary, #94A3B8);
+  border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.08));
 }
 
 .info {

@@ -4,12 +4,59 @@ import { useState } from "react";
 import ConfirmDeleteMealModal from "./ConfirmDeleteMealModal";
 import styles from "./MealCard.module.css";
 
-const MEAL_ICONS = {
-  breakfast: "🌅",
-  lunch: "☀️",
-  dinner: "🌙",
-  snack: "🍿",
-};
+function renderMealIcon(mealType) {
+  const type = (mealType || "").toLowerCase();
+  if (type === "breakfast") {
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2v6"/>
+        <path d="m4.93 10.93 4.24-4.24"/>
+        <path d="M2 18h20"/>
+        <path d="M20 18a8 8 0 0 0-16 0"/>
+      </svg>
+    );
+  }
+  if (type === "lunch") {
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M12 2v2"/>
+        <path d="M12 20v2"/>
+        <path d="m4.93 4.93 1.41 1.41"/>
+        <path d="m17.66 17.66 1.41 1.41"/>
+        <path d="M2 12h2"/>
+        <path d="M20 12h2"/>
+        <path d="m6.34 17.66-1.41 1.41"/>
+        <path d="m19.07 4.93-1.41 1.41"/>
+      </svg>
+    );
+  }
+  if (type === "dinner") {
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+      </svg>
+    );
+  }
+  if (type === "snack") {
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 8h1a4 4 0 1 1 0 8h-1"/>
+        <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/>
+        <line x1="6" y1="2" x2="6" y2="4"/>
+        <line x1="10" y1="2" x2="10" y2="4"/>
+        <line x1="14" y1="2" x2="14" y2="4"/>
+      </svg>
+    );
+  }
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/>
+      <path d="M7 2v20"/>
+      <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+    </svg>
+  );
+}
 
 export default function MealCard({ meal, onDelete }) {
   const [expanded, setExpanded] = useState(false);
@@ -56,10 +103,10 @@ export default function MealCard({ meal, onDelete }) {
 
   const priorityBadge =
     priority === "high"
-      ? "⚡ Recovery Anchor"
+      ? "Recovery Anchor"
       : priority === "low"
-      ? "☕ Snack"
-      : "🌾 Balanced";
+      ? "Snack"
+      : "Balanced";
 
   return (
     <div
@@ -76,7 +123,7 @@ export default function MealCard({ meal, onDelete }) {
               className={styles.mealThumb}
             />
           ) : (
-            <span className={styles.icon}>{MEAL_ICONS[meal.meal_type] || "🍽️"}</span>
+            <span className={styles.icon}>{renderMealIcon(meal.meal_type)}</span>
           )}
           <div className={styles.info}>
             <div className={styles.typeRow}>
@@ -124,9 +171,9 @@ export default function MealCard({ meal, onDelete }) {
 
           {/* Macro breakdown summary */}
           <div className={styles.macroSummaryRow}>
-            <span style={{ color: "#3b82f6" }}>⚡ P: {meal.total_protein || 0}g</span>
-            <span style={{ color: "#10b981" }}>🌾 C: {meal.total_carbs || 0}g</span>
-            <span style={{ color: "#f59e0b" }}>🥑 F: {meal.total_fat || 0}g</span>
+            <span style={{ color: "#38BDF8" }}>P: {meal.total_protein || 0}g</span>
+            <span style={{ color: "#10B981" }}>C: {meal.total_carbs || 0}g</span>
+            <span style={{ color: "#F59E0B" }}>F: {meal.total_fat || 0}g</span>
           </div>
 
           {meal.food_items.map((item) => (

@@ -266,7 +266,7 @@ export default function ProgressScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background || '#181410',
+    backgroundColor: colors.background || '#08090C',
   },
   loader: {
     flex: 1,
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   input: {
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#3A3128',

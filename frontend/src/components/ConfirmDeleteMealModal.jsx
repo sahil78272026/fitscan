@@ -3,12 +3,42 @@
 import { useEffect } from "react";
 import styles from "./ConfirmDeleteMealModal.module.css";
 
-const MEAL_ICONS = {
-  breakfast: "🌅",
-  lunch: "☀️",
-  dinner: "🌙",
-  snack: "🍿",
-};
+function renderMealIcon(mealType) {
+  const type = (mealType || "").toLowerCase();
+  if (type === "breakfast") {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2v6"/><path d="m4.93 10.93 4.24-4.24"/><path d="M2 18h20"/><path d="M20 18a8 8 0 0 0-16 0"/>
+      </svg>
+    );
+  }
+  if (type === "lunch") {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+      </svg>
+    );
+  }
+  if (type === "dinner") {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+      </svg>
+    );
+  }
+  if (type === "snack") {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/>
+      </svg>
+    );
+  }
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+    </svg>
+  );
+}
 
 export default function ConfirmDeleteMealModal({
   isOpen,
@@ -32,7 +62,7 @@ export default function ConfirmDeleteMealModal({
 
   if (!isOpen || !meal) return null;
 
-  const mealIcon = MEAL_ICONS[meal.meal_type] || "🍽️";
+  const mealIcon = renderMealIcon(meal.meal_type);
 
   return (
     <div
@@ -62,7 +92,12 @@ export default function ConfirmDeleteMealModal({
         {/* Header */}
         <div className={styles.header}>
           <div className={styles.iconWrapper}>
-            <span>🗑️</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3,6 5,6 21,6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              <line x1="10" y1="11" x2="10" y2="17"/>
+              <line x1="14" y1="11" x2="14" y2="17"/>
+            </svg>
           </div>
           <div className={styles.titleArea}>
             <h2 id="delete-meal-title" className={styles.modalTitle}>
@@ -94,7 +129,11 @@ export default function ConfirmDeleteMealModal({
         {/* Warning Alert Box */}
         <div className={styles.warningBox}>
           <div className={styles.warningTitle}>
-            <span>⚠️</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
             <span>Warning</span>
           </div>
           <p className={styles.warningDetail}>

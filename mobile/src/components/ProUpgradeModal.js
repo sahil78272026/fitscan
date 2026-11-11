@@ -174,8 +174,9 @@ export default function ProUpgradeModal({
   const is100PercentDiscount = appliedCoupon?.discount_percentage === 100 || finalAmount === 0;
 
   // Validate coupon handler
-  const handleApplyCoupon = async () => {
-    const trimmed = couponCode.trim().toUpperCase();
+  const handleApplyCoupon = async (overrideCode = null) => {
+    const raw = typeof overrideCode === 'string' ? overrideCode : couponCode;
+    const trimmed = raw.trim().toUpperCase();
     if (!trimmed) {
       setCouponError('Please enter a coupon code.');
       return;
@@ -183,6 +184,9 @@ export default function ProUpgradeModal({
 
     setCouponLoading(true);
     setCouponError(null);
+    if (typeof overrideCode === 'string') {
+      setCouponCode(trimmed);
+    }
 
     try {
       const res = await validateCoupon(trimmed, billingCycle);
@@ -414,8 +418,22 @@ export default function ProUpgradeModal({
                       </View>
                       <Text style={styles.earlyBirdTitle}>Complimentary Launch Access</Text>
                       <Text style={styles.earlyBirdDesc}>
-                        Direct payment plans are upcoming soon. During our early bird launch period, unlock 100% free CoreControl Pro with your exclusive promo code.
+                        Direct payment plans are upcoming soon. During our early bird launch period, full CoreControl Pro access is 100% free with access code TESTFREE.
                       </Text>
+                      <TouchableOpacity
+                        style={styles.quickFillBtn}
+                        onPress={() => {
+                          setCouponCode('TESTFREE');
+                          handleApplyCoupon('TESTFREE');
+                        }}
+                        disabled={couponLoading}
+                        activeOpacity={0.8}
+                        accessibilityRole="button"
+                        accessibilityLabel="Activate TESTFREE 100% Free"
+                      >
+                        <SparkleIcon size={14} color="#F59E0B" />
+                        <Text style={styles.quickFillBtnText}>Activate TESTFREE (100% Free)</Text>
+                      </TouchableOpacity>
                     </View>
 
                     {/* Promo Code Input Section */}
@@ -714,6 +732,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#94A3B8',
     lineHeight: 17,
+  },
+  quickFillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#111318',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginTop: 12,
+  },
+  quickFillBtnText: {
+    color: '#F59E0B',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   couponSection: {
     backgroundColor: '#08090C',

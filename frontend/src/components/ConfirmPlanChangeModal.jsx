@@ -39,7 +39,9 @@ export default function ConfirmPlanChangeModal({
         {/* Modal Header */}
         <div className={styles.header}>
           <div className={styles.iconWrapper}>
-            <span>🤖</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+            </svg>
           </div>
           <div className={styles.titleArea}>
             <h2 className={styles.modalTitle}>Generate New AI Meal Plans?</h2>
@@ -63,14 +65,16 @@ export default function ConfirmPlanChangeModal({
         {/* Personalized AI Meal Plan Notice */}
         <div className={styles.warningBox}>
           <div className={styles.warningTitle}>
-            <span>✨</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
             <span>Personalized AI Nutrition</span>
           </div>
           <p className={styles.warningDetail}>
             Clicking confirm will invoke Google Gemini AI to generate 3 fresh, tailored daily meal plans matching your current physical metrics, cuisine preferences, and macro targets.
           </p>
           <p className={styles.warningDetail} style={{ marginTop: "0.4rem", color: "#fef08a" }}>
-            ⏱️ Note: To keep your nutrition consistent and optimize AI calls, meal plans can be updated once every 24 hours.
+            Note: Meal plans can be regenerated once every 24 hours.
           </p>
         </div>
 
@@ -88,7 +92,7 @@ export default function ConfirmPlanChangeModal({
             className={styles.confirmBtn}
             onClick={onConfirm}
           >
-            Yes, Generate New Plans ✨
+            Generate New Plans
           </button>
         </div>
       </div>

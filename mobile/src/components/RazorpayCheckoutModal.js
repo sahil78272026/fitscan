@@ -55,7 +55,7 @@ export default function RazorpayCheckoutModal({
           <style>
             * { box-sizing: border-box; }
             body {
-              background-color: #181410;
+              background-color: #08090C;
               color: #F4ECDD;
               display: flex;
               flex-direction: column;
@@ -214,7 +214,7 @@ export default function RazorpayCheckoutModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
   },
   headerBar: {
     height: 48,
@@ -245,15 +245,15 @@ const styles = StyleSheet.create({
   },
   webViewWrapper: {
     flex: 1,
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
   },
   webView: {
     flex: 1,
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 12,

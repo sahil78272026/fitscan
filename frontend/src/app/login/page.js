@@ -136,43 +136,62 @@ export default function LoginPage() {
               Build a healthy, peaceful rhythm with your food.
             </h2>
             <p className={styles.heroDescription}>
-              Sustainable health isn&apos;t built on rigid diets or stressful restrictions. It starts with simple awareness. FitScan gives you a calm, honest space to record what you eat, understand how your body is fueled, and build daily habits that stay with you for life.
+              Smart nutrition tracking without restrictions. Build lasting habits with simple awareness.
             </p>
 
             <div className={styles.valuePillars}>
               <div className={styles.pillarItem}>
-                <div className={styles.pillarIconBox}>🥣</div>
+                <div className={styles.pillarIconBox}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/>
+                    <path d="M7 2v20"/>
+                    <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+                  </svg>
+                </div>
                 <div className={styles.pillarText}>
                   <h3 className={styles.pillarTitle}>Effortless Meal Logging</h3>
                   <p className={styles.pillarDesc}>
-                    Log your dishes naturally in seconds or snap a quick photo. No tedious database digging or rigid portion quizzes.
+                    Log dishes instantly via natural text or photo.
                   </p>
                 </div>
               </div>
 
               <div className={styles.pillarItem}>
-                <div className={styles.pillarIconBox}>🌱</div>
+                <div className={styles.pillarIconBox}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                  </svg>
+                </div>
                 <div className={styles.pillarText}>
                   <h3 className={styles.pillarTitle}>Habits Over Perfection</h3>
                   <p className={styles.pillarDesc}>
-                    Focus on showing up consistently. Build positive daily streaks, understand your eating patterns, and celebrate small wins.
+                    Build daily streaks and track eating patterns.
                   </p>
                 </div>
               </div>
 
               <div className={styles.pillarItem}>
-                <div className={styles.pillarIconBox}>🌾</div>
+                <div className={styles.pillarIconBox}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>
+                    <path d="M22 12A10 10 0 0 0 12 2v10z"/>
+                  </svg>
+                </div>
                 <div className={styles.pillarText}>
                   <h3 className={styles.pillarTitle}>Balanced Macro Clarity</h3>
                   <p className={styles.pillarDesc}>
-                    See your daily protein, carbs, and fats clearly at a glance without guilt, helping you stay energized every day.
+                    Clear daily breakdown of protein, carbs, and fats.
                   </p>
                 </div>
               </div>
             </div>
 
             <div className={styles.humanNote}>
-              <span className={styles.humanNoteIcon}>✨</span>
+              <span className={styles.humanNoteIcon}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+                </svg>
+              </span>
               <p className={styles.humanNoteText}>
                 No high-pressure targets or complicated rules. Just honest daily awareness to help you feel your best.
               </p>

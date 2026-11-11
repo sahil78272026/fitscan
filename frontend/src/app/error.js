@@ -17,7 +17,7 @@ export default function GlobalError({ error, reset }) {
         justifyContent: "center",
         minHeight: "100vh",
         padding: "2rem",
-        backgroundColor: "#181410",
+        backgroundColor: "#08090C",
         color: "#F4ECDD",
         textAlign: "center",
         fontFamily: "system-ui, -apple-system, sans-serif",
@@ -46,7 +46,7 @@ export default function GlobalError({ error, reset }) {
         onClick={() => reset()}
         style={{
           backgroundColor: "#E8A020",
-          color: "#181410",
+          color: "#08090C",
           fontWeight: "600",
           fontSize: "0.95rem",
           padding: "0.75rem 1.75rem",

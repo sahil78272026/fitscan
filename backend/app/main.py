@@ -9,7 +9,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.config import get_settings
-from app.database import engine, Base
+from app.database import engine, Base, AsyncSessionLocal
 
 
 def get_rate_limit_key(request: Request) -> str:
@@ -128,6 +128,28 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await init_db_schema(conn)
     logger.info("✅ Database tables & macro schema verified")
+
+    try:
+        from sqlalchemy import select, func
+        async with AsyncSessionLocal() as session:
+            for code in ("TESTFREE", "ADV_LAUNCH100"):
+                stmt = select(Coupon).where(func.upper(Coupon.code) == code)
+                existing = (await session.execute(stmt)).scalar_one_or_none()
+                if not existing:
+                    coupon = Coupon(
+                        code=code,
+                        discount_percentage=100,
+                        duration_days=365,
+                        max_uses=None,
+                        times_used=0,
+                        is_active=True,
+                    )
+                    session.add(coupon)
+            await session.commit()
+            logger.info("🎟️ Default access coupons verified (TESTFREE, ADV_LAUNCH100)")
+    except Exception as e:
+        logger.warning(f"Could not auto-seed default coupons: {e}")
+
     yield
     logger.info("👋 CoreControl shutting down...")
     await engine.dispose()

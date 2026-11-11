@@ -17,7 +17,9 @@ export default function AdherenceWidget({ stats }) {
       {/* Top Row: Streak & Adherence Score */}
       <div className={styles.topRow}>
         <div className={styles.streakBadge}>
-          <span>🔥</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+          </svg>
           <span><strong className={styles.streakNumber}>{current_streak}</strong> Day Streak</span>
         </div>
 
@@ -82,11 +84,16 @@ export default function AdherenceWidget({ stats }) {
                 className={`${styles.badgeCard} ${b.unlocked ? styles.unlocked : ""}`}
                 title={b.description}
               >
-                <span className={styles.badgeIcon}>{b.icon}</span>
+                <span className={styles.badgeIcon}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={b.unlocked ? "#F59E0B" : "#64748B"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="8" r="6"/>
+                    <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>
+                  </svg>
+                </span>
                 <div className={styles.badgeInfo}>
                   <span className={styles.badgeTitle}>{b.title}</span>
                   <span className={styles.badgeStatus}>
-                    {b.unlocked ? "Unlocked 🎉" : "Locked"}
+                    {b.unlocked ? "Unlocked" : "Locked"}
                   </span>
                 </div>
               </div>

@@ -6,7 +6,11 @@ import styles from "./MissedMealBanner.module.css";
 const MEAL_CONFIG = {
   breakfast: {
     label: "Breakfast",
-    icon: "🍳",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2v6"/><path d="m4.93 10.93 4.24-4.24"/><path d="M2 18h20"/><path d="M20 18a8 8 0 0 0-16 0"/>
+      </svg>
+    ),
     ratio: 0.25,
     messages: [
       (name) => `Hey ${name}, looks like you missed your morning breakfast!`,
@@ -18,7 +22,11 @@ const MEAL_CONFIG = {
   },
   lunch: {
     label: "Lunch",
-    icon: "☀️",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+      </svg>
+    ),
     ratio: 0.35,
     messages: [
       (name) => `${name}, did midday rush past? You haven't logged lunch yet!`,
@@ -30,7 +38,11 @@ const MEAL_CONFIG = {
   },
   dinner: {
     label: "Dinner",
-    icon: "🌙",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+      </svg>
+    ),
     ratio: 0.3,
     messages: [
       (name) => `${name}, winding down for the night? Don't forget your dinner macros!`,
@@ -235,7 +247,10 @@ export default function MissedMealBanner({
         <div className={styles.headerLine}>
           <span className={styles.badge}>
             <span className={styles.badgePulse}>●</span>
-            <span>{config.icon} Missed {config.label}</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+              {config.icon}
+              <span>Missed {config.label}</span>
+            </span>
           </span>
 
           {missedMeals.length > 1 && (
@@ -250,7 +265,9 @@ export default function MissedMealBanner({
                   onClick={() => setSelectedMealType(type)}
                   title={`Switch to ${MEAL_CONFIG[type].label}`}
                 >
-                  {MEAL_CONFIG[type].icon}
+                  <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                    {MEAL_CONFIG[type].icon}
+                  </span>
                 </button>
               ))}
             </div>

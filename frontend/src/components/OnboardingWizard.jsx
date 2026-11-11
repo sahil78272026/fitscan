@@ -229,7 +229,11 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
         {/* Header & Step Bar */}
         <div className={styles.wizardHeader}>
           <div className={styles.brandTitle}>
-            <span className={styles.brandIcon}>✨</span>
+            <span className={styles.brandIcon}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+              </svg>
+            </span>
             <span className={styles.brandText}>CoreControl Personalization</span>
           </div>
           {onCancel && (
@@ -276,7 +280,7 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
           {step === 1 && (
             <div className={styles.stepSlide}>
               <h2 className={styles.stepTitle}>What is your primary fitness goal?</h2>
-              <p className={styles.stepSubtitle}>Your daily calorie and macronutrient targets will align with this objective.</p>
+              <p className={styles.stepSubtitle}>Calorie and macro targets align with this goal.</p>
               
               <div className={styles.cardGrid2}>
                 {GOALS.map((g) => (
@@ -300,7 +304,7 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
           {step === 2 && (
             <div className={styles.stepSlide}>
               <h2 className={styles.stepTitle}>What is your dietary preference?</h2>
-              <p className={styles.stepSubtitle}>AI meal suggestions will exclusively follow your food rules.</p>
+              <p className={styles.stepSubtitle}>Meal plans strictly follow your dietary choices.</p>
               
               <div className={styles.cardGrid2}>
                 {DIETS.map((d) => (
@@ -321,7 +325,7 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
           {step === 3 && (
             <div className={styles.stepSlide}>
               <h2 className={styles.stepTitle}>What is your daily food budget preference?</h2>
-              <p className={styles.stepSubtitle}>Get delicious meal options optimized for local market prices.</p>
+              <p className={styles.stepSubtitle}>Meal options optimized for local ingredient costs.</p>
               
               <div className={styles.cardGrid3}>
                 {BUDGETS.map((b) => (
@@ -343,7 +347,7 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
           {step === 4 && (
             <form onSubmit={handleSubmit} className={styles.stepSlide}>
               <h2 className={styles.stepTitle}>Your Body Profile & Activity</h2>
-              <p className={styles.stepSubtitle}>Used for BMR & TDEE calculation to determine exact macronutrient splits.</p>
+              <p className={styles.stepSubtitle}>Calculates daily energy expenditure and targets.</p>
 
               <div className={styles.metricsFormGrid}>
                 {/* Weight Input */}
@@ -571,7 +575,7 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
               </div>
 
               <div className={styles.legalDisclaimerBox}>
-                ⚖️ <strong>Health & Medical Disclaimer:</strong> CoreControl generates AI meal suggestions and macro estimates for general wellness and educational purposes only. CoreControl is not a licensed medical provider and does not provide medical nutrition therapy. Consult a physician before beginning any diet program.
+                <strong>Health & Medical Disclaimer:</strong> CoreControl generates AI meal suggestions and macro estimates for general wellness and educational purposes only. CoreControl is not a licensed medical provider and does not provide medical nutrition therapy. Consult a physician before beginning any diet program.
               </div>
 
               <div className={styles.wizardFooter}>
@@ -581,7 +585,7 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
                 <button type="submit" className={styles.primaryBtn} disabled={submitting}>
                   {submitting
                     ? "Calculating & Saving..."
-                    : "Generate Custom Meal Plans ✨"}
+                    : "Generate Custom Meal Plans"}
                 </button>
               </div>
             </form>

@@ -5,24 +5,92 @@ import {
   View,
   TouchableOpacity,
 } from 'react-native';
+import Svg, { Path, Circle } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { colors } from '../theme';
+
+function SunriseIcon({ size = 13, color = '#F59E0B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 2v6M4.93 10.93l1.41 1.41M19.07 10.93l-1.41 1.41M2 18h20M12 11a4 4 0 00-4 4h8a4 4 0 00-4-4zM8 6l4-4 4 4"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function SunIcon({ size = 13, color = '#F59E0B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="4" stroke={color} strokeWidth="2" />
+      <Path
+        d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
+function MoonIcon({ size = 13, color = '#38BDF8' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function CloseIcon({ size = 12, color = '#94A3B8' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M18 6L6 18M6 6l12 12"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function renderMealIcon(mealType, size = 13) {
+  switch (mealType) {
+    case 'breakfast':
+      return <SunriseIcon size={size} color="#F59E0B" />;
+    case 'lunch':
+      return <SunIcon size={size} color="#F59E0B" />;
+    case 'dinner':
+      return <MoonIcon size={size} color="#38BDF8" />;
+    default:
+      return <SunIcon size={size} color="#F59E0B" />;
+  }
+}
 
 const MEAL_CONFIG = {
   breakfast: {
     label: 'Breakfast',
-    icon: '🍳',
     ratio: 0.25,
     tag: 'Missed Breakfast',
   },
   lunch: {
     label: 'Lunch',
-    icon: '🥗',
     ratio: 0.35,
     tag: 'Missed Lunch',
   },
   dinner: {
     label: 'Dinner',
-    icon: '🍲',
     ratio: 0.3,
     tag: 'Missed Dinner',
   },
@@ -180,13 +248,13 @@ export default function MissedMealBanner({
       <View style={styles.bannerHeaderRow}>
         <View style={styles.badgeRow}>
           <View style={styles.pulseDot} />
-          <Text style={styles.badgeText}>{config.icon} {config.tag}</Text>
+          {renderMealIcon(activeMealType, 12)}
+          <Text style={styles.badgeText}>{config.tag}</Text>
         </View>
 
         {missedMeals.length > 1 && (
           <View style={styles.miniTabsRow}>
             {missedMeals.map((type) => {
-              const tabCfg = MEAL_CONFIG[type];
               const isActive = activeMealType === type;
               return (
                 <TouchableOpacity
@@ -195,7 +263,7 @@ export default function MissedMealBanner({
                   onPress={() => setSelectedMealType(type)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.miniTabIcon}>{tabCfg.icon}</Text>
+                  {renderMealIcon(type, 12)}
                 </TouchableOpacity>
               );
             })}
@@ -207,7 +275,7 @@ export default function MissedMealBanner({
           onPress={handleDismiss}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Text style={styles.closeBtnText}>✕</Text>
+          <CloseIcon size={12} color="#94A3B8" />
         </TouchableOpacity>
       </View>
 
@@ -294,12 +362,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   miniTab: {
-    backgroundColor: '#181410',
+    backgroundColor: colors.surfaceElevated || '#1A1D24',
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderWidth: 1,
-    borderColor: '#3A3128',
+    borderColor: colors.border || '#222631',
   },
   miniTabActive: {
     borderColor: '#E8A020',
@@ -325,10 +393,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#181410',
+    backgroundColor: colors.background || '#08090C',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border || '#222631',
   },
   macroPill: {
     flexDirection: 'row',

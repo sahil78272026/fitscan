@@ -1211,7 +1211,10 @@ export default function HomeScreen({ navigation, user, onLogout }) {
         onClose={closePaywall}
         daysRemaining={trialDaysRemaining}
         currentTier={isPro ? 'pro' : 'free'}
-        onSuccess={refreshSubscription}
+        onSuccess={() => {
+          refreshSubscription();
+          loadData();
+        }}
       />
     </SafeAreaView>
   );

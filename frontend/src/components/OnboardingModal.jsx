@@ -4,23 +4,23 @@ import { useState, useEffect } from "react";
 import styles from "./OnboardingModal.module.css";
 
 const GOALS = [
-  { id: "fat_loss", label: "🔥 Fat Loss", desc: "Burn fat while keeping muscle" },
-  { id: "weight_loss", label: "📉 Weight Loss", desc: "Steady caloric deficit" },
-  { id: "muscle_building", label: "💪 Muscle Building", desc: "Gain lean muscle mass" },
-  { id: "muscle_maintain", label: "⚖️ Maintenance", desc: "Maintain current weight" },
+  { id: "fat_loss", label: "Fat Loss", desc: "Burn fat while keeping muscle" },
+  { id: "weight_loss", label: "Weight Loss", desc: "Steady caloric deficit" },
+  { id: "muscle_building", label: "Muscle Building", desc: "Gain lean muscle mass" },
+  { id: "muscle_maintain", label: "Maintenance", desc: "Maintain current weight" },
 ];
 
 const DIETS = [
-  { id: "veg", label: "🥦 Vegetarian" },
-  { id: "non_veg", label: "🍗 Non-Vegetarian" },
-  { id: "vegan", label: "🌱 Vegan" },
-  { id: "eggetarian", label: "🍳 Eggetarian" },
+  { id: "veg", label: "Vegetarian" },
+  { id: "non_veg", label: "Non-Vegetarian" },
+  { id: "vegan", label: "Vegan" },
+  { id: "eggetarian", label: "Eggetarian" },
 ];
 
 const BUDGETS = [
-  { id: "low_budget", label: "🪙 Pocket Friendly", desc: "Low cost local staples" },
-  { id: "moderate", label: "💳 Moderate", desc: "Balanced variety & cost" },
-  { id: "flexible", label: "🌟 Flexible", desc: "High protein, gourmet items" },
+  { id: "low_budget", label: "Pocket Friendly", desc: "Low cost local staples" },
+  { id: "moderate", label: "Moderate", desc: "Balanced variety & cost" },
+  { id: "flexible", label: "Flexible", desc: "High protein, gourmet items" },
 ];
 
 export default function OnboardingModal({ isOpen, onClose, initialSettings, onSave }) {
@@ -77,7 +77,7 @@ export default function OnboardingModal({ isOpen, onClose, initialSettings, onSa
     <div className={styles.overlay}>
       <div className={styles.modal}>
         <div className={styles.header}>
-          <h2>🎯 Setup Your Fitness Goals</h2>
+          <h2>Setup Your Fitness Goals</h2>
           <button className={styles.closeBtn} onClick={onClose}>✕</button>
         </div>
 
@@ -188,7 +188,7 @@ export default function OnboardingModal({ isOpen, onClose, initialSettings, onSa
           </div>
 
           <button type="submit" className={styles.saveBtn} disabled={saving}>
-            {saving ? "Calculating Macros..." : "Save & Generate Targets ✨"}
+            {saving ? "Calculating Macros..." : "Save & Generate Targets"}
           </button>
         </form>
       </div>

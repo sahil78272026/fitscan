@@ -1,6 +1,6 @@
 .card {
   position: relative;
-  background: rgba(24, 20, 16, 0.85);
+  background: var(--color-surface, #111318);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(245, 158, 11, 0.25);
@@ -198,7 +198,7 @@
 
 .actionBtn {
   background: #e8a020;
-  color: #181410;
+  color: #08090C;
   font-size: 0.78rem;
   font-weight: 700;
   border: none;

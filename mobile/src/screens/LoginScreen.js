@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { colors } from '../theme';
 import { verifyFirebaseToken, loginWithEmail } from '../services/api';
 import {
   auth,
@@ -134,7 +135,7 @@ export default function LoginScreen({ onLoginSuccess }) {
             try {
               await sendPasswordResetEmail(auth, cleanEmail);
               Alert.alert(
-                'Link Sent! ✉️',
+                'Link Sent',
                 `A password setup link has been sent to ${cleanEmail}.\n\nCheck your email (including spam/promotions) to set or reset your password. Once set, you can sign in with your email and password!`
               );
             } catch (err) {
@@ -236,7 +237,7 @@ export default function LoginScreen({ onLoginSuccess }) {
                   setLoading(true);
                   await sendPasswordResetEmail(auth, cleanEmail);
                   Alert.alert(
-                    'Link Sent! ✉️',
+                    'Link Sent',
                     `A link has been sent to ${cleanEmail}.\n\nFollow the instructions in the email to set your password, then return here to sign in with email & password!`
                   );
                   setIsSignUp(false);
@@ -314,7 +315,7 @@ export default function LoginScreen({ onLoginSuccess }) {
       ) {
         Alert.alert(
           'Development Build Required',
-          'Native Google Sign-In requires an Android Development Build because standard Expo Go cannot run native Google Play libraries. Use Email/Password in Expo Go or run a development build.'
+          'Google Sign-In requires a standalone build. Please sign in with email or build with EAS.'
         );
       } else {
         Alert.alert('Google Sign-In Error', err.message || 'Failed to sign in with Google');
@@ -333,9 +334,8 @@ export default function LoginScreen({ onLoginSuccess }) {
       >
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.brand}>
-            <Text style={styles.brandIcon}>🏋️</Text>
-            <Text style={styles.brandTitle}>CoreControl Mobile</Text>
-            <Text style={styles.brandSubtitle}>AI Calorie & Step Tracker</Text>
+            <Text style={styles.brandTitle}>CoreControl</Text>
+            <Text style={styles.brandSubtitle}>Intelligent Nutrition & Fitness Tracking</Text>
           </View>
 
           <View style={styles.card}>
@@ -457,8 +457,8 @@ export default function LoginScreen({ onLoginSuccess }) {
 
             <Text style={styles.devHint}>
               {isFirebaseConfigured()
-                ? '🔒 Secured with Firebase Authentication'
-                : '🔧 Dev mode active: instant local sign in'}
+                ? 'Secured with Firebase Auth'
+                : 'Dev mode active: instant local sign in'}
             </Text>
           </View>
         </ScrollView>
@@ -470,7 +470,7 @@ export default function LoginScreen({ onLoginSuccess }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#181410',
+    backgroundColor: colors.background || '#08090C',
   },
   inner: {
     flex: 1,
@@ -592,10 +592,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   input: {
-    backgroundColor: '#181410',
+    backgroundColor: colors.surfaceElevated || '#1A1D24',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#3A3128',
+    borderColor: colors.border || '#222631',
     color: '#F4ECDD',
     fontSize: 15,
     paddingHorizontal: 14,

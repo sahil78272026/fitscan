@@ -42,7 +42,7 @@ export default function StreakScreen({ navigation }) {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
         <ScreenHeader
-          title="🔥 Streak & Achievements"
+          title="Streak & Achievements"
           onBack={() => (navigation?.canGoBack?.() ? navigation.goBack() : navigation.navigate('MainApp'))}
           backTitle="Back"
           backIcon="←"
@@ -58,7 +58,7 @@ export default function StreakScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       <ScreenHeader
-        title="🔥 Streak & Achievements"
+        title="Streak & Achievements"
         onBack={() => (navigation?.canGoBack?.() ? navigation.goBack() : navigation.navigate('MainApp'))}
         backTitle="Back"
         backIcon="←"
@@ -87,7 +87,7 @@ export default function StreakScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background || '#181410',
+    backgroundColor: colors.background || '#08090C',
   },
   loader: {
     flex: 1,

@@ -1,6 +1,6 @@
 .main {
   min-height: 100vh;
-  background-color: var(--color-bg, #181410);
+  background-color: var(--color-bg, #08090C);
   color: var(--color-text-primary, #F4ECDD);
   padding: 2rem 1rem 6rem;
 }

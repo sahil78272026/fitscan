@@ -90,8 +90,8 @@ export default function DeleteAccountPage() {
 
         {/* Hero Card */}
         <div className={styles.heroCard}>
-          <span className={styles.badge}>⚠️ Data Privacy & Compliance</span>
-          <h1 className={styles.title}>Account & Data Deletion</h1>
+          <span className={styles.badge}>Data Privacy &amp; Compliance</span>
+          <h1 className={styles.title}>Account &amp; Data Deletion</h1>
           <p className={styles.subtitle}>
             In compliance with Apple App Store Guideline 5.1.1 and Google Play Store Data Safety Policies, you may permanently delete your account and all associated personal health data at any time.
           </p>
@@ -122,7 +122,7 @@ export default function DeleteAccountPage() {
           </ul>
 
           <div className={styles.noticeBox}>
-            ℹ️ <strong>Subscription Notice:</strong> Deleting your CoreControl account permanently removes all stored data on our servers. If you have an active CoreControl Pro subscription billed through Apple App Store (Apple ID) or Google Play Store, please cancel your subscription in your device&apos;s Store settings to prevent future renewals.
+            <strong>Subscription Notice:</strong> Deleting your CoreControl account permanently removes all stored data on our servers. If you have an active CoreControl Pro subscription billed through Apple App Store (Apple ID) or Google Play Store, please cancel your subscription in your device&apos;s Store settings to prevent future renewals.
           </div>
         </div>
 
@@ -136,7 +136,7 @@ export default function DeleteAccountPage() {
 
         {error && (
           <div className={styles.noticeBox} style={{ color: "var(--color-danger, #C7502F)", borderColor: "rgba(199, 80, 47, 0.4)" }}>
-            ⚠️ {error}
+            {error}
           </div>
         )}
 
@@ -156,7 +156,7 @@ export default function DeleteAccountPage() {
                 onClick={handleAuthDelete}
                 disabled={loading}
               >
-                {loading ? "Processing Deletion..." : "🗑️ Permanently Delete My Account & Data"}
+                {loading ? "Processing Deletion..." : "Permanently Delete My Account & Data"}
               </button>
             </div>
           </div>

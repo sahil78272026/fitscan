@@ -96,7 +96,7 @@ export function parseDailyBudget(costString, budgetTier = 'moderate', currencyPr
 export function estimateMealCost(meal, selectedPlan, userSettings = {}) {
   if (!meal) {
     return {
-      formatted: '💰 ~₹50',
+      formatted: '~₹50',
       amount: 50,
       currency: '₹',
       percentage: 25,

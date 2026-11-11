@@ -29,6 +29,14 @@ settings = get_settings()
 
 
 @pytest.fixture(autouse=True)
+def setup_razorpay_mock(monkeypatch):
+    """Ensure all coupon and payment tests execute predictably in mock mode."""
+    monkeypatch.setattr(settings, "RAZORPAY_MOCK_MODE", True)
+    monkeypatch.setattr(settings, "RAZORPAY_KEY_ID", "mock_key_id")
+    monkeypatch.setattr(settings, "RAZORPAY_KEY_SECRET", "mock_secret")
+
+
+@pytest.fixture(autouse=True)
 async def init_db_and_cleanup():
     """Ensure database schema is created and dependencies are reset."""
     async with engine.begin() as conn:
@@ -773,3 +781,39 @@ class TestRazorpayEndpoints:
                 stmt_c = select(Coupon).where(Coupon.code == "SAVE20")
                 c_db = (await session.execute(stmt_c)).scalar_one()
                 assert c_db.times_used == 1  # Still 1, not incremented again!
+
+    @pytest.mark.asyncio
+    async def test_testfree_auto_seed_and_redeem(self, test_user):
+        """Verify TESTFREE coupon is auto-created on demand and activates 100% free Pro access."""
+        app.dependency_overrides[get_current_user] = lambda: test_user
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            # 1. Validate TESTFREE without prior database entry
+            val_resp = await client.post(
+                "/api/coupons/validate",
+                json={"code": "TESTFREE", "plan_type": "annual"},
+            )
+            assert val_resp.status_code == 200
+            val_data = val_resp.json()
+            assert val_data["valid"] is True
+            assert val_data["discount_percentage"] == 100
+            assert val_data["is_free_access"] is True
+
+            # 2. Redeem TESTFREE directly
+            redeem_resp = await client.post(
+                "/api/coupons/redeem",
+                json={"code": "TESTFREE", "plan_type": "annual"},
+            )
+            assert redeem_resp.status_code == 200
+            redeem_data = redeem_resp.json()
+            assert redeem_data["success"] is True
+            assert redeem_data["subscription_tier"] == "pro"
+            assert redeem_data["subscription_status"] == "active_coupon"
+
+            # 3. Check status endpoint confirms Pro tier
+            status_resp = await client.get("/api/subscription/status")
+            assert status_resp.status_code == 200
+            status_data = status_resp.json()
+            assert status_data["subscription_tier"] == "pro"
+            assert status_data["can_access_premium"] is True
+

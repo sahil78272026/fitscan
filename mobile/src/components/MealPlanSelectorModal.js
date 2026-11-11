@@ -13,41 +13,35 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getSuggestedMealPlans, selectMealPlan } from '../services/api';
+import { colors } from '../theme';
 
 const AI_STEPS = [
   {
-    icon: '🎯',
+    step: '01',
     title: 'Analyzing Nutrition Targets',
-    detail: 'Reading your daily calories, protein split, and fitness goal...',
+    detail: 'Reading daily calories, protein split, and fitness goal...',
   },
   {
-    icon: '🥗',
+    step: '02',
     title: 'Filtering Dietary Preferences',
     detail: 'Matching cuisine styles, dietary restrictions, and budget tier...',
   },
   {
-    icon: '🍳',
+    step: '03',
     title: 'Balancing Daily Meals',
     detail: 'Designing optimal portions for breakfast, lunch, and dinner...',
   },
   {
-    icon: '💰',
+    step: '04',
     title: 'Estimating Costs & Macros',
     detail: 'Auditing ingredient pricing and macronutrient distribution...',
   },
   {
-    icon: '✨',
+    step: '05',
     title: 'Finalizing 3 Custom Plans',
     detail: 'Polishing dish descriptions and recipes for your review...',
   },
 ];
-
-const MEAL_ICONS = {
-  Breakfast: '🍳',
-  Lunch: '🥗',
-  Snack: '☕',
-  Dinner: '🍲',
-};
 
 export default function MealPlanSelectorModal({ visible, onClose, onPlanSelected, onBackToWizard }) {
   const [plans, setPlans] = useState([]);
@@ -94,7 +88,7 @@ export default function MealPlanSelectorModal({ visible, onClose, onPlanSelected
     setSelectingId(planKey);
     try {
       const updated = await selectMealPlan(plan);
-      Alert.alert('Meal Plan Activated! 🎯', `Activated: ${plan.title}`);
+      Alert.alert('Meal Plan Activated', `Activated: ${plan.title}`);
       onPlanSelected(updated);
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to activate meal plan');
@@ -114,7 +108,6 @@ export default function MealPlanSelectorModal({ visible, onClose, onPlanSelected
         {/* Modal Top Header */}
         <View style={styles.modalHeader}>
           <View style={styles.headerTitleRow}>
-            <Text style={styles.headerIcon}>✨</Text>
             <Text style={styles.headerTitle}>AI Meal Plan Generator</Text>
           </View>
           <TouchableOpacity onPress={onClose} style={styles.closeBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -126,12 +119,12 @@ export default function MealPlanSelectorModal({ visible, onClose, onPlanSelected
           /* Animated 5-Step AI Generation Sequencer */
           <ScrollView contentContainerStyle={styles.loadingScroll}>
             <View style={styles.glowIconWrapper}>
-              <Text style={styles.glowEmoji}>✨</Text>
+              <ActivityIndicator size="small" color="#E8A020" />
             </View>
 
-            <Text style={styles.loadingTitle}>Crafting Your AI Meal Plans</Text>
+            <Text style={styles.loadingTitle}>Crafting Your Meal Plans</Text>
             <Text style={styles.loadingSubtitle}>
-              Gemini AI is evaluating your target macros and local ingredient costs.
+              Evaluating your target macros, preferences, and local ingredient costs.
             </Text>
 
             {/* Progress Bar */}
@@ -172,7 +165,9 @@ export default function MealPlanSelectorModal({ visible, onClose, onPlanSelected
 
                     <View style={styles.stepTextCol}>
                       <View style={styles.stepTitleRow}>
-                        <Text style={styles.stepEmoji}>{step.icon}</Text>
+                        <View style={styles.stepNumberBadge}>
+                          <Text style={styles.stepNumberText}>{step.step}</Text>
+                        </View>
                         <Text style={[styles.stepTitle, isCurrent && styles.stepTitleActive]}>{step.title}</Text>
                       </View>
                       {isCurrent && (
@@ -185,18 +180,17 @@ export default function MealPlanSelectorModal({ visible, onClose, onPlanSelected
             </View>
 
             <Text style={styles.loadingFooterNote}>
-              ⏱️ High-precision macro calculation usually takes ~5–10 seconds
+              Macro calculation usually takes 5–10 seconds
             </Text>
           </ScrollView>
         ) : error ? (
           /* Error Screen */
           <View style={styles.errorContainer}>
-            <Text style={styles.errorIcon}>⚠️</Text>
             <Text style={styles.errorTitle}>Generation Failed</Text>
             <Text style={styles.errorMsg}>{error}</Text>
 
             <TouchableOpacity style={styles.retryBtn} onPress={loadMealPlans}>
-              <Text style={styles.retryBtnText}>🔄 Retry AI Generation</Text>
+              <Text style={styles.retryBtnText}>Retry AI Generation</Text>
             </TouchableOpacity>
 
             {onClose && (
@@ -212,7 +206,7 @@ export default function MealPlanSelectorModal({ visible, onClose, onPlanSelected
               <View style={styles.stepPill}>
                 <Text style={styles.stepPillText}>Select Active Plan</Text>
               </View>
-              <Text style={styles.screenTitle}>🍱 Choose Your Daily Meal Plan</Text>
+              <Text style={styles.screenTitle}>Choose Your Daily Meal Plan</Text>
               <Text style={styles.screenSubtitle}>
                 Based on your metrics & budget, pick the schedule that best fits your daily routine.
               </Text>
@@ -229,7 +223,7 @@ export default function MealPlanSelectorModal({ visible, onClose, onPlanSelected
                     </View>
                     {plan.estimated_cost && (
                       <View style={styles.costBadge}>
-                        <Text style={styles.costBadgeText}>💰 {plan.estimated_cost}</Text>
+                        <Text style={styles.costBadgeText}>{plan.estimated_cost}</Text>
                       </View>
                     )}
                   </View>
@@ -258,15 +252,14 @@ export default function MealPlanSelectorModal({ visible, onClose, onPlanSelected
                   </View>
 
                   {/* Daily Meal Schedule & Recipes Breakdown */}
-                  <Text style={styles.breakdownHeader}>🍽️ Daily Meal Schedule</Text>
+                  <Text style={styles.breakdownHeader}>Daily Meal Schedule</Text>
                   <View style={styles.mealsContainer}>
                     {plan.meals?.map((m, mIdx) => {
-                      const icon = MEAL_ICONS[m.meal_type] || '🍱';
                       return (
                         <View key={mIdx} style={styles.mealItemBox}>
                           <View style={styles.mealItemTopRow}>
                             <View style={styles.mealTypePill}>
-                              <Text style={styles.mealTypePillText}>{icon} {m.meal_type}</Text>
+                              <Text style={styles.mealTypePillText}>{m.meal_type}</Text>
                             </View>
                             <Text style={styles.mealCalsText}>{m.calories} kcal</Text>
                           </View>
@@ -304,7 +297,7 @@ export default function MealPlanSelectorModal({ visible, onClose, onPlanSelected
                     {isSelected ? (
                       <ActivityIndicator color="#221803" />
                     ) : (
-                      <Text style={styles.selectBtnText}>Activate This Meal Plan ✨</Text>
+                      <Text style={styles.selectBtnText}>Activate This Meal Plan</Text>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -314,7 +307,7 @@ export default function MealPlanSelectorModal({ visible, onClose, onPlanSelected
             {/* Disclaimer Box */}
             <View style={styles.disclaimerBox}>
               <Text style={styles.disclaimerText}>
-                ⚖️ <Text style={{ fontWeight: 'bold', color: '#A79A85' }}>Disclaimer:</Text> CoreControl AI meal suggestions and macro estimates are generated for general wellness purposes only and do not constitute medical nutrition therapy.
+                <Text style={{ fontWeight: 'bold', color: '#A79A85' }}>Disclaimer:</Text> Nutritional targets are for general guidance only. Consult a healthcare professional for clinical needs.
               </Text>
             </View>
           </ScrollView>
@@ -327,7 +320,7 @@ export default function MealPlanSelectorModal({ visible, onClose, onPlanSelected
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#181410',
+    backgroundColor: colors.background || '#08090C',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -474,6 +467,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  stepNumberBadge: {
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+    backgroundColor: '#2A2219',
+    borderWidth: 1,
+    borderColor: '#3A3128',
+  },
+  stepNumberText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#E8A020',
   },
   stepEmoji: {
     fontSize: 14,
@@ -623,7 +629,7 @@ const styles = StyleSheet.create({
   macroRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#181410',
+    backgroundColor: colors.background || '#08090C',
     borderRadius: 10,
     padding: 10,
     marginBottom: 16,
@@ -652,11 +658,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   mealItemBox: {
-    backgroundColor: '#181410',
+    backgroundColor: colors.card || '#111318',
     borderRadius: 10,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#2D261F',
+    borderColor: colors.border || '#222631',
   },
   mealItemTopRow: {
     flexDirection: 'row',

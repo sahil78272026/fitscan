@@ -1,5 +1,63 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import Svg, { Path, Circle } from 'react-native-svg';
+import { colors } from '../theme';
+
+function SunIcon({ size = 18, color = '#F59E0B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="4" stroke={color} strokeWidth="2" />
+      <Path
+        d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
+function SunriseIcon({ size = 14, color = '#08090C' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 2v6M4.93 10.93l1.41 1.41M19.07 10.93l-1.41 1.41M2 18h20M12 11a4 4 0 00-4 4h8a4 4 0 00-4-4zM8 6l4-4 4 4"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function LightbulbIcon({ size = 14, color = '#F59E0B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M9 18h6M10 22h4M12 2a7 7 0 00-7 7c0 2.5 1.5 4.5 3 6h8c1.5-1.5 3-3.5 3-6a7 7 0 00-7-7z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function CloseIcon({ size = 12, color = '#94A3B8' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M18 6L6 18M6 6l12 12"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
 
 export default function MorningBriefingCard({ briefingData, onDismiss, onLogBreakfast }) {
   if (!briefingData || !briefingData.briefing) return null;
@@ -28,10 +86,10 @@ export default function MorningBriefingCard({ briefingData, onDismiss, onLogBrea
       <View style={styles.header}>
         <View style={styles.greetingRow}>
           <View style={styles.sunIconContainer}>
-            <Text style={styles.sunIcon}>☀️</Text>
+            <SunIcon size={18} color="#F59E0B" />
           </View>
           <View style={styles.titleContainer}>
-            <Text style={styles.greetingText}>{greeting || 'Good morning! ☀️'}</Text>
+            <Text style={styles.greetingText}>{greeting ? greeting.replace(/\u2600\uFE0F|\u2600/g, '').trim() : 'Good morning'}</Text>
             <Text style={styles.subGreetingText}>Yesterday's Recap & Today's Tips</Text>
           </View>
         </View>
@@ -51,7 +109,7 @@ export default function MorningBriefingCard({ briefingData, onDismiss, onLogBrea
               onPress={onDismiss}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Text style={styles.dismissBtnText}>✕</Text>
+              <CloseIcon size={12} color="#94A3B8" />
             </TouchableOpacity>
           )}
         </View>
@@ -67,7 +125,10 @@ export default function MorningBriefingCard({ briefingData, onDismiss, onLogBrea
       {/* Improvements List */}
       {improvements && improvements.length > 0 ? (
         <View style={styles.improvementsBox}>
-          <Text style={styles.improvementsTitle}>💡 Today's Improvements:</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+            <LightbulbIcon size={14} color="#E8A020" />
+            <Text style={styles.improvementsTitle}>Today's Improvements:</Text>
+          </View>
           {improvements.map((tip, idx) => (
             <Text key={idx} style={styles.improvementItem}>
               • {tip}
@@ -87,7 +148,10 @@ export default function MorningBriefingCard({ briefingData, onDismiss, onLogBrea
 
         {onLogBreakfast && (
           <TouchableOpacity style={styles.actionBtn} onPress={onLogBreakfast}>
-            <Text style={styles.actionBtnText}>🍳 Log Breakfast</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <SunriseIcon size={13} color="#08090C" />
+              <Text style={styles.actionBtnText}>Log Breakfast</Text>
+            </View>
           </TouchableOpacity>
         )}
       </View>
@@ -97,9 +161,9 @@ export default function MorningBriefingCard({ briefingData, onDismiss, onLogBrea
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#221D17',
+    backgroundColor: colors.card || '#111318',
     borderWidth: 1,
-    borderColor: 'rgba(232, 160, 32, 0.35)',
+    borderColor: colors.border || '#222631',
     borderRadius: 14,
     padding: 14,
     marginBottom: 16,
@@ -269,7 +333,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   actionBtnText: {
-    color: '#181410',
+    color: '#08090C',
     fontSize: 12,
     fontWeight: '700',
   },

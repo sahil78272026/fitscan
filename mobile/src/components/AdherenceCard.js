@@ -1,5 +1,66 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Svg, { Path, Circle } from 'react-native-svg';
+
+function FlameIcon({ size = 20, color = '#E8A020' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 2C10.5 4.5 8 7 8 11a4 4 0 008 0c0-2-1-3.5-2-4.5.5 2.5-1 3.5-2 3.5s-1.5-1-1-2.5c.5-1.5 1-3.5-1-5.5z"
+        fill={color}
+      />
+      <Path
+        d="M12 22c-4.4 0-8-3.6-8-8 0-4.1 3.1-7.4 7-7.9-.6 1-.9 2.4-.9 3.9 0 2.2 1.8 4 4 4 .5 0 1-.1 1.5-.3 1.5 2.5 1.1 5.9-1.1 7.2A7.95 7.95 0 0112 22z"
+        fill={color}
+        opacity={0.8}
+      />
+    </Svg>
+  );
+}
+
+function ZapIcon({ size = 18, color = '#E8A020' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+    </Svg>
+  );
+}
+
+function TargetIcon({ size = 18, color = '#7BA05B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <Circle cx="12" cy="12" r="10" />
+      <Circle cx="12" cy="12" r="6" />
+      <Circle cx="12" cy="12" r="2" />
+    </Svg>
+  );
+}
+
+function TrophyIcon({ size = 18, color = '#E8A020' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M6 9H4.5a2.5 2.5 0 010-5H6" />
+      <Path d="M18 9h1.5a2.5 2.5 0 000-5H18" />
+      <Path d="M4 22h16" />
+      <Path d="M10 14.66V17c0 .55-.45 1-1 1H8v4h8v-4h-1c-.55 0-1-.45-1-1v-2.34" />
+      <Path d="M6 4h12v5c0 3.31-2.69 6-6 6s-6-2.69-6-6V4z" />
+    </Svg>
+  );
+}
+
+function renderBadgeIcon(badge) {
+  const color = badge.unlocked ? '#E8A020' : '#6B7280';
+  if (badge.id === 'streak_3' || (typeof badge.icon === 'string' && badge.icon.includes('\uD83D\uDD25'))) {
+    return <FlameIcon size={18} color={color} />;
+  }
+  if (badge.id === 'streak_7' || (typeof badge.icon === 'string' && badge.icon.includes('\u26A1'))) {
+    return <ZapIcon size={18} color={color} />;
+  }
+  if (badge.id === 'macro_master' || (typeof badge.icon === 'string' && badge.icon.includes('\uD83C\uDFAF'))) {
+    return <TargetIcon size={18} color={badge.unlocked ? '#7BA05B' : '#6B7280'} />;
+  }
+  return <TrophyIcon size={18} color={color} />;
+}
 
 export default function AdherenceCard({ stats }) {
   const {
@@ -49,7 +110,7 @@ export default function AdherenceCard({ stats }) {
       <View style={styles.topRow}>
         {/* Streak Pill */}
         <View style={styles.streakBadge}>
-          <Text style={styles.fireIcon}>🔥</Text>
+          <FlameIcon size={20} color="#E8A020" />
           <View>
             <Text style={styles.streakNumber}>{current_streak} Day Streak</Text>
             <Text style={styles.streakSub}>Keep logging daily!</Text>
@@ -88,13 +149,13 @@ export default function AdherenceCard({ stats }) {
                 key={b.id}
                 style={[styles.badgeCard, b.unlocked ? styles.badgeUnlocked : styles.badgeLocked]}
               >
-                <Text style={styles.badgeIcon}>{b.icon}</Text>
+                <View style={styles.badgeIconBox}>{renderBadgeIcon(b)}</View>
                 <View style={styles.badgeInfo}>
                   <Text style={[styles.badgeTitle, !b.unlocked && styles.textMuted]}>
                     {b.title}
                   </Text>
                   <Text style={styles.badgeDesc} numberOfLines={1}>
-                    {b.unlocked ? 'Unlocked 🎉' : 'Locked'}
+                    {b.unlocked ? 'Unlocked' : 'Locked'}
                   </Text>
                 </View>
               </View>
@@ -223,9 +284,17 @@ const styles = StyleSheet.create({
     borderColor: '#7BA05B',
   },
   badgeLocked: {
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
     borderColor: '#3A3128',
     opacity: 0.6,
+  },
+  badgeIconBox: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   badgeIcon: {
     fontSize: 20,

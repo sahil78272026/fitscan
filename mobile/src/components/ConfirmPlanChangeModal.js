@@ -8,6 +8,33 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
+import { colors } from '../theme';
+
+function CloseIcon({ size = 14, color = '#94A3B8' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M18 6L6 18M6 6l12 12"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function SparkleIcon({ size = 16, color = '#F59E0B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"
+        fill={color}
+      />
+    </Svg>
+  );
+}
 
 export default function ConfirmPlanChangeModal({
   visible,
@@ -32,14 +59,14 @@ export default function ConfirmPlanChangeModal({
             onPress={onClose}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Text style={styles.closeBtnText}>✕</Text>
+            <CloseIcon size={14} color="#94A3B8" />
           </TouchableOpacity>
 
           <ScrollView showsVerticalScrollIndicator={false}>
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.iconCircle}>
-                <Text style={styles.iconText}>🤖</Text>
+                <SparkleIcon size={24} color="#F59E0B" />
               </View>
               <Text style={styles.modalTitle}>Generate New AI Meal Plans?</Text>
               <Text style={styles.modalSubtitle}>
@@ -61,14 +88,14 @@ export default function ConfirmPlanChangeModal({
             {/* AI Nutrition Notice */}
             <View style={styles.warningBoxPro}>
               <View style={styles.warningTitleRow}>
-                <Text style={styles.warningIcon}>✨</Text>
+                <SparkleIcon size={14} color="#F59E0B" />
                 <Text style={styles.warningTitlePro}>Personalized AI Meal Plan</Text>
               </View>
               <Text style={styles.warningDetailPro}>
                 Tapping confirm will invoke Google Gemini AI to generate 3 fresh, tailored daily meal plans for your current calorie & macro targets.
               </Text>
               <Text style={[styles.warningDetailPro, { marginTop: 6, color: '#fef08a' }]}>
-                ⏱️ Note: To keep your nutrition consistent and optimize AI calls, meal plans can be updated once every 24 hours.
+                Note: Meal plans can be regenerated once every 24 hours.
               </Text>
             </View>
 
@@ -87,7 +114,7 @@ export default function ConfirmPlanChangeModal({
                 onPress={onConfirm}
                 activeOpacity={0.8}
               >
-                <Text style={styles.confirmBtnText}>Yes, Generate Plans ✨</Text>
+                <Text style={styles.confirmBtnText}>Yes, Generate Plans</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -109,11 +136,11 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 420,
     maxHeight: '90%',
-    backgroundColor: '#221D17',
+    backgroundColor: colors.surface || '#111318',
     borderRadius: 18,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#3A3128',
+    borderColor: colors.border || '#222631',
     position: 'relative',
     ...Platform.select({
       ios: {
@@ -135,9 +162,11 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#2C251D',
+    backgroundColor: colors.surfaceElevated || '#1A1D24',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border || '#222631',
   },
   closeBtnText: {
     color: '#A79A85',
@@ -176,12 +205,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   currentPlanCard: {
-    backgroundColor: '#181410',
+    backgroundColor: colors.background || '#08090C',
     borderRadius: 12,
     padding: 14,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#3A3128',
+    borderColor: colors.border || '#222631',
   },
   planCardLabel: {
     fontSize: 10,

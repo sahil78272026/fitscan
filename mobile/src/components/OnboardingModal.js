@@ -830,7 +830,7 @@ export default function OnboardingModal({ visible, initialSettings, onClose, onC
                 disabled={loading}
               >
                 {loading ? (
-                  <ActivityIndicator color="#181410" />
+                  <ActivityIndicator color="#08090C" />
                 ) : (
                   <Text style={styles.submitBtnText}>Save Goals & Continue</Text>
                 )}
@@ -854,7 +854,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.08)',
   },
@@ -881,7 +881,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   progressSection: {
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
     paddingHorizontal: 20,
     paddingBottom: 12,
     borderBottomWidth: 1,
@@ -950,7 +950,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   cardItem: {
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 14,
@@ -1015,7 +1015,7 @@ const styles = StyleSheet.create({
     color: '#F59E0B',
   },
   metricCard: {
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 14,
@@ -1098,7 +1098,7 @@ const styles = StyleSheet.create({
     color: '#A8A29E',
   },
   unitToggleTextActive: {
-    color: '#181410',
+    color: '#08090C',
     fontWeight: '700',
   },
   stepperContainer: {
@@ -1223,7 +1223,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   previewBox: {
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
     borderWidth: 1,
     borderColor: 'rgba(245, 158, 11, 0.3)',
     borderRadius: 14,
@@ -1300,7 +1300,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.08)',
     gap: 12,
@@ -1325,7 +1325,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   nextBtnText: {
-    color: '#181410',
+    color: '#08090C',
     fontSize: 14,
     fontWeight: '700',
   },
@@ -1338,7 +1338,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   submitBtnText: {
-    color: '#181410',
+    color: '#08090C',
     fontSize: 14,
     fontWeight: '700',
   },

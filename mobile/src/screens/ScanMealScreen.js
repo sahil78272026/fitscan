@@ -360,7 +360,7 @@ export default function ScanMealScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background || '#181410',
+    backgroundColor: colors.background || '#08090C',
   },
   keyboardAvoid: {
     flex: 1,
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   goalBannerBtnText: {
-    color: '#181410',
+    color: '#08090C',
     fontSize: 12,
     fontWeight: '700',
   },

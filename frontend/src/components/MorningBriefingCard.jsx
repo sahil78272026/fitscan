@@ -21,9 +21,21 @@ export default function MorningBriefingCard({ briefingData, onDismiss, onLogBrea
     <aside className={styles.card} aria-label="Morning Nutrition Briefing">
       <div className={styles.header}>
         <div className={styles.greetingGroup}>
-          <div className={styles.sunIcon}>☀️</div>
+          <div className={styles.sunIcon}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="4"/>
+              <path d="M12 2v2"/>
+              <path d="M12 20v2"/>
+              <path d="m4.93 4.93 1.41 1.41"/>
+              <path d="m17.66 17.66 1.41 1.41"/>
+              <path d="M2 12h2"/>
+              <path d="M20 12h2"/>
+              <path d="m6.34 17.66-1.41 1.41"/>
+              <path d="m19.07 4.93-1.41 1.41"/>
+            </svg>
+          </div>
           <div>
-            <h2 className={styles.greetingText}>{greeting || "Good morning! ☀️"}</h2>
+            <h2 className={styles.greetingText}>{(greeting || "Good morning").replace(/[^\x00-\x7F]/g, "").trim()}</h2>
             <p className={styles.subGreeting}>Yesterday&apos;s Recap &amp; Today&apos;s Tips</p>
           </div>
         </div>
@@ -57,7 +69,13 @@ export default function MorningBriefingCard({ briefingData, onDismiss, onLogBrea
       {improvements && improvements.length > 0 && (
         <div className={styles.improvementsSection}>
           <div className={styles.improvementsHeader}>
-            <span className={styles.sparkle}>💡</span>
+            <span className={styles.sparkle}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/>
+                <path d="M9 18h6"/>
+                <path d="M10 22h4"/>
+              </svg>
+            </span>
             <span>Today&apos;s Improvements:</span>
           </div>
           <ul className={styles.improvementsList}>
@@ -82,7 +100,7 @@ export default function MorningBriefingCard({ briefingData, onDismiss, onLogBrea
             className={styles.actionBtn}
             onClick={onLogBreakfast}
           >
-            🍳 Log Breakfast
+            Log Breakfast
           </button>
         )}
       </footer>

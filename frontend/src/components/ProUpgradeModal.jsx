@@ -146,8 +146,8 @@ export default function ProUpgradeModal({
   const payableAmount = isHundredPercent ? 0 : Math.max(0, basePrice - discountAmount);
 
   // Apply Coupon
-  const handleApplyCoupon = useCallback(async () => {
-    const cleanCode = couponCode.trim().toUpperCase();
+  const handleApplyCoupon = useCallback(async (overrideCode = null) => {
+    const cleanCode = (typeof overrideCode === "string" ? overrideCode : couponCode).trim().toUpperCase();
     if (!cleanCode) return;
 
     setValidatingCoupon(true);
@@ -156,6 +156,7 @@ export default function ProUpgradeModal({
       const result = await validateCoupon(cleanCode, billingCycle);
       if (result.valid) {
         setAppliedCoupon(result);
+        setCouponCode(cleanCode);
         setError(null);
       } else {
         setAppliedCoupon(null);
@@ -367,93 +368,38 @@ export default function ProUpgradeModal({
           </div>
         </div>
 
-        {/* Plan Selector & Checkout */}
+        {/* Early Bird Special Access & Coupon Unlock */}
         {!isPro ? (
           <>
-            <div className={styles.pricingSelector}>
-              <div
-                className={`${styles.pricingCard} ${
-                  billingCycle === "annual" ? styles.selectedCard : ""
-                }`}
-                onClick={() => setBillingCycle("annual")}
+            {/* Early Bird Special Access Banner */}
+            <div className={styles.earlyBirdBanner}>
+              <div className={styles.earlyBirdTag}>EARLY BIRD SPECIAL ACCESS</div>
+              <p className={styles.earlyBirdText}>
+                Direct payment plans are upcoming. During our early bird launch period, full CoreControl Pro access is <strong>100% free</strong> with access code <strong>TESTFREE</strong>.
+              </p>
+              <button
+                type="button"
+                className={styles.quickFillBtn}
+                onClick={() => {
+                  setCouponCode("TESTFREE");
+                  handleApplyCoupon("TESTFREE");
+                }}
               >
-                <div className={styles.saveBadge}>SAVE 45% • BEST VALUE</div>
-                <div className={styles.pricingRadio}>
-                  <div className={styles.radioCircle}>
-                    {billingCycle === "annual" && <div className={styles.radioDot} />}
-                  </div>
-                  <div>
-                    <span className={styles.planDuration}>Annual Membership</span>
-                    <span className={styles.planPerMonth}>~₹83 / month</span>
-                  </div>
-                </div>
-                <div className={styles.priceAmount}>
-                  {appliedCoupon && billingCycle === "annual" ? (
-                    <div>
-                      <span className={styles.strikePrice}>₹999</span>
-                      {isHundredPercent ? (
-                        <span className={styles.freePriceTag}>FREE</span>
-                      ) : (
-                        <strong>₹{payableAmount}</strong>
-                      )}
-                      <span>/ year</span>
-                    </div>
-                  ) : (
-                    <div>
-                      <strong>₹999</strong>
-                      <span>/ year</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div
-                className={`${styles.pricingCard} ${
-                  billingCycle === "monthly" ? styles.selectedCard : ""
-                }`}
-                onClick={() => setBillingCycle("monthly")}
-              >
-                <div className={styles.pricingRadio}>
-                  <div className={styles.radioCircle}>
-                    {billingCycle === "monthly" && <div className={styles.radioDot} />}
-                  </div>
-                  <div>
-                    <span className={styles.planDuration}>Monthly Pass</span>
-                    <span className={styles.planPerMonth}>Standard billing</span>
-                  </div>
-                </div>
-                <div className={styles.priceAmount}>
-                  {appliedCoupon && billingCycle === "monthly" ? (
-                    <div>
-                      <span className={styles.strikePrice}>₹149</span>
-                      {isHundredPercent ? (
-                        <span className={styles.freePriceTag}>FREE</span>
-                      ) : (
-                        <strong>₹{payableAmount}</strong>
-                      )}
-                      <span>/ month</span>
-                    </div>
-                  ) : (
-                    <div>
-                      <strong>₹149</strong>
-                      <span>/ month</span>
-                    </div>
-                  )}
-                </div>
-              </div>
+                Use TESTFREE (100% Free)
+              </button>
             </div>
 
             {/* Dynamic Coupon Input Section */}
             <div className={styles.couponSection}>
               <div className={styles.couponHeader}>
                 <CouponIcon size={15} />
-                <span>Have a Promo Code or Access Coupon?</span>
+                <span>Enter Early Bird Promo Code</span>
               </div>
               <div className={styles.couponInputRow}>
                 <input
                   type="text"
                   className={styles.couponInput}
-                  placeholder="e.g. LAUNCH100"
+                  placeholder="e.g. TESTFREE"
                   value={couponCode}
                   onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                   disabled={validatingCoupon || Boolean(appliedCoupon)}
@@ -476,7 +422,7 @@ export default function ProUpgradeModal({
                   <button
                     type="button"
                     className={styles.applyCouponBtn}
-                    onClick={handleApplyCoupon}
+                    onClick={() => handleApplyCoupon()}
                     disabled={validatingCoupon || !couponCode.trim()}
                   >
                     {validatingCoupon ? "Checking..." : "Apply"}
@@ -490,7 +436,7 @@ export default function ProUpgradeModal({
                     <CheckIcon size={14} />
                     <span>
                       {appliedCoupon.code}: {appliedCoupon.discount_percentage}% OFF
-                      {appliedCoupon.description ? ` (${appliedCoupon.description})` : ""}
+                      {appliedCoupon.discount_percentage === 100 ? " • 100% Free Pro Access" : ""}
                     </span>
                   </div>
                   <button
@@ -536,21 +482,26 @@ export default function ProUpgradeModal({
                 {loading ? "Activating Pro Access..." : "Claim 100% Free Access Instantly"}
               </button>
             ) : (
-              <button
-                type="button"
-                className={styles.upgradeBtn}
-                onClick={handleRazorpayPayment}
-                disabled={loading}
-              >
-                {loading
-                  ? "Processing..."
-                  : `Pay ₹${payableAmount} with Razorpay`}
-              </button>
+              <div className={styles.couponPromptBox}>
+                <p className={styles.couponPromptText}>
+                  Enter code <strong>TESTFREE</strong> above to activate your complimentary Pro membership.
+                </p>
+                <button
+                  type="button"
+                  className={styles.autoApplyBtn}
+                  onClick={() => {
+                    setCouponCode("TESTFREE");
+                    handleApplyCoupon("TESTFREE");
+                  }}
+                >
+                  Activate with TESTFREE
+                </button>
+              </div>
             )}
 
             <p className={styles.guaranteeNote}>
               <LockIcon size={13} />
-              Secure 256-bit encrypted checkout • Instant Pro activation
+              Early bird access • Instant Pro activation & unlimited AI features
             </p>
           </>
         ) : (

@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   navBtn: {
     paddingHorizontal: 12,
     paddingVertical: 4,
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
     borderRadius: 6,
     borderWidth: 1,
     borderColor: '#3A3128',

@@ -56,7 +56,7 @@ export default ErrorBoundary;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   retryButtonText: {
-    color: '#181410',
+    color: '#08090C',
     fontWeight: '700',
     fontSize: 15,
   },

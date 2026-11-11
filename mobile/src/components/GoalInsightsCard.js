@@ -6,16 +6,50 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { colors, typography, spacing, radius, shadows } from '../theme';
 import { Badge } from './ui/Badge';
 import { getGoalInsights, getAdaptiveSuggestions } from '../utils/personalizationEngine';
 
-const DIET_ICONS = {
-  veg: '🌱',
-  vegan: '🥑',
-  eggetarian: '🥚',
-  non_veg: '🍗',
-};
+function CoachIcon({ size = 18, color = '#E8A020' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-2.54z" />
+      <Path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-2.54z" />
+    </Svg>
+  );
+}
+
+function DietBadge({ diet }) {
+  if (diet === 'veg') {
+    return (
+      <View style={styles.dietMarkGreen}>
+        <View style={styles.dietDotGreen} />
+      </View>
+    );
+  }
+  if (diet === 'vegan') {
+    return (
+      <View style={styles.dietMarkGreen}>
+        <Svg width={10} height={10} viewBox="0 0 24 24" fill="#7BA05B">
+          <Path d="M12 2C6.5 2 2 6.5 2 12c0 5 4 9 9 10 .5-5 4-9 9-10 1-5-3.5-10-8-10z" />
+        </Svg>
+      </View>
+    );
+  }
+  if (diet === 'eggetarian') {
+    return (
+      <View style={styles.dietMarkYellow}>
+        <View style={styles.dietDotYellow} />
+      </View>
+    );
+  }
+  return (
+    <View style={styles.dietMarkRed}>
+      <View style={styles.dietDotRed} />
+    </View>
+  );
+}
 
 export default function GoalInsightsCard({
   summary,
@@ -36,7 +70,7 @@ export default function GoalInsightsCard({
       {/* Header */}
       <View style={styles.headerRow}>
         <View style={styles.titleRow}>
-          <Text style={styles.iconTitle}>🧠</Text>
+          <CoachIcon size={18} color={colors.primary || '#E8A020'} />
           <Text style={styles.cardTitle}>Goal Insights & Coaching</Text>
         </View>
         <Badge
@@ -77,7 +111,7 @@ export default function GoalInsightsCard({
                 accessibilityLabel={`Suggest ${item.name}, ${item.calories} calories, ${item.protein} grams protein`}
               >
                 <View style={styles.chipTopRow}>
-                  <Text style={styles.dietIcon}>{DIET_ICONS[item.diet] || '🍽️'}</Text>
+                  <DietBadge diet={item.diet} />
                   <Text style={styles.chipTag}>{item.tag}</Text>
                 </View>
 
@@ -182,6 +216,51 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 4,
+  },
+  dietMarkGreen: {
+    width: 14,
+    height: 14,
+    borderWidth: 1.5,
+    borderColor: '#7BA05B',
+    borderRadius: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dietDotGreen: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#7BA05B',
+  },
+  dietMarkRed: {
+    width: 14,
+    height: 14,
+    borderWidth: 1.5,
+    borderColor: '#C7502F',
+    borderRadius: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dietDotRed: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#C7502F',
+  },
+  dietMarkYellow: {
+    width: 14,
+    height: 14,
+    borderWidth: 1.5,
+    borderColor: '#E8A020',
+    borderRadius: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dietDotYellow: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#E8A020',
   },
   dietIcon: {
     fontSize: 13,

@@ -126,7 +126,7 @@ function shouldIgnoreUrl(url) {
 
 function logGrouped({ id, method, url, status, headers, reqBody, resData, durationMs, error }) {
   const isOk = typeof status === 'number' && status >= 200 && status < 300;
-  const icon = isOk ? '✅' : '❌';
+  const statusTag = isOk ? '[OK]' : '[ERR]';
 
   // Format clean endpoint display
   let endpoint = url;
@@ -137,22 +137,22 @@ function logGrouped({ id, method, url, status, headers, reqBody, resData, durati
     // If not standard URL format, fallback to raw url
   }
 
-  const title = `${icon} [#${id}] ${method} ${endpoint} [${status}] (${durationMs}ms)`;
+  const title = `${statusTag} [#${id}] ${method} ${endpoint} [${status}] (${durationMs}ms)`;
   const cleanHeaders = sanitizeHeaders(headers);
   const cleanReqBody = sanitizeBody(reqBody);
   const cleanResData = typeof resData === 'object' && resData !== null ? sanitizeBody(resData) : resData;
 
   if (console.groupCollapsed) {
     console.groupCollapsed(title);
-    console.log('🌐 Full URL:', url);
-    console.log('📤 Request:', {
+    console.log('[URL] Full URL:', url);
+    console.log('[REQ] Request:', {
       headers: cleanHeaders,
       body: cleanReqBody,
     });
     if (error) {
-      console.log('❌ Error:', error);
+      console.log('[ERR] Error:', error);
     } else {
-      console.log('📥 Response:', cleanResData ?? '');
+      console.log('[RES] Response:', cleanResData ?? '');
     }
     console.groupEnd();
   } else {

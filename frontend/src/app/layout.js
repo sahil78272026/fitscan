@@ -3,7 +3,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import BottomTabBar from "@/components/BottomTabBar";
 
 export const viewport = {
-  themeColor: "#181410",
+  themeColor: "#08090C",
   colorScheme: "dark",
   width: "device-width",
   initialScale: 1,

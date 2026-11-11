@@ -10,17 +10,6 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { estimateMealCost } from './mealCostEstimator';
 
-const MEAL_ICONS = {
-  breakfast: '🍳',
-  lunch: '🥗',
-  snack: '☕',
-  dinner: '🍲',
-  Breakfast: '🍳',
-  Lunch: '🥗',
-  Snack: '☕',
-  Dinner: '🍲',
-};
-
 /**
  * Escapes HTML control characters to prevent XSS and malformed document layout.
  *
@@ -81,7 +70,6 @@ export function generateMealPlanHtml(selectedPlan, userSettings = {}) {
 
         const mealTypeKey = (meal.meal_type || `Meal ${index + 1}`).toLowerCase();
         const mealTypeLabel = (meal.meal_type || `Meal ${index + 1}`).toUpperCase();
-        const icon = MEAL_ICONS[meal.meal_type] || MEAL_ICONS[mealTypeKey] || '🍽️';
         const dishName = meal.dish_name || 'Healthy Dish';
         const cal = meal.calories != null ? meal.calories : 0;
         const p = meal.protein != null ? meal.protein : 0;
@@ -136,7 +124,6 @@ export function generateMealPlanHtml(selectedPlan, userSettings = {}) {
           <div class="meal-card">
             <div class="meal-header">
               <div class="meal-type-badge">
-                <span class="meal-icon">${icon}</span>
                 <span class="meal-type-text">${escapeHtml(mealTypeLabel)}</span>
               </div>
               <div class="meal-badges">
@@ -204,7 +191,7 @@ export function generateMealPlanHtml(selectedPlan, userSettings = {}) {
     .brand-logo-title {
       font-size: 22px;
       font-weight: 800;
-      color: #181410;
+      color: #08090C;
       letter-spacing: -0.5px;
     }
 
@@ -248,7 +235,7 @@ export function generateMealPlanHtml(selectedPlan, userSettings = {}) {
     .plan-title {
       font-size: 18px;
       font-weight: 700;
-      color: #181410;
+      color: #08090C;
       margin-bottom: 6px;
     }
 
@@ -303,7 +290,7 @@ export function generateMealPlanHtml(selectedPlan, userSettings = {}) {
     .target-value {
       font-size: 15px;
       font-weight: 800;
-      color: #181410;
+      color: #08090C;
     }
 
     .target-label {
@@ -321,7 +308,7 @@ export function generateMealPlanHtml(selectedPlan, userSettings = {}) {
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.6px;
-      color: #181410;
+      color: #08090C;
       margin-bottom: 12px;
       display: flex;
       align-items: center;
@@ -389,7 +376,7 @@ export function generateMealPlanHtml(selectedPlan, userSettings = {}) {
     .dish-title {
       font-size: 14px;
       font-weight: 700;
-      color: #181410;
+      color: #08090C;
       margin-bottom: 4px;
     }
 
@@ -466,7 +453,7 @@ export function generateMealPlanHtml(selectedPlan, userSettings = {}) {
     }
 
     .document-footer strong {
-      color: #181410;
+      color: #08090C;
     }
   </style>
 </head>
@@ -485,9 +472,9 @@ export function generateMealPlanHtml(selectedPlan, userSettings = {}) {
   <div class="plan-hero">
     <div class="plan-title">${escapeHtml(planTitle)}</div>
     <div class="plan-tags">
-      <span class="tag tag-goal">🎯 ${escapeHtml(goalType)}</span>
-      <span class="tag tag-diet">🥗 ${escapeHtml(dietType)}</span>
-      <span class="tag tag-budget">💰 ${escapeHtml(dailyBudget)}</span>
+      <span class="tag tag-goal">Goal: ${escapeHtml(goalType)}</span>
+      <span class="tag tag-diet">Diet: ${escapeHtml(dietType)}</span>
+      <span class="tag tag-budget">Budget: ${escapeHtml(dailyBudget)}</span>
     </div>
 
     <div class="targets-grid">

@@ -1,34 +1,34 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getSuggestedMealPlans } from "@/lib/api";
 import styles from "./MealPlanSelector.module.css";
 
 const AI_STEPS = [
   {
-    icon: "🎯",
-    title: "Analyzing Nutrition Targets",
-    detail: "Reading your daily calories, protein split, and fitness goal...",
+    step: "01",
+    title: "Analyzing Targets",
+    detail: "Evaluating calories, protein ratio, and fitness goals...",
   },
   {
-    icon: "🥗",
-    title: "Filtering Dietary Preferences",
-    detail: "Matching cuisine styles, dietary restrictions, and budget tier...",
+    step: "02",
+    title: "Filtering Diet",
+    detail: "Matching cuisine preferences, restrictions, and budget tier...",
   },
   {
-    icon: "🍳",
-    title: "Balancing Daily Meals",
+    step: "03",
+    title: "Balancing Meals",
     detail: "Designing optimal portions for breakfast, lunch, and dinner...",
   },
   {
-    icon: "💰",
-    title: "Estimating Costs & Macros",
-    detail: "Auditing ingredient pricing and macronutrient distribution...",
+    step: "04",
+    title: "Auditing Macros",
+    detail: "Validating macro distribution and ingredient estimates...",
   },
   {
-    icon: "✨",
-    title: "Finalizing 3 Custom Plans",
-    detail: "Polishing descriptions and recipes for your review...",
+    step: "05",
+    title: "Finalizing Plans",
+    detail: "Polishing menus and recipes for selection...",
   },
 ];
 
@@ -107,12 +107,18 @@ export default function MealPlanSelector({ initialPlans, onSelectPlan, onBackToW
         <div className={styles.loadingContainer}>
           <div className={styles.aiGlowIconWrapper}>
             <div className={styles.aiGlowPulse} />
-            <span className={styles.aiGlowEmoji}>✨</span>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary, #E8A020)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+              <path d="M5 3v4"/>
+              <path d="M19 17v4"/>
+              <path d="M3 5h4"/>
+              <path d="M17 19h4"/>
+            </svg>
           </div>
 
-          <h2 className={styles.loadingTitle}>Crafting Your AI Meal Plans</h2>
+          <h2 className={styles.loadingTitle}>Generating Meal Plans</h2>
           <p className={styles.loadingSubtitle}>
-            Gemini is evaluating your target macros and local ingredient costs.
+            Optimizing portions, macro splits, and ingredient targets.
           </p>
 
           {/* Progress Bar */}
@@ -161,7 +167,7 @@ export default function MealPlanSelector({ initialPlans, onSelectPlan, onBackToW
 
                   <div className={styles.stepContent}>
                     <div className={styles.stepTitleRow}>
-                      <span className={styles.stepEmoji}>{step.icon}</span>
+                      <span className={styles.stepNumberBadge}>{step.step}</span>
                       <span className={styles.stepTitleText}>{step.title}</span>
                     </div>
                     {isCurrent && (
@@ -174,7 +180,7 @@ export default function MealPlanSelector({ initialPlans, onSelectPlan, onBackToW
           </div>
 
           <p className={styles.loadingFooterNote}>
-            ⏱️ High-precision macro calculation usually takes ~5–10 seconds
+            Macro optimization usually takes 5–10 seconds
           </p>
         </div>
       </div>
@@ -185,13 +191,19 @@ export default function MealPlanSelector({ initialPlans, onSelectPlan, onBackToW
     return (
       <div className={styles.selectorOverlay}>
         <div className={styles.errorContainer}>
-          <span className={styles.errorIcon}>⚠️</span>
+          <div className={styles.errorIcon}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#E05252" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </div>
           <h3 style={{ fontSize: "1.1rem", marginBottom: "0.85rem", lineHeight: "1.4" }}>
             {error}
           </h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", width: "100%", marginTop: "0.5rem" }}>
             <button className={styles.retryBtn} onClick={loadMealPlans}>
-              🔄 Retry AI Generation
+              Retry Generation
             </button>
             {onBackToWizard && (
               <button
@@ -224,15 +236,15 @@ export default function MealPlanSelector({ initialPlans, onSelectPlan, onBackToW
         <div className={styles.selectorHeader}>
           <div>
             <span className={styles.badge}>Step 5 • Select Active Plan</span>
-            <h2 className={styles.title}>🍱 Choose Your Preferred Daily Meal Plan</h2>
+            <h2 className={styles.title}>Choose Your Daily Meal Plan</h2>
             <p className={styles.subtitle}>
-              Based on your metrics & budget, pick the plan that best fits your daily routine.
+              Select the plan that best fits your daily routine and budget.
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
             {onBackToWizard && (
               <button className={styles.changeMetricsBtn} onClick={onBackToWizard}>
-                ⚙️ Change Metrics
+                Edit Targets
               </button>
             )}
             {onClose && (
@@ -317,7 +329,7 @@ export default function MealPlanSelector({ initialPlans, onSelectPlan, onBackToW
                   onClick={() => handleChoosePlan(plan)}
                   disabled={isSelected}
                 >
-                  {isSelected ? "Activating Plan..." : "Activate This Meal Plan ✨"}
+                  {isSelected ? "Activating Plan..." : "Activate Meal Plan"}
                 </button>
               </div>
             );
@@ -325,7 +337,7 @@ export default function MealPlanSelector({ initialPlans, onSelectPlan, onBackToW
         </div>
 
         <div className={styles.legalDisclaimerBox}>
-          ⚖️ <strong>Disclaimer:</strong> CoreControl AI meal suggestions and macro estimates are generated for general fitness, wellness, and educational purposes only. They do not constitute medical nutrition therapy or personalized medical advice. Please consult a qualified physician or dietitian regarding specific dietary needs, allergies, or medical conditions.
+          <strong>Disclaimer:</strong> AI suggestions and macro estimates are for general wellness and educational purposes only, not medical advice. Consult a healthcare provider for clinical needs.
         </div>
       </div>
     </div>

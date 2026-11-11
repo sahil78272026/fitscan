@@ -6,7 +6,7 @@
   display: flex;
   justify-content: space-around;
   align-items: stretch;
-  background: rgba(24, 20, 16, 0.95);
+  background: rgba(8, 9, 12, 0.92);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid var(--color-border);
@@ -41,7 +41,9 @@
 }
 
 .navIcon {
-  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
 }
 

@@ -5,10 +5,57 @@ import Image from "next/image";
 import styles from "./MealInput.module.css";
 
 const MEAL_TYPES = [
-  { value: "breakfast", label: "🌅 Breakfast", icon: "🌅" },
-  { value: "lunch", label: "☀️ Lunch", icon: "☀️" },
-  { value: "dinner", label: "🌙 Dinner", icon: "🌙" },
-  { value: "snack", label: "🍿 Snack", icon: "🍿" },
+  {
+    value: "breakfast",
+    label: "Breakfast",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2v6"/>
+        <path d="m4.93 10.93 4.24-4.24"/>
+        <path d="M2 18h20"/>
+        <path d="M20 18a8 8 0 0 0-16 0"/>
+      </svg>
+    ),
+  },
+  {
+    value: "lunch",
+    label: "Lunch",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M12 2v2"/>
+        <path d="M12 20v2"/>
+        <path d="m4.93 4.93 1.41 1.41"/>
+        <path d="m17.66 17.66 1.41 1.41"/>
+        <path d="M2 12h2"/>
+        <path d="M20 12h2"/>
+        <path d="m6.34 17.66-1.41 1.41"/>
+        <path d="m19.07 4.93-1.41 1.41"/>
+      </svg>
+    ),
+  },
+  {
+    value: "dinner",
+    label: "Dinner",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+      </svg>
+    ),
+  },
+  {
+    value: "snack",
+    label: "Snack",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 8h1a4 4 0 1 1 0 8h-1"/>
+        <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/>
+        <line x1="6" y1="2" x2="6" y2="4"/>
+        <line x1="10" y1="2" x2="10" y2="4"/>
+        <line x1="14" y1="2" x2="14" y2="4"/>
+      </svg>
+    ),
+  },
 ];
 
 function getMealTypeFromTime() {
@@ -174,7 +221,11 @@ async function compressImageFile(file, maxWidth = 1280, maxHeight = 1280, qualit
             disabled={isLoading}
             title="Snap live food photo with camera"
           >
-            📷 Camera
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+              <circle cx="12" cy="13" r="3"/>
+            </svg>
+            Camera
           </button>
           <button
             type="button"
@@ -183,7 +234,12 @@ async function compressImageFile(file, maxWidth = 1280, maxHeight = 1280, qualit
             disabled={isLoading}
             title="Choose food photo from gallery or files"
           >
-            🖼️ Gallery
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+              <circle cx="9" cy="9" r="2"/>
+              <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+            </svg>
+            Gallery
           </button>
         </div>
 

@@ -200,20 +200,20 @@ export default function MealPlanScreen({ navigation }) {
   const getMealPriority = (meal) => {
     if (meal?.criticality) {
       const c = String(meal.criticality).toLowerCase();
-      if (c === 'high') return { level: 'high', label: '⚡ Key Recovery Meal' };
-      if (c === 'low') return { level: 'low', label: '☕ Light Fuel' };
-      return { level: 'medium', label: '⚖️ Core Staple' };
+      if (c === 'high') return { level: 'high', label: 'Key Recovery Meal' };
+      if (c === 'low') return { level: 'low', label: 'Light Fuel' };
+      return { level: 'medium', label: 'Core Staple' };
     }
     const type = (meal?.meal_type || '').toLowerCase();
     const protein = meal?.protein || 0;
     const calories = meal?.calories || 0;
     if (type === 'snack' || calories < 280) {
-      return { level: 'low', label: '☕ Light Fuel' };
+      return { level: 'low', label: 'Light Fuel' };
     }
     if (type === 'dinner' || protein >= 35 || calories >= 580) {
-      return { level: 'high', label: '⚡ Key Recovery Meal' };
+      return { level: 'high', label: 'Key Recovery Meal' };
     }
-    return { level: 'medium', label: '⚖️ Core Staple' };
+    return { level: 'medium', label: 'Core Staple' };
   };
 
   const handleSwapMeals = useCallback(
@@ -418,7 +418,7 @@ export default function MealPlanScreen({ navigation }) {
       {exportingPdf ? (
         <ActivityIndicator size="small" color={colors.primary || '#E8A020'} />
       ) : (
-        <Text style={styles.headerDownloadBtnText}>📄 PDF</Text>
+        <Text style={styles.headerDownloadBtnText}>PDF</Text>
       )}
     </TouchableOpacity>
   );
@@ -442,7 +442,6 @@ export default function MealPlanScreen({ navigation }) {
       >
         {loadError ? (
           <Card variant="default" style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>⚠️</Text>
             <Text style={styles.emptyTitle}>Failed to Load Meal Plan</Text>
             <Text style={styles.emptySubtext}>
               {loadError}
@@ -457,7 +456,6 @@ export default function MealPlanScreen({ navigation }) {
           </Card>
         ) : !selectedPlan ? (
           <Card variant="default" style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>📋</Text>
             <Text style={styles.emptyTitle}>No Active Meal Plan Selected</Text>
             <Text style={styles.emptySubtext}>
               Set your target metrics in Profile and choose an AI-generated daily meal schedule with cost breakdowns.
@@ -487,11 +485,10 @@ export default function MealPlanScreen({ navigation }) {
                 <View style={styles.masterPlanContainer}>
                   <View style={styles.masterHeaderBanner}>
                     <View style={styles.masterHeaderBadge}>
-                      <Text style={styles.masterHeaderBadgeIcon}>📋</Text>
                       <Text style={styles.masterHeaderBadgeText}>MASTER MEAL PLAN BLUEPRINT</Text>
                     </View>
                     <View style={styles.masterStatusPill}>
-                      <Text style={styles.masterStatusText}>✨ Active</Text>
+                      <Text style={styles.masterStatusText}>Active</Text>
                     </View>
                   </View>
 
@@ -516,7 +513,6 @@ export default function MealPlanScreen({ navigation }) {
                     {selectedPlan.estimated_cost && (
                       <Badge
                         variant="warning"
-                        icon="💰"
                         label={selectedPlan.estimated_cost}
                         size="sm"
                       />
@@ -524,7 +520,7 @@ export default function MealPlanScreen({ navigation }) {
                     {userSettings?.can_change_plan === false && (
                       <Badge
                         variant="warning"
-                        label={`⏳ Change in ${userSettings.hours_until_next_plan_change || 1}h`}
+                        label={`Change in ${userSettings.hours_until_next_plan_change || 1}h`}
                         size="sm"
                       />
                     )}
@@ -728,7 +724,6 @@ export default function MealPlanScreen({ navigation }) {
               <Button
                 variant="secondary"
                 size="md"
-                icon="📄"
                 title={exportingPdf ? 'Exporting PDF...' : 'Export Meal Plan (PDF)'}
                 onPress={handleDownloadMealPlan}
                 disabled={exportingPdf}
@@ -790,7 +785,7 @@ export default function MealPlanScreen({ navigation }) {
             <ScrollView style={styles.swapSlotsList} showsVerticalScrollIndicator={false}>
               {selectedPlan?.meals?.map((targetMeal, targetIdx) => {
                 const isCurrent = targetIdx === swapSourceIndex;
-                const icon = MEAL_TYPE_ICONS[targetMeal.meal_type] || '🍱';
+                const slotNum = `0${targetIdx + 1}`.slice(-2);
                 return (
                   <TouchableOpacity
                     key={targetIdx}
@@ -805,7 +800,9 @@ export default function MealPlanScreen({ navigation }) {
                     accessibilityLabel={`Swap with ${targetMeal.meal_type}: ${targetMeal.dish_name}`}
                   >
                     <View style={styles.swapSlotLeft}>
-                      <Text style={styles.swapSlotIcon}>{icon}</Text>
+                      <View style={styles.swapSlotBadge}>
+                        <Text style={styles.swapSlotBadgeText}>{slotNum}</Text>
+                      </View>
                       <View style={{ flex: 1 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <Text style={styles.swapSlotType}>{targetMeal.meal_type}</Text>
@@ -849,7 +846,7 @@ export default function MealPlanScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background || '#181410',
+    backgroundColor: colors.background || '#08090C',
   },
   loader: {
     flex: 1,
@@ -940,7 +937,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   masterStatusPill: {
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -971,7 +968,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   masterMacroBarContainer: {
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
     borderRadius: 10,
     padding: 10,
     borderWidth: 1,
@@ -1010,7 +1007,7 @@ const styles = StyleSheet.create({
   },
   masterMacroCell: {
     flex: 1,
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
     borderRadius: 10,
     padding: 8,
     alignItems: 'center',
@@ -1159,7 +1156,7 @@ const styles = StyleSheet.create({
     color: '#7BA05B',
   },
   conciseCalPill: {
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
     borderRadius: 6,
     paddingHorizontal: 7,
     paddingVertical: 2,
@@ -1325,7 +1322,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
     borderRadius: 10,
     padding: 12,
     marginBottom: 8,
@@ -1344,8 +1341,20 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 8,
   },
-  swapSlotIcon: {
-    fontSize: 20,
+  swapSlotBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: colors.surfaceActive || '#2A2219',
+    borderWidth: 1,
+    borderColor: colors.borderSubtle || '#2D261F',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  swapSlotBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary || '#E8A020',
   },
   swapSlotType: {
     fontSize: 11,

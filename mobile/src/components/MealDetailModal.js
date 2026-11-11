@@ -10,21 +10,175 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, typography, radius, shadows, spacing } from '../theme';
 import { Card, Badge, Button } from './ui';
 import { estimateMealCost, parseDailyBudget } from '../utils/mealCostEstimator';
 import { logMeal } from '../services/api';
 
-const MEAL_TYPE_ICONS = {
-  breakfast: '🍳',
-  lunch: '🥗',
-  snack: '☕',
-  dinner: '🍲',
-  Breakfast: '🍳',
-  Lunch: '🥗',
-  Snack: '☕',
-  Dinner: '🍲',
-};
+// --- Semantic Vector SVG Icons (Zero Raw Emojis) ---
+function SunriseIcon({ size = 14, color = colors.primary || '#F59E0B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 2v6M4.93 10.93l1.41 1.41M19.07 10.93l-1.41 1.41M2 18h20M12 11a4 4 0 00-4 4h8a4 4 0 00-4-4zM8 6l4-4 4 4"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function SunIcon({ size = 14, color = colors.primary || '#F59E0B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="4" stroke={color} strokeWidth="2" />
+      <Path
+        d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
+function MoonIcon({ size = 14, color = colors.hydrationSky || '#38BDF8' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function CoffeeIcon({ size = 14, color = colors.primary || '#F59E0B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zM6 1v3M10 1v3M14 1v3"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function TagIcon({ size = 12, color = colors.primary || '#F59E0B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82zM7 7h.01"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function CheckIcon({ size = 14, color = '#10B981' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M20 6L9 17l-5-5"
+        stroke={color}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function CloseIcon({ size = 16, color = '#94A3B8' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M18 6L6 18M6 6l12 12"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function LightbulbIcon({ size = 18, color = colors.primary || '#F59E0B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M9 18h6M10 22h4M12 2a7 7 0 00-7 7c0 2.5 1.5 4.5 3 6h8c1.5-1.5 3-3.5 3-6a7 7 0 00-7-7z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function SwapIcon({ size = 14, color = colors.hydrationSky || '#38BDF8' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M16 3l4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function UtensilsIcon({ size = 16, color = '#F8FAFC' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M18 2v20M21 15v7M21 2a3 3 0 00-3 3v6a3 3 0 003 3v-2M3 2v7a4 4 0 004 4v9M7 2v7M11 2v7"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function ShareIcon({ size = 16, color = '#F8FAFC' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function getMealTypeIcon(type, size = 13, color = colors.primary || '#F59E0B') {
+  const t = (type || '').toLowerCase();
+  if (t.includes('breakfast')) return <SunriseIcon size={size} color={color} />;
+  if (t.includes('lunch')) return <SunIcon size={size} color={color} />;
+  if (t.includes('snack')) return <CoffeeIcon size={size} color={color} />;
+  if (t.includes('dinner')) return <MoonIcon size={size} color={color} />;
+  return <UtensilsIcon size={size} color={color} />;
+}
 
 /**
  * Universal Meal Detail Modal for FitScan Mobile.
@@ -116,42 +270,36 @@ export default function MealDetailModal({
     if (dish.includes('paneer') || ings.includes('paneer')) {
       list.push({
         title: 'Tofu Lean Swap',
-        icon: '🌱',
         desc: 'Swap paneer with 100g firm tofu for the same protein with 40% less saturated fat.',
       });
     }
     if (dish.includes('egg') || ings.includes('egg')) {
       list.push({
         title: 'Vegetarian Moong Swap',
-        icon: '🥣',
         desc: 'Swap eggs with 100g sprouted moong or paneer bhurji for equal protein density.',
       });
     }
     if (dish.includes('chicken') || ings.includes('chicken')) {
       list.push({
         title: 'Plant Protein Alternative',
-        icon: '🌿',
         desc: 'Swap chicken breast with 45g soya chunks boiled in light spices (+23g protein).',
       });
     }
     if (dish.includes('rice') || ings.includes('rice')) {
       list.push({
         title: 'Calorie Deficit Cut',
-        icon: '🥗',
         desc: 'Swap white or brown rice with 1 cup cauliflower rice to reduce ~140 kcal of carbs.',
       });
     }
     if (dish.includes('roti') || ings.includes('roti') || dish.includes('toast')) {
       list.push({
         title: 'High-Fiber Swap',
-        icon: '🌾',
         desc: 'Use 100% whole grain multi-millet roti or 100% rye sourdough for sustained energy.',
       });
     }
     // Generic fallback variation
     list.push({
       title: 'Macro Booster Tip',
-      icon: '💪',
       desc: 'Add 1 scoop unflavored whey or 100g Greek yogurt to boost protein by +15-20g.',
     });
 
@@ -161,7 +309,7 @@ export default function MealDetailModal({
   if (!visible || !meal) return null;
 
   const mealTypeStr = meal.meal_type || 'Lunch';
-  const mealIcon = MEAL_TYPE_ICONS[mealTypeStr] || MEAL_TYPE_ICONS[mealTypeStr.toLowerCase()] || '🍱';
+  const mealIcon = getMealTypeIcon(mealTypeStr);
   const isLoggedToday = hasLoggedLocal || isAlreadyLogged || isLogged;
   const isCurrentlyLogging = isLogging || isLoggingLocal;
 
@@ -211,9 +359,9 @@ export default function MealDetailModal({
 
         await logMeal(rawInput, type, todayStr);
         Alert.alert(
-          'Meal Logged! 🍽️',
+          'Meal Logged',
           `Successfully logged ${meal.dish_name} (${meal.calories} kcal) to today's diary.`,
-          [{ text: 'Great!' }]
+          [{ text: 'Great' }]
         );
       }
       setHasLoggedLocal(true);
@@ -295,7 +443,7 @@ export default function MealDetailModal({
                 />
                 <Badge
                   variant="warning"
-                  icon="💰"
+                  icon={<TagIcon size={12} color={colors.primary || '#F59E0B'} />}
                   label={`${costInfo.formatted} / meal`}
                   size="md"
                 />
@@ -313,7 +461,7 @@ export default function MealDetailModal({
               accessibilityRole="button"
               accessibilityLabel="Close meal detail"
             >
-              <Text style={styles.closeBtnText}>✕</Text>
+              <CloseIcon size={16} color={colors.textSecondary || '#94A3B8'} />
             </TouchableOpacity>
           </View>
 
@@ -471,7 +619,7 @@ export default function MealDetailModal({
                           ]}
                         >
                           {isChecked ? (
-                            <Text style={styles.checkboxCheck}>✓</Text>
+                            <CheckIcon size={12} color="#08090C" />
                           ) : null}
                         </View>
                         <Text
@@ -494,7 +642,8 @@ export default function MealDetailModal({
 
               {allIngredientsChecked && (
                 <View style={styles.allReadyPill}>
-                  <Text style={styles.allReadyText}>✨ All ingredients checked & ready to cook!</Text>
+                  <CheckIcon size={14} color="#10B981" />
+                  <Text style={styles.allReadyText}>All ingredients checked & ready to cook!</Text>
                 </View>
               )}
             </Card>
@@ -516,7 +665,7 @@ export default function MealDetailModal({
 
               {/* Low-Oil Guideline Callout */}
               <View style={styles.cookingTipBox}>
-                <Text style={styles.cookingTipIcon}>💡</Text>
+                <LightbulbIcon size={18} color={colors.primary || '#F59E0B'} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.cookingTipTitle}>Low-Oil Cooking Tip</Text>
                   <Text style={styles.cookingTipBody}>
@@ -533,7 +682,9 @@ export default function MealDetailModal({
               <View style={styles.variationsList}>
                 {recipeVariations.map((v, idx) => (
                   <View key={idx} style={styles.variationRow}>
-                    <Text style={styles.variationIcon}>{v.icon}</Text>
+                    <View style={styles.variationIconBox}>
+                      <SwapIcon size={14} color={colors.hydrationSky || '#38BDF8'} />
+                    </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.variationTitle}>{v.title}</Text>
                       <Text style={styles.variationDesc}>{v.desc}</Text>
@@ -554,10 +705,10 @@ export default function MealDetailModal({
                 size="lg"
                 title={
                   isLoggedToday
-                    ? 'Logged to Today ✓'
+                    ? 'Logged to Today'
                     : 'Mark as Eaten / Log to Today'
                 }
-                icon={isLoggedToday ? '✓' : '🍽️'}
+                icon={isLoggedToday ? <CheckIcon size={16} color="#10B981" /> : <UtensilsIcon size={16} color="#08090C" />}
                 onPress={handleLogMealAction}
                 disabled={isLoggedToday || isCurrentlyLogging}
                 loading={isCurrentlyLogging}
@@ -572,7 +723,7 @@ export default function MealDetailModal({
                 accessibilityRole="button"
                 accessibilityLabel="Share recipe details"
               >
-                <Text style={styles.shareIconText}>📤</Text>
+                <ShareIcon size={18} color={colors.textPrimary || '#F8FAFC'} />
               </TouchableOpacity>
             </View>
           </View>
@@ -839,7 +990,7 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSubtle || '#2D261F',
   },
   ingredientRowChecked: {
-    backgroundColor: colors.background || '#181410',
+    backgroundColor: colors.background || '#08090C',
     opacity: 0.65,
     borderColor: colors.borderSubtle || '#2D261F',
   },
@@ -881,7 +1032,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: colors.success || '#7BA05B',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
   },
   allReadyText: {
     color: colors.success || '#7BA05B',
@@ -960,15 +1114,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
-    backgroundColor: colors.background || '#181410',
+    backgroundColor: colors.background || '#08090C',
     borderRadius: radius.md || 10,
     padding: 10,
     borderWidth: 1,
     borderColor: colors.borderSubtle || '#2D261F',
   },
-  variationIcon: {
-    fontSize: 18,
-    marginTop: 1,
+  variationIconBox: {
+    marginTop: 2,
+    marginRight: 2,
   },
   variationTitle: {
     fontSize: typography?.sizes?.xs || 11,

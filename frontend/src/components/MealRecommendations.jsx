@@ -31,7 +31,13 @@ export default function MealRecommendations() {
         onClick={isOpen ? () => setIsOpen(false) : fetchRecs}
         disabled={loading}
       >
-        <span className={styles.sparkle}>💡</span>
+        <span className={styles.sparkle}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/>
+            <path d="M9 18h6"/>
+            <path d="M10 22h4"/>
+          </svg>
+        </span>
         <span>{loading ? "Finding Budget Meal Ideas..." : isOpen ? "Hide Curated Meal Ideas" : "Get Curated Budget Meal Ideas"}</span>
       </button>
 
@@ -51,9 +57,9 @@ export default function MealRecommendations() {
 
               <div className={styles.macroPills}>
                 <span className={styles.pill}>{item.calories} kcal</span>
-                <span className={styles.pill}>⚡ {item.protein}g P</span>
-                <span className={styles.pill}>🌾 {item.carbs}g C</span>
-                <span className={styles.pill}>🥑 {item.fat}g F</span>
+                <span className={styles.pill}>{item.protein}g P</span>
+                <span className={styles.pill}>{item.carbs}g C</span>
+                <span className={styles.pill}>{item.fat}g F</span>
               </div>
 
               <div className={styles.recipeBox}>

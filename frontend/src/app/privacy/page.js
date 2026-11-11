@@ -127,7 +127,11 @@ export default function PrivacyPage() {
 
           {/* Section 5 - Data Sharing Commitment */}
           <div className={styles.highlightBox}>
-            🔒 <strong>Data Sharing Commitment:</strong> CoreControl does NOT sell, rent, or trade your personal health data, email address, step counts, or uploaded meal photos to third-party advertisers, data brokers, or commercial marketing partners.
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline-block", verticalAlign: "-2px", marginRight: "6px" }}>
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            <strong>Data Sharing Commitment:</strong> CoreControl does NOT sell, rent, or trade your personal health data, email address, step counts, or uploaded meal photos to third-party advertisers, data brokers, or commercial marketing partners.
           </div>
 
           {/* Section 6 */}

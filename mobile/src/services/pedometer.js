@@ -28,7 +28,7 @@ export async function syncStepsToBackend(steps, calories = null, loggedDate = nu
   try {
     const validCalories = typeof calories === 'number' && !isNaN(calories) && calories > 0 ? calories : null;
     if (__DEV__) {
-      console.log(`☁️ [Steps -> Backend Sync] Uploading ${steps.toLocaleString()} steps (${validCalories ?? 0} kcal) for ${loggedDate || 'today'}`);
+      console.log(`[Steps -> Backend Sync] Uploading ${steps.toLocaleString()} steps (${validCalories ?? 0} kcal) for ${loggedDate || 'today'}`);
     }
     await logSteps(steps, loggedDate, validCalories);
   } catch (error) {

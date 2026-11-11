@@ -19,19 +19,260 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import Svg, { Path, Circle } from 'react-native-svg';
 
 import { colors, typography, spacing, radius, shadows } from '../theme';
 import { Button, Card, Badge, ScreenHeader } from '../components/ui';
 import { getSettings } from '../services/api';
 
+// --- Semantic Vector SVG Icons (Zero Raw Emojis) ---
+function SparkleIcon({ size = 16, color = '#F59E0B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"
+        fill={color}
+      />
+    </Svg>
+  );
+}
+
+function PillIcon({ size = 16, color = '#38BDF8' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M10.5 20.5l10-10a4.95 4.95 0 10-7-7l-10 10a4.95 4.95 0 107 7zM8.5 8.5l7 7"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function DumbbellIcon({ size = 16, color = '#F59E0B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M6.5 6.5h11M6.5 17.5h11M4 9.5v5M20 9.5v5M2 11v2M22 11v2M6.5 6.5v11M17.5 6.5v11"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function SnackIcon({ size = 16, color = '#10B981' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 2a10 10 0 1010 10 3.5 3.5 0 01-3.5-3.5 3.5 3.5 0 01-3.5-3.5A3.5 3.5 0 0112 2zM8.5 8.5h.01M7 13h.01M12 16h.01"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function CartIcon({ size = 20, color = '#F8FAFC' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M6 2L3 6v14a2 2 0 002 2h12a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function SearchIcon({ size = 18, color = '#94A3B8' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="11" cy="11" r="8" stroke={color} strokeWidth="2" />
+      <Path
+        d="M21 21l-4.35-4.35"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function CloseIcon({ size = 16, color = '#94A3B8' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M18 6L6 18M6 6l12 12"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function TargetIcon({ size = 14, color = '#F59E0B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth="2" />
+      <Circle cx="12" cy="12" r="6" stroke={color} strokeWidth="2" />
+      <Circle cx="12" cy="12" r="2" fill={color} />
+    </Svg>
+  );
+}
+
+function CheckIcon({ size = 14, color = '#10B981' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M20 6L9 17l-5-5"
+        stroke={color}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function BoltIcon({ size = 16, color = '#F59E0B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function DropIcon({ size = 16, color = '#38BDF8' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function ActivityIcon({ size = 16, color = '#A855F7' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M22 12h-4l-3 9L9 3l-3 9H2"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function ScaleIcon({ size = 16, color = '#10B981' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 3v18M6 8l6-5 6 5M6 8l-4 8h8l-4-8zM18 8l-4 8h8l-4-8z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function LeafIcon({ size = 16, color = '#10B981' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M11 20A7 7 0 014 13C4 7 11 2 20 2c0 9-5 16-11 16zM2 22l7-7"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function JarIcon({ size = 16, color = '#F59E0B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M5 8h14v12a2 2 0 01-2 2H7a2 2 0 01-2-2V8zM8 4h8v4H8V4z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function renderProductIcon(productId, size = 20) {
+  switch (productId) {
+    case 'p1':
+      return <JarIcon size={size} color="#F59E0B" />;
+    case 'p2':
+      return <BoltIcon size={size} color="#F59E0B" />;
+    case 'p3':
+      return <PillIcon size={size} color="#38BDF8" />;
+    case 'p4':
+      return <DropIcon size={size} color="#38BDF8" />;
+    case 'p5':
+      return <ActivityIcon size={size} color="#A855F7" />;
+    case 'p6':
+      return <DumbbellIcon size={size} color="#F59E0B" />;
+    case 'p7':
+      return <ScaleIcon size={size} color="#10B981" />;
+    case 'p8':
+      return <ActivityIcon size={size} color="#A855F7" />;
+    case 'p9':
+      return <SnackIcon size={size} color="#F59E0B" />;
+    case 'p10':
+      return <LeafIcon size={size} color="#10B981" />;
+    default:
+      return <SparkleIcon size={size} color="#F59E0B" />;
+  }
+}
+
+function StarIcon({ size = 11, color = '#F59E0B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+      <Path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+    </Svg>
+  );
+}
+
 /**
  * Filter Categories for Store
  */
 const CATEGORIES = [
-  { id: 'all', label: 'All', icon: '✨' },
-  { id: 'supplements', label: 'Supplements', icon: '💊' },
-  { id: 'equipment', label: 'Equipment', icon: '🏋️' },
-  { id: 'snacks', label: 'Snacks', icon: '🍫' },
+  { id: 'all', label: 'All', icon: <SparkleIcon size={14} color="#F59E0B" /> },
+  { id: 'supplements', label: 'Supplements', icon: <PillIcon size={14} color="#38BDF8" /> },
+  { id: 'equipment', label: 'Equipment', icon: <DumbbellIcon size={14} color="#F59E0B" /> },
+  { id: 'snacks', label: 'Snacks', icon: <SnackIcon size={14} color="#10B981" /> },
 ];
 
 /**
@@ -39,25 +280,25 @@ const CATEGORIES = [
  */
 const GOAL_RECOMMENDATIONS = {
   muscle_building: {
-    title: 'Recommended for Muscle Building 💪',
+    title: 'Recommended for Muscle Building',
     tagline: 'Surplus protein & power recovery to maximize lean hypertrophy',
     highlightedProductId: 'p1',
     accentVariant: 'protein',
   },
   fat_loss: {
-    title: 'Recommended for Fat Loss 🔥',
+    title: 'Recommended for Fat Loss',
     tagline: 'Electrolyte hydration & metabolic resistance gear for caloric deficit',
     highlightedProductId: 'p4',
     accentVariant: 'warning',
   },
   weight_loss: {
-    title: 'Recommended for Weight Loss 📉',
+    title: 'Recommended for Weight Loss',
     tagline: 'Smart body composition tracking & guilt-free high-protein snacks',
     highlightedProductId: 'p7',
     accentVariant: 'primary',
   },
   muscle_maintain: {
-    title: 'Recommended for Maintenance ⚖️',
+    title: 'Recommended for Maintenance',
     tagline: 'Daily micronutrients & myofascial foam roller for active recovery',
     highlightedProductId: 'p3',
     accentVariant: 'info',
@@ -77,7 +318,7 @@ const PRODUCTS = [
     originalPrice: 3599,
     rating: 4.9,
     reviewsCount: 1240,
-    icon: '🥛',
+    icon: 'p1',
     badgeText: '27g Protein/scoop',
     badgeVariant: 'protein',
     goalTypes: ['muscle_building', 'fat_loss'],
@@ -100,18 +341,18 @@ const PRODUCTS = [
   },
   {
     id: 'p2',
-    name: 'Creapure® Micronized Creatine (250g)',
+    name: 'Creapure Micronized Creatine (250g)',
     brand: 'PurePower',
     category: 'supplements',
     price: 999,
     originalPrice: 1299,
     rating: 4.8,
     reviewsCount: 850,
-    icon: '⚡',
+    icon: 'p2',
     badgeText: 'Peak Strength',
     badgeVariant: 'primary',
     goalTypes: ['muscle_building'],
-    shortDesc: '100% Creapure® German micronized creatine monohydrate to boost ATP energy and power output.',
+    shortDesc: '100% Creapure German micronized creatine monohydrate to boost ATP energy and power output.',
     details: {
       servings: '83 servings (3g scoop)',
       flavor: 'Unflavored (100% Pure)',
@@ -122,7 +363,7 @@ const PRODUCTS = [
       ],
       specs: [
         { label: 'Creatine Monohydrate', value: '3,000mg' },
-        { label: 'Purity Standard', value: '99.9% Creapure®' },
+        { label: 'Purity Standard', value: '99.9% Creapure' },
         { label: 'Calories', value: '0 kcal' },
       ],
     },
@@ -136,7 +377,7 @@ const PRODUCTS = [
     originalPrice: 849,
     rating: 4.7,
     reviewsCount: 620,
-    icon: '💊',
+    icon: 'p3',
     badgeText: '23 Micronutrients',
     badgeVariant: 'info',
     goalTypes: ['muscle_maintain', 'fat_loss', 'weight_loss'],
@@ -147,7 +388,7 @@ const PRODUCTS = [
       benefits: [
         'Fills essential micronutrient gaps during intense diet deficits',
         'Supports immune defenses, bone density, and energy metabolism',
-        'Formulated with Bioperine® for enhanced absorption',
+        'Formulated with Bioperine for enhanced absorption',
       ],
       specs: [
         { label: 'Vitamins & Minerals', value: '23 Essential' },
@@ -165,7 +406,7 @@ const PRODUCTS = [
     originalPrice: 999,
     rating: 4.8,
     reviewsCount: 410,
-    icon: '💧',
+    icon: 'p4',
     badgeText: 'Zero Sugar',
     badgeVariant: 'warning',
     goalTypes: ['fat_loss', 'weight_loss'],
@@ -195,7 +436,7 @@ const PRODUCTS = [
     originalPrice: 1299,
     rating: 4.9,
     reviewsCount: 2100,
-    icon: '🎗️',
+    icon: 'p5',
     badgeText: '10–50 lbs Range',
     badgeVariant: 'primary',
     goalTypes: ['fat_loss', 'muscle_maintain', 'muscle_building'],
@@ -224,7 +465,7 @@ const PRODUCTS = [
     originalPrice: 11999,
     rating: 4.9,
     reviewsCount: 780,
-    icon: '🏋️',
+    icon: 'p6',
     badgeText: '15 Weights in 1',
     badgeVariant: 'primary',
     goalTypes: ['muscle_building', 'muscle_maintain'],
@@ -253,7 +494,7 @@ const PRODUCTS = [
     originalPrice: 2499,
     rating: 4.8,
     reviewsCount: 1420,
-    icon: '⚖️',
+    icon: 'p7',
     badgeText: 'CoreControl Sync',
     badgeVariant: 'success',
     goalTypes: ['weight_loss', 'fat_loss', 'muscle_maintain'],
@@ -282,7 +523,7 @@ const PRODUCTS = [
     originalPrice: 999,
     rating: 4.7,
     reviewsCount: 530,
-    icon: '🧘',
+    icon: 'p8',
     badgeText: 'Deep Tissue',
     badgeVariant: 'neutral',
     goalTypes: ['muscle_maintain', 'muscle_building'],
@@ -311,7 +552,7 @@ const PRODUCTS = [
     originalPrice: 899,
     rating: 4.8,
     reviewsCount: 950,
-    icon: '🍫',
+    icon: 'p9',
     badgeText: '20g Protein / bar',
     badgeVariant: 'protein',
     goalTypes: ['muscle_building', 'fat_loss'],
@@ -341,7 +582,7 @@ const PRODUCTS = [
     originalPrice: 449,
     rating: 4.6,
     reviewsCount: 340,
-    icon: '🌱',
+    icon: 'p10',
     badgeText: '14g Plant Protein',
     badgeVariant: 'protein',
     goalTypes: ['fat_loss', 'weight_loss', 'muscle_maintain'],
@@ -583,11 +824,11 @@ export default function StoreScreen({ navigation, user }) {
   // Checkout simulation
   const handleCheckout = () => {
     Alert.alert(
-      'Order Confirmed! 🎉',
+      'Order Confirmed',
       `Thank you! Your simulated order for ₹${cartSubtotal.toLocaleString('en-IN')} has been placed.\n\nEstimated delivery within 2-3 business days.`,
       [
         {
-          text: 'Great!',
+          text: 'Great',
           onPress: () => {
             updateCartState({});
             setCartModalVisible(false);
@@ -601,7 +842,7 @@ export default function StoreScreen({ navigation, user }) {
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       {/* Universal Screen Header */}
       <ScreenHeader
-        title="CoreControl Store 🛍️"
+        title="CoreControl Store"
         subtitle="Supplements & Fitness Gear"
         rightAction={
           <TouchableOpacity
@@ -611,7 +852,7 @@ export default function StoreScreen({ navigation, user }) {
             accessibilityLabel={`Shopping cart with ${totalCartCount} items`}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={styles.cartIcon}>🛒</Text>
+            <CartIcon size={22} color={colors.textPrimary || '#F8FAFC'} />
             {totalCartCount > 0 && (
               <View style={styles.cartBadge}>
                 <Text style={styles.cartBadgeText}>{totalCartCount}</Text>
@@ -638,7 +879,7 @@ export default function StoreScreen({ navigation, user }) {
         {/* Search Bar Input */}
         <View style={styles.searchSection}>
           <View style={styles.searchBar}>
-            <Text style={styles.searchIcon}>🔍</Text>
+            <SearchIcon size={18} color={colors.textSecondary || '#94A3B8'} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search supplements, equipment, snacks..."
@@ -657,7 +898,7 @@ export default function StoreScreen({ navigation, user }) {
                 accessibilityRole="button"
                 accessibilityLabel="Clear search text"
               >
-                <Text style={styles.clearSearchText}>✕</Text>
+                <CloseIcon size={14} color={colors.textSecondary || '#94A3B8'} />
               </TouchableOpacity>
             )}
           </View>
@@ -699,7 +940,7 @@ export default function StoreScreen({ navigation, user }) {
                     label="Goal Match"
                     variant={currentRecommendation.accentVariant}
                     size="sm"
-                    icon="🎯"
+                    icon={<TargetIcon size={12} color="#F59E0B" />}
                   />
                   <Text style={styles.goalPillText}>
                     {userGoalType.replace('_', ' ').toUpperCase()}
@@ -720,7 +961,7 @@ export default function StoreScreen({ navigation, user }) {
               {recommendedProduct && (
                 <View style={styles.featuredProductRow}>
                   <View style={styles.featuredIconBox}>
-                    <Text style={styles.featuredIcon}>{recommendedProduct.icon}</Text>
+                    {renderProductIcon(recommendedProduct.id, 24)}
                   </View>
                   <View style={styles.featuredProductInfo}>
                     <Text style={styles.featuredProductName} numberOfLines={1}>
@@ -762,7 +1003,7 @@ export default function StoreScreen({ navigation, user }) {
 
           {filteredProducts.length === 0 ? (
             <Card variant="flat" style={styles.emptyCard}>
-              <Text style={styles.emptyIcon}>🔍</Text>
+              <SearchIcon size={36} color={colors.textSecondary || '#94A3B8'} />
               <Text style={styles.emptyTitle}>No matching products</Text>
               <Text style={styles.emptySubtitle}>
                 Try adjusting your search query or switching to another category.
@@ -793,13 +1034,13 @@ export default function StoreScreen({ navigation, user }) {
                 >
                   <View style={styles.cardHeader}>
                     <View style={styles.iconBox}>
-                      <Text style={styles.iconText}>{product.icon}</Text>
+                      {renderProductIcon(product.id, 22)}
                     </View>
                     <View style={styles.headerInfo}>
                       <View style={styles.brandRow}>
                         <Text style={styles.brandText}>{product.brand}</Text>
                         {isGoalMatch && (
-                          <Badge label="Match" variant="primary" size="sm" icon="🎯" />
+                          <Badge label="Match" variant="primary" size="sm" icon={<TargetIcon size={11} color="#F59E0B" />} />
                         )}
                       </View>
                       <Text style={styles.productName} numberOfLines={2}>
@@ -819,8 +1060,9 @@ export default function StoreScreen({ navigation, user }) {
                       size="sm"
                     />
                     <View style={styles.ratingBadge}>
+                      <StarIcon size={10} color="#F59E0B" />
                       <Text style={styles.ratingText}>
-                        ★ {product.rating} ({product.reviewsCount})
+                        {product.rating} ({product.reviewsCount})
                       </Text>
                     </View>
                   </View>
@@ -852,7 +1094,7 @@ export default function StoreScreen({ navigation, user }) {
                         title={cartQty > 0 ? `In Cart (${cartQty})` : 'Add'}
                         size="sm"
                         variant={cartQty > 0 ? 'outline' : 'primary'}
-                        icon={cartQty > 0 ? '✓' : '+'}
+                        icon={cartQty > 0 ? <CheckIcon size={13} color="#10B981" /> : undefined}
                         onPress={() => handleAddToCart(product)}
                         style={styles.addBtn}
                       />
@@ -923,7 +1165,7 @@ export default function StoreScreen({ navigation, user }) {
                 accessibilityLabel="Close product details"
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text style={styles.modalCloseText}>✕</Text>
+                <CloseIcon size={16} color={colors.textSecondary || '#94A3B8'} />
               </TouchableOpacity>
             </View>
 
@@ -939,7 +1181,7 @@ export default function StoreScreen({ navigation, user }) {
               >
                 <View style={styles.modalTopRow}>
                   <View style={styles.modalIconBox}>
-                    <Text style={styles.modalIconText}>{selectedProduct.icon}</Text>
+                    {renderProductIcon(selectedProduct.id, 28)}
                   </View>
                   <View style={styles.modalMetaBox}>
                     <Text style={styles.modalBrandText}>{selectedProduct.brand}</Text>
@@ -950,9 +1192,12 @@ export default function StoreScreen({ navigation, user }) {
                         variant={selectedProduct.badgeVariant}
                         size="sm"
                       />
-                      <Text style={styles.modalRatingText}>
-                        ★ {selectedProduct.rating} ({selectedProduct.reviewsCount} verified reviews)
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <StarIcon size={12} color="#F59E0B" />
+                        <Text style={styles.modalRatingText}>
+                          {selectedProduct.rating} ({selectedProduct.reviewsCount} verified reviews)
+                        </Text>
+                      </View>
                     </View>
                   </View>
                 </View>
@@ -987,7 +1232,7 @@ export default function StoreScreen({ navigation, user }) {
                   <Text style={styles.detailsBlockTitle}>Key Benefits & Formulation</Text>
                   {selectedProduct.details?.benefits?.map((benefit, index) => (
                     <View key={index} style={styles.benefitRow}>
-                      <Text style={styles.checkIcon}>✓</Text>
+                      <CheckIcon size={13} color="#10B981" />
                       <Text style={styles.benefitText}>{benefit}</Text>
                     </View>
                   ))}
@@ -1041,7 +1286,7 @@ export default function StoreScreen({ navigation, user }) {
           <View style={styles.modalSheet}>
             <View style={styles.cartHeaderRow}>
               <Text style={styles.cartSheetTitle}>
-                Your Cart 🛒 ({totalCartCount})
+                Your Cart ({totalCartCount})
               </Text>
               <TouchableOpacity
                 style={styles.modalCloseBtn}
@@ -1050,13 +1295,13 @@ export default function StoreScreen({ navigation, user }) {
                 accessibilityLabel="Close shopping cart"
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text style={styles.modalCloseText}>✕</Text>
+                <CloseIcon size={16} color={colors.textSecondary || '#94A3B8'} />
               </TouchableOpacity>
             </View>
 
             {cartItemsList.length === 0 ? (
               <View style={styles.emptyCartBox}>
-                <Text style={styles.emptyCartIcon}>🛍️</Text>
+                <CartIcon size={40} color={colors.textSecondary || '#94A3B8'} />
                 <Text style={styles.emptyCartTitle}>Your cart is empty</Text>
                 <Text style={styles.emptyCartSubtitle}>
                   Browse our curated supplements and fitness gear to add items to your cart.
@@ -1077,7 +1322,7 @@ export default function StoreScreen({ navigation, user }) {
                 {cartItemsList.map((item) => (
                   <View key={item.id} style={styles.cartItemRow}>
                     <View style={styles.cartItemIconBox}>
-                      <Text style={styles.cartItemIcon}>{item.icon}</Text>
+                      {renderProductIcon(item.id, 20)}
                     </View>
                     <View style={styles.cartItemInfo}>
                       <Text style={styles.cartItemName} numberOfLines={1}>
@@ -1156,7 +1401,7 @@ export default function StoreScreen({ navigation, user }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background || '#181410',
+    backgroundColor: colors.background || '#08090C',
   },
   scrollContainer: {
     flex: 1,

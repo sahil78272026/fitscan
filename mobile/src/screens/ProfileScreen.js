@@ -452,7 +452,6 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
         {/* Account Logout */}
         <Button
           title="Logout of Account"
-          icon="🚪"
           variant="secondary"
           size="md"
           fullWidth
@@ -467,7 +466,6 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
           {/* Bulk Reset Logs */}
           <Button
             title="Reset Personal Activity Logs"
-            icon="🔄"
             variant="outline"
             size="md"
             fullWidth
@@ -486,7 +484,6 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
           {/* Account Deletion */}
           <Button
             title="Delete Account & All Data"
-            icon="🗑️"
             variant="outline"
             size="md"
             fullWidth
@@ -548,7 +545,7 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background || '#181410',
+    backgroundColor: colors.background || '#08090C',
   },
   loader: {
     flex: 1,
@@ -817,7 +814,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   macroPill: {
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -940,7 +937,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   input: {
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#3A3128',
@@ -998,7 +995,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 8,
-    backgroundColor: '#181410',
+    backgroundColor: '#08090C',
     borderWidth: 1,
     borderColor: '#3A3128',
   },

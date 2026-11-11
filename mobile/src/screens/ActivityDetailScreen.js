@@ -466,7 +466,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
             metric === 'calories' && styles.metricPillTextActive,
           ]}
         >
-          🔥 Calories Eaten
+          Calories Eaten
         </Text>
       </TouchableOpacity>
 
@@ -484,7 +484,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
             metric === 'steps' && styles.metricPillTextActive,
           ]}
         >
-          👟 Steps
+          Daily Steps
         </Text>
       </TouchableOpacity>
     </View>
@@ -638,7 +638,6 @@ export default function ActivityDetailScreen({ navigation, route }) {
             activeOpacity={0.7}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={styles.compactToggleIcon}>{gridExpanded ? '📊' : '📅'}</Text>
             <Text style={styles.compactToggleText}>
               {gridExpanded ? 'Show Chart' : 'Show Full Month'}
             </Text>
@@ -731,7 +730,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
             return (
               <View key={idx} style={styles.activityCard}>
                 <View style={styles.activityIconBox}>
-                  <Text style={styles.activityIcon}>🚶</Text>
+                  <Text style={styles.activityIconText}>ST</Text>
                 </View>
                 <View style={styles.activityDetails}>
                   <Text style={styles.activityTime}>{hour12}</Text>
@@ -744,7 +743,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
       ) : totalSteps > 0 ? (
         <View style={styles.activityCard}>
           <View style={styles.activityIconBox}>
-            <Text style={styles.activityIcon}>🚶</Text>
+            <Text style={styles.activityIconText}>ST</Text>
           </View>
           <View style={styles.activityDetails}>
             <Text style={styles.activityTime}>Daily Summary</Text>
@@ -754,7 +753,6 @@ export default function ActivityDetailScreen({ navigation, route }) {
         </View>
       ) : (
         <View style={styles.emptyMealBox}>
-          <Text style={styles.emptyMealIcon}>🚶</Text>
           <Text style={styles.emptyMealText}>No movement or steps recorded for this date</Text>
         </View>
       )}
@@ -921,18 +919,17 @@ export default function ActivityDetailScreen({ navigation, route }) {
 
           {(!sortedMeals || sortedMeals.length === 0) ? (
             <View style={styles.emptyMealBox}>
-              <Text style={styles.emptyMealIcon}>🍽️</Text>
               <Text style={styles.emptyMealText}>No meals logged for this date</Text>
             </View>
           ) : (
             sortedMeals.map((m) => {
-              const getMealIcon = (type) => {
+              const getMealLetter = (type) => {
                 switch (type?.toLowerCase()) {
-                  case 'breakfast': return '🍳';
-                  case 'lunch': return '🥗';
-                  case 'snack': return '🍎';
-                  case 'dinner': return '🍲';
-                  default: return '🍽️';
+                  case 'breakfast': return 'B';
+                  case 'lunch': return 'L';
+                  case 'snack': return 'S';
+                  case 'dinner': return 'D';
+                  default: return 'M';
                 }
               };
               let timeStr = m.meal_type ? m.meal_type.toUpperCase() : 'MEAL';
@@ -972,12 +969,12 @@ export default function ActivityDetailScreen({ navigation, route }) {
                       >
                         <Image source={{ uri: m.image_url }} style={styles.activityMealThumb} resizeMode="cover" />
                         <View style={styles.activityMealThumbBadge}>
-                          <Text style={styles.activityMealThumbBadgeText}>🔍</Text>
+                          <Text style={styles.activityMealThumbBadgeText}>VIEW</Text>
                         </View>
                       </TouchableOpacity>
                     ) : (
                       <View style={styles.activityIconBox}>
-                        <Text style={styles.activityIcon}>{getMealIcon(m.meal_type)}</Text>
+                        <Text style={styles.activityIconText}>{getMealLetter(m.meal_type)}</Text>
                       </View>
                     )}
                     <View style={styles.activityDetails}>
@@ -1004,7 +1001,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
                         >
                           <Image source={{ uri: m.image_url }} style={styles.expandedImageBanner} resizeMode="cover" />
                           <View style={styles.expandedImageOverlay}>
-                            <Text style={styles.expandedImageOverlayText}>📸 Tap to enlarge photo</Text>
+                            <Text style={styles.expandedImageOverlayText}>Tap to enlarge photo</Text>
                           </View>
                         </TouchableOpacity>
                       ) : null}
@@ -1083,7 +1080,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
           {weeklyData.map((w, idx) => (
             <View key={idx} style={styles.activityCard}>
               <View style={styles.activityIconBox}>
-                <Text style={styles.activityIcon}>{w.cals > 0 ? '🍽️' : '⚪'}</Text>
+                <Text style={styles.activityIconText}>{w.cals > 0 ? 'CAL' : '—'}</Text>
               </View>
               <View style={styles.activityDetails}>
                 <Text style={styles.activityTime}>{w.dayName}, {w.dayNum}</Text>
@@ -1107,7 +1104,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
           {weeklyData.map((w, idx) => (
             <View key={idx} style={styles.activityCard}>
               <View style={styles.activityIconBox}>
-                <Text style={styles.activityIcon}>{w.steps > 0 ? '👟' : '⚪'}</Text>
+                <Text style={styles.activityIconText}>{w.steps > 0 ? 'ST' : '—'}</Text>
               </View>
               <View style={styles.activityDetails}>
                 <Text style={styles.activityTime}>{w.dayName}, {w.dayNum}</Text>
@@ -1135,14 +1132,13 @@ export default function ActivityDetailScreen({ navigation, route }) {
           </View>
           {activeDays.length === 0 ? (
             <View style={styles.emptyMealBox}>
-              <Text style={styles.emptyMealIcon}>🍽️</Text>
               <Text style={styles.emptyMealText}>No meals logged this month</Text>
             </View>
           ) : (
             activeDays.map((d, idx) => (
               <View key={idx} style={styles.activityCard}>
                 <View style={styles.activityIconBox}>
-                  <Text style={styles.activityIcon}>🍽️</Text>
+                  <Text style={styles.activityIconText}>CAL</Text>
                 </View>
                 <View style={styles.activityDetails}>
                   <Text style={styles.activityTime}>{d.date}</Text>
@@ -1165,7 +1161,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
           {monthlyData.map((m, idx) => (
             <View key={idx} style={styles.activityCard}>
               <View style={styles.activityIconBox}>
-                <Text style={styles.activityIcon}>{m.val > 0 ? '👟' : '⚪'}</Text>
+                <Text style={styles.activityIconText}>{m.val > 0 ? 'ST' : '—'}</Text>
               </View>
               <View style={styles.activityDetails}>
                 <Text style={styles.activityTime}>{m.label} ({m.dateRange})</Text>
@@ -1237,17 +1233,11 @@ export default function ActivityDetailScreen({ navigation, route }) {
             <Text style={styles.dateTitle}>{periodLabel}</Text>
             <View style={styles.dateSubRow}>
               {metric === 'steps' ? (
-                <>
-                  <Text style={styles.subMetricIcon}>👟</Text>
-                  <Text style={styles.subMetricVal}>{periodStats.stepsSubMetricVal}</Text>
-                </>
+                <Text style={styles.subMetricVal}>{periodStats.stepsSubMetricVal}</Text>
               ) : (
-                <>
-                  <Text style={[styles.subMetricIcon, { color: '#E8A020' }]}>🔥</Text>
-                  <Text style={[styles.subMetricVal, { color: '#E8A020' }]}>
-                    {periodStats.subMetricVal}
-                  </Text>
-                </>
+                <Text style={[styles.subMetricVal, { color: '#E8A020' }]}>
+                  {periodStats.subMetricVal}
+                </Text>
               )}
             </View>
           </View>
@@ -1328,7 +1318,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
             onPress={() => setPreviewImage(null)}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            <Text style={styles.imageModalCloseText}>✕ Close</Text>
+            <Text style={styles.imageModalCloseText}>Close</Text>
           </TouchableOpacity>
           {previewImage && (
             <Image
@@ -1999,6 +1989,11 @@ const styles = StyleSheet.create({
   },
   activityIcon: {
     fontSize: 20,
+  },
+  activityIconText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#E8A020',
   },
   activityDetails: {
     flex: 1,
