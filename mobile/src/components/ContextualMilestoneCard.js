@@ -5,8 +5,17 @@ import {
   View,
   TouchableOpacity,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { colors, typography, spacing, radius, shadows } from '../theme';
 import { getActiveMilestones } from '../utils/personalizationEngine';
+
+function CloseIcon({ size = 11, color = colors.textSecondary || '#A79A85' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M18 6L6 18M6 6l12 12" />
+    </Svg>
+  );
+}
 
 export default function ContextualMilestoneCard({
   adherenceStats,
@@ -72,7 +81,7 @@ export default function ContextualMilestoneCard({
           accessibilityRole="button"
           accessibilityLabel="Dismiss milestone notification"
         >
-          <Text style={styles.dismissBtnText}>✕</Text>
+          <CloseIcon size={11} color={colors.textSecondary || '#A79A85'} />
         </TouchableOpacity>
       </View>
     </View>

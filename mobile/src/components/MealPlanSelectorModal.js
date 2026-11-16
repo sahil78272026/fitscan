@@ -12,8 +12,25 @@ import {
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 import { getSuggestedMealPlans, selectMealPlan } from '../services/api';
 import { colors } from '../theme';
+
+function CloseIcon({ size = 16, color = '#F4ECDD' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M18 6L6 18M6 6l12 12" />
+    </Svg>
+  );
+}
+
+function CheckIcon({ size = 14, color = '#10B981' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M20 6L9 17l-5-5" />
+    </Svg>
+  );
+}
 
 const AI_STEPS = [
   {
@@ -111,7 +128,7 @@ export default function MealPlanSelectorModal({ visible, onClose, onPlanSelected
             <Text style={styles.headerTitle}>AI Meal Plan Generator</Text>
           </View>
           <TouchableOpacity onPress={onClose} style={styles.closeBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Text style={styles.closeText}>✕</Text>
+            <CloseIcon size={16} color={colors.textPrimary || '#F4ECDD'} />
           </TouchableOpacity>
         </View>
 
@@ -155,7 +172,7 @@ export default function MealPlanSelectorModal({ visible, onClose, onPlanSelected
                   >
                     <View style={styles.stepStatusIcon}>
                       {isCompleted ? (
-                        <Text style={styles.checkIcon}>✓</Text>
+                        <CheckIcon size={14} color="#10B981" />
                       ) : isCurrent ? (
                         <ActivityIndicator size="small" color="#E8A020" />
                       ) : (

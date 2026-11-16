@@ -5,8 +5,14 @@ import styles from "./GoalEditor.module.css";
 
 export default function GoalEditor({ currentGoal, onUpdate }) {
   const [editing, setEditing] = useState(false);
+  const [prevGoal, setPrevGoal] = useState(currentGoal);
   const [value, setValue] = useState(currentGoal);
   const [saving, setSaving] = useState(false);
+
+  if (currentGoal !== prevGoal) {
+    setPrevGoal(currentGoal);
+    setValue(currentGoal);
+  }
 
   const handleSave = async () => {
     const goal = parseInt(value, 10);

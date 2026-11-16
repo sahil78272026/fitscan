@@ -2,7 +2,7 @@ import logging
 from datetime import date, datetime, timedelta
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,13 +23,12 @@ class StepLogPayload(BaseModel):
 
 
 class StepLogResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     step_count: int
     calories_burned: float
     logged_date: date
-
-    class Config:
-        from_attributes = True
 
 
 class StepHistoryResponse(BaseModel):

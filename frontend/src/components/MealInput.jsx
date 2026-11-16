@@ -103,7 +103,11 @@ async function compressImageFile(file, maxWidth = 1280, maxHeight = 1280, qualit
   if (!file || !file.type.startsWith("image/")) return file;
 
   return new Promise((resolve) => {
-    const img = new Image();
+    const img = typeof window !== "undefined" ? new window.Image() : null;
+    if (!img) {
+      resolve(file);
+      return;
+    }
     const objectUrl = URL.createObjectURL(file);
 
     img.onload = () => {

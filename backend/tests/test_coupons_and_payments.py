@@ -503,8 +503,8 @@ class TestRazorpayEndpoints:
             assert resp.status_code == 200
             plans = resp.json()["plans"]
             plan_ids = [p["id"] for p in plans]
-            assert "pro_monthly" in plan_ids
-            assert "pro_annual" in plan_ids
+            assert len(plans) == 2
+            assert plan_ids == ["pro_monthly", "pro_annual"]
 
     @pytest.mark.asyncio
     async def test_create_razorpay_order_endpoint(self, test_user):

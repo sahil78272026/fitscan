@@ -18,6 +18,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, typography, spacing, radius, shadows } from '../theme';
+import { useToast } from '../context/ToastContext';
 import { Card, Button, Badge } from '../components/ui';
 import MealDetailModal from '../components/MealDetailModal';
 import MealCard from '../components/MealCard';
@@ -137,6 +138,35 @@ function CloseIcon({ size = 14, color = colors.textSecondary || '#94A3B8' }) {
   );
 }
 
+function CheckCircleIcon({ size = 14, color = colors.protein || '#10B981' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth="2" />
+      <Path
+        d="M8 12l2.5 2.5L16 9"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function MoonIcon({ size = 14, color = colors.hydrationSky || '#38BDF8' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
 const getInitialMealType = () => {
   const hour = new Date().getHours();
   if (hour < 11) return 'breakfast';
@@ -158,6 +188,8 @@ export default function HomeScreen({ navigation, user, onLogout }) {
     closePaywall,
     isPaywallOpen,
   } = useSubscription(user);
+
+  const { showToast } = useToast();
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [summary, setSummary] = useState(null);
@@ -194,6 +226,8 @@ export default function HomeScreen({ navigation, user, onLogout }) {
   const [userSettings, setUserSettings] = useState(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const hasCheckedOnboarding = React.useRef(false);
+  const isInitialMountDate = React.useRef(true);
+  const isDataLoadingRef = React.useRef(false);
 
   // Animated scroll tracking for buttery-smooth header streak transition
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -260,18 +294,88 @@ export default function HomeScreen({ navigation, user, onLogout }) {
     [summary?.meals]
   );
 
-  const getCurrentMealIndex = (meals = []) => {
-    const hour = new Date().getHours();
-    let currentType = 'dinner';
-    if (hour < 11) currentType = 'breakfast';
-    else if (hour < 16) currentType = 'lunch';
-    else if (hour < 19) currentType = 'snack';
-
-    const idx = meals.findIndex(
-      (m) => (m.meal_type || '').toLowerCase() === currentType
+  const isDinnerLogged = useMemo(() => {
+    if (!activePlan?.meals?.length) return false;
+    const dinnerMeal = activePlan.meals.find(
+      (m) => (m.meal_type || '').toLowerCase().includes('dinner')
     );
-    return idx >= 0 ? idx : 0;
-  };
+    return dinnerMeal ? isPlannedMealLogged(dinnerMeal) : false;
+  }, [activePlan?.meals, isPlannedMealLogged]);
+
+  const areAllPlannedMealsLogged = useMemo(() => {
+    if (!activePlan?.meals?.length) return false;
+    return activePlan.meals.every((m) => isPlannedMealLogged(m));
+  }, [activePlan?.meals, isPlannedMealLogged]);
+
+  const isDayNutritionComplete = isDinnerLogged || areAllPlannedMealsLogged;
+
+  const getNextUpMealIndex = useCallback(
+    (meals = []) => {
+      if (!meals || !meals.length) return -1;
+
+      // 1. Check if dinner is already logged
+      const dinnerMeal = meals.find(
+        (m) => (m.meal_type || '').toLowerCase().includes('dinner')
+      );
+      const isDinnerDone = dinnerMeal ? isPlannedMealLogged(dinnerMeal) : false;
+
+      // 2. Check if all planned meals are logged
+      const areAllDone = meals.every((m) => isPlannedMealLogged(m));
+
+      // If dinner is logged OR all meals are logged, the day's planned meal cycle is finished
+      if (isDinnerDone || areAllDone) {
+        return -1;
+      }
+
+      // 3. Identify all remaining unlogged meals
+      const unloggedSlots = meals
+        .map((m, idx) => ({ meal: m, idx, logged: isPlannedMealLogged(m) }))
+        .filter((item) => !item.logged);
+
+      if (unloggedSlots.length === 0) return -1;
+
+      // 4. Map current hour to target meal type
+      const hour = new Date().getHours();
+      let targetType = 'dinner';
+      if (hour < 11) targetType = 'breakfast';
+      else if (hour < 16) targetType = 'lunch';
+      else if (hour < 19) targetType = 'snack';
+
+      const getNormalizedType = (m) => {
+        const t = (m.meal_type || '').toLowerCase().trim();
+        if (t.includes('breakfast')) return 'breakfast';
+        if (t.includes('lunch')) return 'lunch';
+        if (t.includes('snack')) return 'snack';
+        if (t.includes('dinner')) return 'dinner';
+        return t;
+      };
+
+      // If the meal for the current time slot is unlogged, pick it
+      const currentMatch = unloggedSlots.find(
+        (item) => getNormalizedType(item.meal) === targetType
+      );
+      if (currentMatch) return currentMatch.idx;
+
+      // If the current slot is already logged, advance to next upcoming unlogged slot in chronological order
+      const mealOrder = ['breakfast', 'lunch', 'snack', 'dinner'];
+      const currentOrderIdx = mealOrder.indexOf(targetType);
+      for (let i = currentOrderIdx + 1; i < mealOrder.length; i++) {
+        const aheadMatch = unloggedSlots.find(
+          (item) => getNormalizedType(item.meal) === mealOrder[i]
+        );
+        if (aheadMatch) return aheadMatch.idx;
+      }
+
+      // Fallback: earliest unlogged meal
+      return unloggedSlots[0].idx;
+    },
+    [isPlannedMealLogged]
+  );
+
+  const nextUpIndex = useMemo(
+    () => getNextUpMealIndex(activePlan?.meals || []),
+    [getNextUpMealIndex, activePlan?.meals]
+  );
 
   const handleLogPlannedMeal = async (plannedMeal) => {
     if (!hasAccess) {
@@ -295,10 +399,18 @@ export default function HomeScreen({ navigation, user, onLogout }) {
       const dateStr = formatDateStr(selectedDate);
       await logMeal(plannedMeal.dish_name, mealTypeLower, dateStr);
       await loadData();
-      Alert.alert(
-        'Logged to Today',
-        `${plannedMeal.dish_name} (${plannedMeal.calories} kcal) added to your diary.`
-      );
+      showToast({
+        type: 'success',
+        title: 'Planned Meal Logged',
+        message: `${plannedMeal.dish_name} added to today's diary.`,
+        badge: plannedMeal.meal_type || 'Meal',
+        calories: plannedMeal.calories,
+        macros: {
+          protein: plannedMeal.protein,
+          carbs: plannedMeal.carbs,
+          fat: plannedMeal.fat,
+        },
+      });
       if (selectedPlannedMealModal) {
         setSelectedPlannedMealModal(null);
       }
@@ -323,10 +435,14 @@ export default function HomeScreen({ navigation, user, onLogout }) {
   }, []);
 
   const loadData = useCallback(async () => {
+    if (isDataLoadingRef.current) return;
+    isDataLoadingRef.current = true;
     try {
       setLoading(true);
       setLoadError(null);
       const dateStr = formatDateStr(selectedDate);
+
+      // Prioritize critical query first: getDailySummary
       const sumData = await getDailySummary(dateStr);
       setSummary(sumData);
       
@@ -335,25 +451,32 @@ export default function HomeScreen({ navigation, user, onLogout }) {
       setCalendarYear(selYear);
       setCalendarMonth(selMonth);
 
-      // Fetch calendar, adherence streak stats, weight history, and check onboarding status
-      const promises = [
-        fetchCalendar(selYear, selMonth),
-        getAdherenceStats().then(setAdherenceStats).catch(() => null),
+      // Fetch core user settings and adherence stats
+      const settingsPromise = getSettings().then((settings) => {
+        setUserSettings(settings);
+        // Until a user fixes their metrics, it reappears:
+        if (!settings?.height_cm || !settings?.weight_kg) {
+          setWizardOpen(true);
+        } else if (!settings?.selected_meal_plan && !hasCheckedOnboarding.current) {
+          hasCheckedOnboarding.current = true;
+          setPlanSelectorOpen(true);
+        }
+      }).catch(() => null);
+
+      const adherencePromise = getAdherenceStats().then(setAdherenceStats).catch(() => null);
+
+      await Promise.all([settingsPromise, adherencePromise]);
+
+      // Release loading state as soon as critical summary and settings are ready
+      setLoading(false);
+
+      // Defer/stagger non-critical queries (weight history & morning briefing) to prevent connection pool starvation
+      const secondaryPromises = [
         getWeightHistory(30).then(setWeightData).catch(() => null),
-        getSettings().then((settings) => {
-          setUserSettings(settings);
-          // Until a user fixes their metrics, it reappears:
-          if (!settings?.height_cm || !settings?.weight_kg) {
-            setWizardOpen(true);
-          } else if (!settings?.selected_meal_plan && !hasCheckedOnboarding.current) {
-            hasCheckedOnboarding.current = true;
-            setPlanSelectorOpen(true);
-          }
-        }).catch(() => null),
       ];
 
       if (isToday) {
-        promises.push(
+        secondaryPromises.push(
           (async () => {
             try {
               const todayStr = formatDateStr(new Date());
@@ -373,7 +496,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
         );
       }
 
-      await Promise.all(promises);
+      await Promise.all(secondaryPromises);
     } catch (err) {
       if (__DEV__) {
         console.warn('Dashboard load error:', err);
@@ -382,8 +505,9 @@ export default function HomeScreen({ navigation, user, onLogout }) {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      isDataLoadingRef.current = false;
     }
-  }, [selectedDate, fetchCalendar, isToday]);
+  }, [selectedDate, isToday]);
 
   const handleWizardComplete = (updatedSettings) => {
     setUserSettings(updatedSettings);
@@ -406,10 +530,14 @@ export default function HomeScreen({ navigation, user, onLogout }) {
     }
   };
 
-  // Automatically reload data whenever selectedDate changes
+  // Automatically reload data whenever selectedDate changes (skips duplicate execution on initial mount since useFocusEffect runs on mount)
   useEffect(() => {
+    if (isInitialMountDate.current) {
+      isInitialMountDate.current = false;
+      return;
+    }
     loadData();
-  }, [selectedDate]);
+  }, [selectedDate, loadData]);
 
   useFocusEffect(
     useCallback(() => {
@@ -445,7 +573,12 @@ export default function HomeScreen({ navigation, user, onLogout }) {
       await logMeal(rawInput.trim(), mealType, dateStr);
       setRawInput('');
       await loadData();
-      Alert.alert('Success', 'Meal logged and macros updated.');
+      showToast({
+        type: 'success',
+        title: 'Meal Logged',
+        message: `${rawInput.trim()} logged to diary.`,
+        badge: mealType,
+      });
     } catch (err) {
       if (err.status === 402 || err.code === 'TRIAL_EXPIRED') {
         openPaywall('log_meal');
@@ -484,7 +617,12 @@ export default function HomeScreen({ navigation, user, onLogout }) {
     try {
       await logWeight(w);
       setNewWeight('');
-      Alert.alert('Weight Saved', `Logged ${w} kg`);
+      showToast({
+        type: 'success',
+        title: 'Weight Saved',
+        message: `Recorded ${w} kg to your progress diary.`,
+        badge: `${w} kg`,
+      });
       await loadData();
     } catch (err) {
       Alert.alert('Error', 'Failed to log weight');
@@ -669,8 +807,6 @@ export default function HomeScreen({ navigation, user, onLogout }) {
               navigation.navigate('ActivityDetail', {
                 selectedDate: formatDateStr(selectedDate),
                 summary,
-                calendarData,
-                initialTab: 'calories',
               })
             }
             activeOpacity={0.85}
@@ -809,8 +945,6 @@ export default function HomeScreen({ navigation, user, onLogout }) {
               navigation.navigate('ActivityDetail', {
                 selectedDate: formatDateStr(selectedDate),
                 summary,
-                calendarData,
-                initialTab: 'calories',
               })
             }
             activeOpacity={0.7}
@@ -831,10 +965,24 @@ export default function HomeScreen({ navigation, user, onLogout }) {
         {isToday && activePlan?.meals?.length > 0 && (
           <View style={styles.plannedMealsContainer}>
             <View style={styles.plannedHeaderRow}>
-              <View>
-                <Text style={styles.cardTitle}>Today's Planned Meals</Text>
+              <View style={{ flex: 1, marginRight: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <Text style={styles.cardTitle}>Today's Planned Meals</Text>
+                  {isDayNutritionComplete && (
+                    <Badge
+                      variant="success"
+                      size="sm"
+                      label="All Set for Today"
+                      icon={<CheckCircleIcon size={12} color={colors.protein} />}
+                    />
+                  )}
+                </View>
                 <Text style={styles.plannedSubTitle}>
-                  {activePlan.title || 'AI Daily Schedule'}
+                  {isDayNutritionComplete
+                    ? areAllPlannedMealsLogged
+                      ? '100% of daily scheduled meals logged • Rest & recover'
+                      : 'Dinner completed • Evening nutrition goal reached'
+                    : (activePlan.title || 'AI Daily Schedule')}
                 </Text>
               </View>
               <TouchableOpacity
@@ -852,10 +1000,55 @@ export default function HomeScreen({ navigation, user, onLogout }) {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.plannedScrollRow}
             >
+              {isDayNutritionComplete && (
+                <Card
+                  variant="emerald"
+                  style={styles.completedDayCard}
+                  onPress={() => navigation.navigate('Meals')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Daily meals completed. Tap to view full meal schedule."
+                >
+                  {/* Header */}
+                  <View style={styles.plannedCardHeader}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <CheckCircleIcon size={14} color={colors.protein} />
+                      <Text style={[styles.plannedTypeTag, { color: colors.protein }]}>
+                        {areAllPlannedMealsLogged ? '100% COMPLETE' : 'DINNER LOGGED'}
+                      </Text>
+                    </View>
+                    <Badge variant="success" size="sm" label="All Set" />
+                  </View>
+
+                  {/* Headline */}
+                  <Text style={styles.plannedDishName} numberOfLines={2}>
+                    {areAllPlannedMealsLogged
+                      ? 'All Daily Meals Accounted For'
+                      : 'Evening Nutrition Logged'}
+                  </Text>
+
+                  {/* Summary row */}
+                  <View style={styles.plannedMacroRow}>
+                    <Text style={styles.plannedMacroText}>
+                      {summary?.meal_count != null ? summary.meal_count : activePlan.meals.length} meals logged • {summary?.total_calories != null ? summary.total_calories : (activePlan.daily_calories || 0)} kcal
+                    </Text>
+                  </View>
+
+                  {/* Rest & Recover Badge */}
+                  <View style={styles.plannedActionArea}>
+                    <View style={styles.completionRestBadge}>
+                      <MoonIcon size={13} color={colors.hydrationSky} />
+                      <Text style={styles.completionRestText}>
+                        Rest & Recover for Tomorrow
+                      </Text>
+                    </View>
+                  </View>
+                </Card>
+              )}
+
               {activePlan.meals.map((m, idx) => {
                 const typeLower = (m.meal_type || 'lunch').toLowerCase();
                 const logged = isPlannedMealLogged(m);
-                const isCurrentSlot = getCurrentMealIndex(activePlan.meals) === idx;
+                const isCurrentSlot = nextUpIndex === idx;
                 const isLoggingThis = loggingPlannedMeal === typeLower;
                 const costInfo = estimateMealCost(m, activePlan, userSettings);
 
@@ -1066,7 +1259,12 @@ export default function HomeScreen({ navigation, user, onLogout }) {
                   const dateStr = formatDateStr(selectedDate);
                   await logMeal(item.name, itemMealType, dateStr);
                   await loadData();
-                  Alert.alert('Meal Logged', `${item.name} added to today's diary.`);
+                  showToast({
+                    type: 'success',
+                    title: 'Meal Logged',
+                    message: `${item.name} added to today's diary.`,
+                    badge: itemMealType,
+                  });
                 } catch (err) {
                   if (err.status === 402 || err.code === 'TRIAL_EXPIRED') {
                     openPaywall('log_meal');
@@ -1256,6 +1454,31 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface || '#111318',
     borderColor: colors.border || '#222631',
   },
+  completedDayCard: {
+    width: 250,
+    minHeight: 170,
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface || '#111318',
+    borderColor: 'rgba(16, 185, 129, 0.35)',
+    borderWidth: 1.5,
+  },
+  completionRestBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.surfaceElevated || '#1A1D24',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: radius.md || 10,
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.20)',
+  },
+  completionRestText: {
+    fontSize: typography?.sizes?.xs || 11,
+    fontWeight: '600',
+    color: colors.hydrationSky || '#38BDF8',
+  },
   plannedCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1415,6 +1638,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     padding: 16,
+    paddingBottom: 120,
   },
   card: {
     backgroundColor: colors.surface || '#111318',
@@ -1693,7 +1917,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated || '#1A1D24',
     borderRadius: radius.pill || 999,
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 6,
     minHeight: 36,
     borderWidth: 1,
     borderColor: colors.border || '#222631',

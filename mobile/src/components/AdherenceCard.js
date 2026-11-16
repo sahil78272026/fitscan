@@ -36,6 +36,14 @@ function TargetIcon({ size = 18, color = '#7BA05B' }) {
   );
 }
 
+function CheckIcon({ size = 13, color = '#FFFFFF' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M20 6L9 17l-5-5" />
+    </Svg>
+  );
+}
+
 function TrophyIcon({ size = 18, color = '#E8A020' }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -81,7 +89,7 @@ export default function AdherenceCard({ stats }) {
   const getStatusSymbol = (status) => {
     switch (status) {
       case 'on_target':
-        return '✓';
+        return '';
       case 'close':
         return '∼';
       case 'off_target':
@@ -132,7 +140,11 @@ export default function AdherenceCard({ stats }) {
             <View key={d.date} style={styles.dayCol}>
               <Text style={styles.dayName}>{d.day_name}</Text>
               <View style={[styles.statusBadge, getStatusStyle(d.status)]}>
-                <Text style={styles.statusSymbol}>{getStatusSymbol(d.status)}</Text>
+                {d.status === 'on_target' ? (
+                  <CheckIcon size={13} color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.statusSymbol}>{getStatusSymbol(d.status)}</Text>
+                )}
               </View>
             </View>
           ))}

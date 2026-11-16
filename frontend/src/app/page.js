@@ -32,7 +32,6 @@ import {
   selectMealPlan,
 } from "@/lib/api";
 import { uploadMealImageToFirebase } from "@/lib/firebase";
-import confetti from "canvas-confetti";
 import styles from "./page.module.css";
 
 function formatDateStr(d) {
@@ -83,6 +82,7 @@ export default function Home() {
   const [briefingDismissed, setBriefingDismissed] = useState(false);
   const hasCheckedOnboarding = useRef(false);
   const initialLoadedRef = useRef(false);
+  const lastUserIdRef = useRef(user?.id);
   const loadedCalendarMonthRef = useRef({ year: today.getFullYear(), month: today.getMonth() + 1 });
 
   const isToday = isSameDay(selectedDate, today);
@@ -159,9 +159,11 @@ export default function Home() {
       setUserSettings(settings);
       if (!hasCheckedOnboarding.current) {
         hasCheckedOnboarding.current = true;
-        // Prompt wizard if brand new user without metrics or meal plan
-        if (!settings?.height_cm || !settings?.weight_kg || !settings?.selected_meal_plan) {
+        // Prompt wizard only if user is missing body metrics
+        if (!settings?.height_cm || !settings?.weight_kg) {
           setWizardOpen(true);
+        } else if (!settings?.selected_meal_plan) {
+          setPlanSelectorOpen(true);
         }
       }
     } catch (err) {
@@ -250,6 +252,22 @@ export default function Home() {
       // Calendar is non-critical, fail silently
     }
   }, []);
+
+  // Reset initialLoadedRef across SPA sessions when switching accounts or logging out
+  useEffect(() => {
+    if (!isAuthenticated) {
+      initialLoadedRef.current = false;
+      hasCheckedOnboarding.current = false;
+      lastUserIdRef.current = null;
+      return;
+    }
+    const currentId = user?.id || user?.uid || null;
+    if (currentId && lastUserIdRef.current !== currentId) {
+      initialLoadedRef.current = false;
+      hasCheckedOnboarding.current = false;
+      lastUserIdRef.current = currentId;
+    }
+  }, [isAuthenticated, user?.id, user?.uid]);
 
   // Initial load: Fetch summary, stats, settings, and calendar once upon authentication
   useEffect(() => {
@@ -340,13 +358,18 @@ export default function Home() {
     fetchCalendar(year, month);
   };
 
-  const triggerConfettiReward = () => {
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.65 },
-      zIndex: 9999,
-    });
+  const triggerConfettiReward = async () => {
+    try {
+      const confetti = (await import("canvas-confetti")).default;
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.65 },
+        zIndex: 9999,
+      });
+    } catch {
+      // Confetti is a non-critical visual flourish
+    }
   };
 
   const handleLogMeal = async (rawInput, mealType) => {
@@ -364,9 +387,11 @@ export default function Home() {
       const dateStr = formatDateStr(selectedDate);
       await logMeal(rawInput, mealType, dateStr);
       triggerConfettiReward();
-      await fetchSummary(selectedDate);
-      await fetchStats();
-      await fetchCalendar(calendarYear, calendarMonth);
+      await Promise.all([
+        fetchSummary(selectedDate),
+        fetchStats(),
+        fetchCalendar(calendarYear, calendarMonth),
+      ]);
       showToast("Meal logged & macros updated!");
     } catch (err) {
       if (err.status === 402 || err.code === "TRIAL_EXPIRED") {
@@ -400,9 +425,11 @@ export default function Home() {
       }
       await scanMealImage(imageFile, rawInput, mealType, dateStr, imageUrl);
       triggerConfettiReward();
-      await fetchSummary(selectedDate);
-      await fetchStats();
-      await fetchCalendar(calendarYear, calendarMonth);
+      await Promise.all([
+        fetchSummary(selectedDate),
+        fetchStats(),
+        fetchCalendar(calendarYear, calendarMonth),
+      ]);
       showToast("Photo analyzed & meal logged!");
     } catch (err) {
       if (err.status === 402 || err.code === "TRIAL_EXPIRED") {
@@ -418,9 +445,11 @@ export default function Home() {
   const handleDeleteMeal = async (mealId) => {
     try {
       await deleteMeal(mealId);
-      await fetchSummary(selectedDate);
-      await fetchStats();
-      await fetchCalendar(calendarYear, calendarMonth);
+      await Promise.all([
+        fetchSummary(selectedDate),
+        fetchStats(),
+        fetchCalendar(calendarYear, calendarMonth),
+      ]);
       showToast("Meal removed");
     } catch (err) {
       showToast("Failed to delete meal", "error");

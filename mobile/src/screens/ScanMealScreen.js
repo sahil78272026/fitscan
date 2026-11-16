@@ -14,6 +14,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { logMeal, scanMealImage, scanMealImageBase64, getSettings } from '../services/api';
 import { uploadMealImageToFirebase, auth } from '../services/firebase';
 import { ScreenHeader, Button } from '../components/ui';
@@ -21,9 +22,11 @@ import { colors, spacing, typography, radius } from '../theme';
 import ProUpgradeModal from '../components/ProUpgradeModal';
 import OnboardingModal from '../components/OnboardingModal';
 import useSubscription from '../hooks/useSubscription';
+import { useToast } from '../context/ToastContext';
 
 export default function ScanMealScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
+  const { showToast } = useToast();
   const {
     isPro,
     trialDaysRemaining,
@@ -63,6 +66,40 @@ export default function ScanMealScreen({ navigation, route }) {
 
   const hasGoals = Boolean(userSettings?.height_cm && userSettings?.weight_kg);
 
+  const compressImage = async (asset) => {
+    try {
+      const maxDim = 1024;
+      let actions = [];
+      if (asset.width && asset.height) {
+        if (asset.width > maxDim || asset.height > maxDim) {
+          if (asset.width >= asset.height) {
+            actions = [{ resize: { width: maxDim } }];
+          } else {
+            actions = [{ resize: { height: maxDim } }];
+          }
+        }
+      } else {
+        actions = [{ resize: { width: maxDim } }];
+      }
+
+      const manipResult = await ImageManipulator.manipulateAsync(
+        asset.uri,
+        actions,
+        { compress: 0.70, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+      );
+      return {
+        uri: manipResult.uri,
+        base64: manipResult.base64,
+      };
+    } catch (e) {
+      if (__DEV__) console.warn('ImageManipulator compression error, fallback to asset:', e);
+      return {
+        uri: asset.uri,
+        base64: asset.base64 || null,
+      };
+    }
+  };
+
   const pickImage = async () => {
     if (!hasAccess) {
       openPaywall('scan_meal');
@@ -88,15 +125,16 @@ export default function ScanMealScreen({ navigation, route }) {
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        quality: 0.5,
-        base64: true,
+        quality: 0.8,
+        base64: false,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
-        setImageUri(asset.uri);
-        if (asset.base64) {
-          setPhotoBase64(asset.base64);
+        const processed = await compressImage(asset);
+        setImageUri(processed.uri);
+        if (processed.base64) {
+          setPhotoBase64(processed.base64);
         }
       }
     } catch (err) {
@@ -131,15 +169,16 @@ export default function ScanMealScreen({ navigation, route }) {
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        quality: 0.5,
-        base64: true,
+        quality: 0.8,
+        base64: false,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
-        setImageUri(asset.uri);
-        if (asset.base64) {
-          setPhotoBase64(asset.base64);
+        const processed = await compressImage(asset);
+        setImageUri(processed.uri);
+        if (processed.base64) {
+          setPhotoBase64(processed.base64);
         }
       }
     } catch (err) {
@@ -183,20 +222,34 @@ export default function ScanMealScreen({ navigation, route }) {
 
       let createdMeal = null;
       if (photoBase64) {
-        try {
-          const uploadSource = imageUri || photoBase64;
-          const isB64Flag = !imageUri;
-          uploadedImageUrl = await uploadMealImageToFirebase(uploadSource, isB64Flag, currentUid);
-        } catch (uploadErr) {
-          console.warn('Firebase photo upload failed, proceeding with scan:', uploadErr);
-        }
+        const uploadSource = imageUri || photoBase64;
+        const isB64Flag = !imageUri;
+        // Start Firebase upload concurrently
+        const uploadPromise = uploadMealImageToFirebase(uploadSource, isB64Flag, currentUid)
+          .catch((uploadErr) => {
+            console.warn('Firebase photo upload failed, proceeding with scan:', uploadErr);
+            return null;
+          });
+
+        // Await upload with tight deadline so slow network doesn't delay AI analysis
+        uploadedImageUrl = await Promise.race([
+          uploadPromise,
+          new Promise((resolve) => setTimeout(() => resolve(null), 1000)),
+        ]);
+
         createdMeal = await scanMealImageBase64(photoBase64, rawInput.trim(), mealType, mealDate, uploadedImageUrl);
       } else if (imageUri) {
-        try {
-          uploadedImageUrl = await uploadMealImageToFirebase(imageUri, false, currentUid);
-        } catch (uploadErr) {
-          console.warn('Firebase photo upload failed, proceeding with scan:', uploadErr);
-        }
+        const uploadPromise = uploadMealImageToFirebase(imageUri, false, currentUid)
+          .catch((uploadErr) => {
+            console.warn('Firebase photo upload failed, proceeding with scan:', uploadErr);
+            return null;
+          });
+
+        uploadedImageUrl = await Promise.race([
+          uploadPromise,
+          new Promise((resolve) => setTimeout(() => resolve(null), 1000)),
+        ]);
+
         createdMeal = await scanMealImage(imageUri, rawInput.trim(), mealType, mealDate, uploadedImageUrl);
       } else {
         createdMeal = await logMeal(rawInput.trim(), mealType, mealDate);
@@ -212,11 +265,20 @@ export default function ScanMealScreen({ navigation, route }) {
         }
       }
 
-      if (Platform.OS === 'web') {
-        alert('Meal Logged! AI calorie analysis completed.');
-      } else {
-        Alert.alert('Meal Logged', 'AI calorie analysis completed.');
-      }
+      showToast({
+        type: 'success',
+        title: 'Meal Logged',
+        message: createdMeal?.dish_name
+          ? `${createdMeal.dish_name} logged to diary.`
+          : 'AI calorie analysis completed and added to diary.',
+        badge: mealType,
+        calories: createdMeal?.calories,
+        macros: createdMeal ? {
+          protein: createdMeal.protein,
+          carbs: createdMeal.carbs,
+          fat: createdMeal.fat,
+        } : null,
+      });
       navigation.goBack();
     } catch (err) {
       if (err.status === 402 || err.code === 'TRIAL_EXPIRED') {

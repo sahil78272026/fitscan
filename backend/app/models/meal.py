@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Date, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, Date, ForeignKey, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -6,6 +6,9 @@ from app.database import Base
 
 class Meal(Base):
     __tablename__ = "meals"
+    __table_args__ = (
+        Index("ix_meals_user_date", "user_id", "meal_date"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
@@ -30,7 +33,7 @@ class FoodItem(Base):
     __tablename__ = "food_items"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    meal_id = Column(Integer, ForeignKey("meals.id", ondelete="CASCADE"), nullable=False)
+    meal_id = Column(Integer, ForeignKey("meals.id", ondelete="CASCADE"), nullable=False, index=True)
     name = Column(String(200), nullable=False)
     quantity = Column(Float, nullable=False, default=1.0)
     unit = Column(String(50), nullable=False, default="serving")

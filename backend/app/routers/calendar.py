@@ -1,7 +1,8 @@
 import logging
+import calendar as py_calendar
 from datetime import date
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, func, extract
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -23,6 +24,10 @@ async def get_calendar_month(
     db: AsyncSession = Depends(get_db),
 ):
     """Get calendar data for a month — which days have meals and their calorie totals."""
+    start_date = date(year, month, 1)
+    last_day = py_calendar.monthrange(year, month)[1]
+    end_date = date(year, month, last_day)
+
     result = await db.execute(
         select(
             Meal.meal_date,
@@ -31,8 +36,8 @@ async def get_calendar_month(
         )
         .where(
             Meal.user_id == current_user.id,
-            extract("year", Meal.meal_date) == year,
-            extract("month", Meal.meal_date) == month,
+            Meal.meal_date >= start_date,
+            Meal.meal_date <= end_date,
         )
         .group_by(Meal.meal_date)
         .order_by(Meal.meal_date)

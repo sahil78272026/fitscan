@@ -33,6 +33,16 @@ class UserSettings(Base):
     morning_briefing_end_hour = Column(Integer, nullable=True, default=11)  # 11 AM
     morning_briefing_frequency = Column(String(20), nullable=True, default="daily")  # daily, weekdays, weekly
     morning_briefing_cache = Column(Text, nullable=True)  # JSON {date: "YYYY-MM-DD", data: {...}}
+    notifications_enabled = Column(Integer, nullable=True, default=1)
+    meal_reminders_enabled = Column(Integer, nullable=True, default=1)
+    breakfast_reminder_time = Column(String(10), nullable=True, default="09:00")
+    lunch_reminder_time = Column(String(10), nullable=True, default="13:30")
+    dinner_reminder_time = Column(String(10), nullable=True, default="20:00")
+    snack_reminder_time = Column(String(10), nullable=True, default="17:00")
+    streak_reminders_enabled = Column(Integer, nullable=True, default=1)
+    streak_reminder_time = Column(String(10), nullable=True, default="21:30")
+    macro_adherence_reminders_enabled = Column(Integer, nullable=True, default=1)
+    timezone = Column(String(50), nullable=True, default="UTC")
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 

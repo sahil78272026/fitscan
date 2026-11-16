@@ -1,5 +1,6 @@
 import uuid
 import logging
+import asyncio
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List, Dict, Any
 
@@ -114,10 +115,14 @@ class VerifyPaymentResponse(BaseModel):
 # Endpoints
 # ============================================================================
 
+CANONICAL_PLAN_IDS = ("pro_monthly", "pro_annual")
+
+
 @router.get("/plans", response_model=PlansResponse)
 async def get_subscription_plans():
-    """Returns available subscription plans (Monthly Rs. 149, Annual Rs. 999)."""
-    return PlansResponse(plans=[PlanInfo(**p) for p in PLANS.values()])
+    """Returns canonical subscription plans without duplicates (Monthly Rs. 149, Annual Rs. 999)."""
+    canonical_plans = [PlanInfo(**PLANS[pid]) for pid in CANONICAL_PLAN_IDS if pid in PLANS]
+    return PlansResponse(plans=canonical_plans)
 
 
 @router.post("/razorpay/create-order", response_model=CreateOrderResponse)
@@ -214,9 +219,10 @@ async def create_razorpay_order(
     db.add(payment_order)
     await db.flush()
 
-    # Create order via Razorpay service
+    # Create order via Razorpay service (async offload)
     try:
-        rzp_order = razorpay_service.create_order(
+        rzp_order = await asyncio.to_thread(
+            razorpay_service.create_order,
             amount_in_rupees=final_rupees,
             receipt_id=order_id,
         )
@@ -242,6 +248,35 @@ async def create_razorpay_order(
         key_id=key_id,
         plan_id=payload.plan_id,
     )
+
+
+@router.get("/razorpay/order/{order_id}")
+async def get_razorpay_order_status(
+    order_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Fetches order details from Razorpay via async thread pool."""
+    stmt = select(PaymentOrder).where(PaymentOrder.order_id == order_id)
+    payment_order = (await db.execute(stmt)).scalar_one_or_none()
+    if not payment_order or payment_order.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Payment order not found.",
+        )
+    if not payment_order.razorpay_order_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No Razorpay order ID associated.",
+        )
+    try:
+        return await asyncio.to_thread(razorpay_service.fetch_order, payment_order.razorpay_order_id)
+    except Exception as e:
+        logger.error(f"Failed to fetch Razorpay order: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Payment gateway error: {str(e)}",
+        )
 
 
 async def _record_order_coupon_redemption(

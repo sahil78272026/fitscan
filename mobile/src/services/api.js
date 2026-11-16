@@ -205,28 +205,6 @@ export async function getCalendarMonth(year, month) {
   return request(`/calendar/month?year=${year}&month=${month}`);
 }
 
-// --- Step Tracking ---
-export async function logSteps(stepCount, loggedDate = null, caloriesBurned = null) {
-  const body = { step_count: parseInt(stepCount, 10) };
-  if (loggedDate) body.logged_date = loggedDate;
-  if (typeof caloriesBurned === 'number' && caloriesBurned > 0) {
-    body.calories_burned = caloriesBurned;
-  }
-  return request('/steps', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
-}
-
-export async function getDailySteps(date = null) {
-  const query = date ? `?logged_date=${date}` : '';
-  return request(`/steps/daily${query}`);
-}
-
-export async function getStepHistory(days = 7) {
-  return request(`/steps/history?days=${days}`);
-}
-
 // --- Meals ---
 export async function logMeal(rawInput, mealType, mealDate = null, imageUrl = null) {
   const body = { raw_input: rawInput, meal_type: mealType };
@@ -490,6 +468,43 @@ export async function verifyPaymentSignature(payload) {
     body: JSON.stringify(payload),
   });
 }
+
+// --- Push Notifications ---
+export async function registerPushToken(token, platform = 'android', deviceName = null) {
+  return request('/notifications/devices', {
+    method: 'POST',
+    body: JSON.stringify({
+      push_token: token,
+      platform,
+      device_name: deviceName,
+    }),
+  });
+}
+
+export async function unregisterPushToken(token) {
+  return request(`/notifications/devices/${encodeURIComponent(token)}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function getNotificationPreferences() {
+  return request('/notifications/preferences');
+}
+
+export async function updateNotificationPreferences(preferences) {
+  return request('/notifications/preferences', {
+    method: 'PUT',
+    body: JSON.stringify(preferences),
+  });
+}
+
+export async function testDispatchNotification(payload = {}) {
+  return request('/notifications/test-dispatch', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 
 
 

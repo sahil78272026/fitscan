@@ -5,6 +5,7 @@ import io
 import json
 import logging
 import time
+from typing import Any
 import httpx
 from PIL import Image, ImageOps
 from google import genai
@@ -13,6 +14,28 @@ from app.config import get_settings
 from app.services.redis_service import cache_get, cache_set
 
 logger = logging.getLogger("corecontrol.gemini")
+
+_original_genai_client_class = genai.Client
+_cached_genai_clients: dict[tuple, genai.Client] = {}
+
+
+def get_genai_client(api_key: str | None = None, http_options: Any = None) -> genai.Client:
+    """Reusable singleton provider for google.genai.Client, with automatic mock passthrough for tests."""
+    if api_key is None:
+        api_key = get_settings().GEMINI_API_KEY
+    if genai.Client is not _original_genai_client_class:
+        # Client class has been mocked or patched in tests
+        return genai.Client(api_key=api_key, http_options=http_options) if http_options else genai.Client(api_key=api_key)
+
+    timeout_val = http_options.timeout if http_options and hasattr(http_options, "timeout") else None
+    cache_key = (api_key, timeout_val)
+    if cache_key not in _cached_genai_clients:
+        _cached_genai_clients[cache_key] = (
+            genai.Client(api_key=api_key, http_options=http_options)
+            if http_options
+            else genai.Client(api_key=api_key)
+        )
+    return _cached_genai_clients[cache_key]
 
 SYSTEM_PROMPT = """You are an expert sports nutritionist and food scanner specializing in global and Indian cuisine. The user will provide text descriptions, an image, or both of what they ate or plan to eat.
 
@@ -245,7 +268,7 @@ async def analyze_food(raw_input: str, image_bytes: bytes | None = None, mime_ty
     settings = get_settings()
     timeout_seconds = getattr(settings, "GEMINI_TIMEOUT_SECONDS", 35.0)
     http_opts = types.HttpOptions(timeout=int(timeout_seconds * 1000)) if timeout_seconds else None
-    client = genai.Client(api_key=settings.GEMINI_API_KEY, http_options=http_opts)
+    client = get_genai_client(api_key=settings.GEMINI_API_KEY, http_options=http_opts)
 
     contents = []
     if image_bytes:
@@ -643,7 +666,7 @@ async def recommend_curated_meals(
     Generate market budget-friendly curated meal ideas using Gemini.
     """
     settings = get_settings()
-    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    client = get_genai_client(api_key=settings.GEMINI_API_KEY)
 
     prompt = MEAL_RECOMMENDATION_PROMPT.format(
         goal_type=goal_type,
@@ -662,6 +685,7 @@ async def recommend_curated_meals(
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
                     temperature=0.3,
+                    thinking_config=types.ThinkingConfig(thinking_budget=0),
                 ),
             ),
             timeout=10.0,
@@ -863,7 +887,7 @@ async def generate_multiple_meal_plans(
     Generate 3 distinct full-day meal plan options tailored strictly to user metrics & goals.
     """
     settings = get_settings()
-    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    client = get_genai_client(api_key=settings.GEMINI_API_KEY)
 
     diet_descriptions = {
         "non_veg": "Non-Vegetarian (MUST include Chicken, Eggs, Fish, or Mutton in meals)",
@@ -1011,6 +1035,7 @@ STYLE RULES:
 - feedback: Exactly ONE direct, human sentence (max 15 words) reviewing yesterday.
 - improvements: Exactly 2 practical bullet points (each under 10 words).
 - focus_today: Short phrase under 6 words.
+- ZERO emojis: Do not include raw emojis anywhere in the response.
 
 Return ONLY valid JSON matching this schema:
 {{
@@ -1018,8 +1043,8 @@ Return ONLY valid JSON matching this schema:
   "status_badge": "On Target | Low Protein | High Calories | Fresh Start",
   "feedback": "One clear sentence reviewing calories and protein.",
   "improvements": [
-    "🍳 Tip 1 (under 10 words)",
-    "💧 Tip 2 (under 10 words)"
+    "Tip 1 (under 10 words, no emojis)",
+    "Tip 2 (under 10 words, no emojis)"
   ],
   "focus_today": "Short focus (max 6 words)."
 }}
@@ -1045,7 +1070,7 @@ async def generate_morning_briefing(
     Generate an intelligent AI morning welcome, feedback, and daily improvement briefing.
     """
     settings = get_settings()
-    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    client = get_genai_client(api_key=settings.GEMINI_API_KEY)
 
     # Format yesterday meals summary
     if not yesterday_meals:
@@ -1092,6 +1117,7 @@ async def generate_morning_briefing(
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
                     temperature=0.3,
+                    thinking_config=types.ThinkingConfig(thinking_budget=0),
                 ),
             ),
             timeout=10.0,
@@ -1105,12 +1131,12 @@ async def generate_morning_briefing(
         # Crisp, human fallback with zero fluff
         if yesterday_meal_count == 0:
             return {
-                "greeting": f"Good morning, {clean_name}! ☀️",
+                "greeting": f"Good morning, {clean_name}!",
                 "status_badge": "Fresh Start",
                 "feedback": "No meals were logged yesterday. Start fresh today by tracking your breakfast.",
                 "improvements": [
-                    "🍳 Have a high-protein breakfast to stay full longer.",
-                    "💧 Drink a large glass of water to start your day."
+                    "Have a high-protein breakfast to stay full longer.",
+                    "Drink a large glass of water to start your day."
                 ],
                 "focus_today": f"Hit your {calorie_goal} kcal target and track early."
             }
@@ -1121,12 +1147,12 @@ async def generate_morning_briefing(
             badge = "Protein Low"
 
         return {
-            "greeting": f"Good morning, {clean_name}! ☀️",
+            "greeting": f"Good morning, {clean_name}!",
             "status_badge": badge,
             "feedback": f"Yesterday: {yesterday_calories} of {calorie_goal} kcal logged, with {yesterday_protein}g protein.",
             "improvements": [
-                f"🍳 Aim for {protein_goal}g protein across today's meals.",
-                "🥗 Keep dinner portions clean to hit your deficit."
+                f"Aim for {protein_goal}g protein across today's meals.",
+                "Keep dinner portions clean to hit your deficit."
             ],
             "focus_today": f"Hit your {protein_goal}g protein goal today."
         }

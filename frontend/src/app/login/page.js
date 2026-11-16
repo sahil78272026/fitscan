@@ -122,11 +122,11 @@ export default function LoginPage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/corecontrol_logo.png"
-              alt="FitScan Logo"
+              alt="CoreControl Logo"
               className={styles.brandLogo}
             />
             <div>
-              <h1 className={styles.brandName}>FitScan</h1>
+              <h1 className={styles.brandName}>CoreControl</h1>
               <p className={styles.brandTagline}>Mindful meal logging & daily habits</p>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import os
+import asyncio
 import logging
 import jwt
 from jwt import PyJWKClient
@@ -175,7 +176,7 @@ async def verify_firebase_id_token(firebase_token: str) -> dict:
     # 1. If Firebase Admin SDK is configured with service account, use it
     if _init_firebase_admin_if_possible():
         try:
-            decoded = fb_admin_auth.verify_id_token(firebase_token)
+            decoded = await asyncio.to_thread(fb_admin_auth.verify_id_token, firebase_token)
             return {
                 "email": decoded.get("email"),
                 "phone_number": decoded.get("phone_number"),
@@ -190,7 +191,7 @@ async def verify_firebase_id_token(firebase_token: str) -> dict:
 
     # 2. Standard verification using Google's public JWKS endpoint (Zero service account JSON needed)
     try:
-        signing_key = _jwks_client.get_signing_key_from_jwt(firebase_token)
+        signing_key = await asyncio.to_thread(_jwks_client.get_signing_key_from_jwt, firebase_token)
         expected_issuer = f"https://securetoken.google.com/{project_id}"
 
         decoded = jwt.decode(

@@ -2,7 +2,7 @@ import logging
 from datetime import date, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,12 +23,11 @@ class WeightLogPayload(BaseModel):
 
 
 class WeightLogResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     weight_kg: float
     logged_date: date
-
-    class Config:
-        from_attributes = True
 
 
 class WeightHistoryResponse(BaseModel):

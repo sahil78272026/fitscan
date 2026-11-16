@@ -1,18 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext, useMemo, createContext } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View, StyleSheet, Text, Image, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SplashScreen from 'expo-splash-screen';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
+import * as Notifications from 'expo-notifications';
+import {
+  initNotifications,
+  registerForPushNotificationsAsync,
+  unregisterPushNotificationsAsync,
+} from './src/services/notifications';
 
 // Keep the native splash screen visible while loading resources and verifying auth state
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Initialize notifications foreground presentation options
+initNotifications();
+
+export const navigationRef = createNavigationContainerRef();
 
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Rect, Circle, Line } from 'react-native-svg';
+import { ToastProvider } from './src/context/ToastContext';
 import { auth } from './src/services/firebase';
 import { getMe } from './src/services/api';
 import { colors, typography, shadows } from './src/theme';
@@ -37,6 +49,32 @@ import ErrorBoundary from './src/components/ErrorBoundary';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+
+export const AuthContext = createContext({
+  user: null,
+  onLogout: () => {},
+  onLoginSuccess: () => {},
+});
+
+function LoginScreenWrapper(props) {
+  const { onLoginSuccess } = useContext(AuthContext);
+  return <LoginScreen {...props} onLoginSuccess={onLoginSuccess} />;
+}
+
+function MainTabsWrapper(props) {
+  const { user, onLogout } = useContext(AuthContext);
+  return <MainTabs {...props} user={user} onLogout={onLogout} />;
+}
+
+function HomeScreenWrapper(props) {
+  const { user, onLogout } = useContext(AuthContext);
+  return <HomeScreen {...props} user={user} onLogout={onLogout} />;
+}
+
+function ProfileScreenWrapper(props) {
+  const { user, onLogout } = useContext(AuthContext);
+  return <ProfileScreen {...props} user={user} onLogout={onLogout} />;
+}
 
 // Zero-Emoji Vector SVG Tab Icons
 function TodayTabIcon({ color, size = 20 }) {
@@ -186,15 +224,12 @@ function MainTabs({ user, onLogout }) {
         },
       })}
     >
-      <Tab.Screen name="Today">
-        {(props) => <HomeScreen {...props} user={user} onLogout={onLogout} />}
-      </Tab.Screen>
+      <Tab.Screen name="Today" component={HomeScreenWrapper} />
       <Tab.Screen name="Meals" component={MealPlanScreen} />
-      <Tab.Screen name="Store" component={StoreScreen} />
+      {/* Store tab temporarily hidden while preserving component in codebase */}
+      {/* <Tab.Screen name="Store" component={StoreScreen} /> */}
       <Tab.Screen name="Progress" component={ProgressScreen} />
-      <Tab.Screen name="Profile">
-        {(props) => <ProfileScreen {...props} user={user} onLogout={onLogout} />}
-      </Tab.Screen>
+      <Tab.Screen name="Profile" component={ProfileScreenWrapper} />
     </Tab.Navigator>
   );
 }
@@ -231,7 +266,70 @@ export default function App() {
     checkAuth();
   }, []);
 
+  // Register push notifications when user signs in or restores session
+  useEffect(() => {
+    if (user) {
+      registerForPushNotificationsAsync().catch((err) => {
+        console.warn('Push registration error on auth:', err);
+      });
+    }
+  }, [user]);
+
+  // Handle notification tap responses and deep linking (both cold-start and active sessions)
+  useEffect(() => {
+    const handleNotificationData = (data) => {
+      if (data?.screen) {
+        const params = data.params || { mealType: data.meal_type };
+        if (navigationRef.isReady()) {
+          navigationRef.navigate(data.screen, params);
+        } else {
+          // If navigation container is not ready yet, retry briefly
+          setTimeout(() => {
+            if (navigationRef.isReady()) {
+              navigationRef.navigate(data.screen, params);
+            }
+          }, 300);
+        }
+      }
+    };
+
+    // Cold-start notification deep linking check
+    Notifications.getLastNotificationResponseAsync()
+      .then((response) => {
+        try {
+          const data = response?.notification?.request?.content?.data;
+          if (data) {
+            handleNotificationData(data);
+          }
+        } catch (e) {
+          console.warn('Cold-start notification handling error:', e);
+        }
+      })
+      .catch(() => {});
+
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      try {
+        const data = response?.notification?.request?.content?.data;
+        if (data) {
+          handleNotificationData(data);
+        }
+      } catch (navErr) {
+        console.warn('Notification response handling error:', navErr);
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
   const handleLogout = async () => {
+    try {
+      await unregisterPushNotificationsAsync();
+    } catch (pushErr) {
+      console.warn('Push unregistration error on logout:', pushErr);
+    }
+
     try {
       if (GoogleSignin && typeof GoogleSignin.signOut === 'function') {
         await GoogleSignin.signOut();
@@ -253,6 +351,15 @@ export default function App() {
     setUser(null);
   };
 
+  const authContextValue = useMemo(
+    () => ({
+      user,
+      onLogout: handleLogout,
+      onLoginSuccess: setUser,
+    }),
+    [user]
+  );
+
   if (loading) {
     return null;
   }
@@ -260,30 +367,30 @@ export default function App() {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
-        <NavigationContainer>
-          <StatusBar style="light" />
-          <Stack.Navigator
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.background || '#08090C' },
-            }}
-          >
-            {!user ? (
-              <Stack.Screen name="Login">
-                {(props) => <LoginScreen {...props} onLoginSuccess={setUser} />}
-              </Stack.Screen>
-            ) : (
-              <>
-                <Stack.Screen name="MainApp">
-                  {(props) => <MainTabs {...props} user={user} onLogout={handleLogout} />}
-                </Stack.Screen>
-                <Stack.Screen name="Scan" component={ScanMealScreen} />
-                <Stack.Screen name="ActivityDetail" component={ActivityDetailScreen} />
-                <Stack.Screen name="Streak" component={StreakScreen} />
-              </>
-            )}
-          </Stack.Navigator>
-        </NavigationContainer>
+        <ToastProvider>
+          <AuthContext.Provider value={authContextValue}>
+            <NavigationContainer ref={navigationRef}>
+              <StatusBar style="light" />
+              <Stack.Navigator
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: colors.background || '#08090C' },
+                }}
+              >
+                {!user ? (
+                  <Stack.Screen name="Login" component={LoginScreenWrapper} />
+                ) : (
+                  <>
+                    <Stack.Screen name="MainApp" component={MainTabsWrapper} />
+                    <Stack.Screen name="Scan" component={ScanMealScreen} />
+                    <Stack.Screen name="ActivityDetail" component={ActivityDetailScreen} />
+                    <Stack.Screen name="Streak" component={StreakScreen} />
+                  </>
+                )}
+              </Stack.Navigator>
+            </NavigationContainer>
+          </AuthContext.Provider>
+        </ToastProvider>
       </SafeAreaProvider>
     </ErrorBoundary>
   );

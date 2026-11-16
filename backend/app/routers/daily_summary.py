@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 import json
 from fastapi import APIRouter, Depends, Query, HTTPException
@@ -10,7 +10,6 @@ from app.models.user import User
 from app.schemas.meal import DailySummaryResponse
 from app.services.meal_service import (
     get_daily_summary,
-    get_meals_by_date,
     get_or_create_settings
 )
 from app.services.gemini_service import generate_morning_briefing
@@ -51,7 +50,7 @@ async def get_morning_briefing_endpoint(
         return {"visible": False, "reason": "disabled_by_user"}
 
     # 2. Morning window check: automatically active every morning from 5:00 AM to 12:00 PM (noon)
-    current_hour = client_hour if client_hour is not None else datetime.utcnow().hour
+    current_hour = client_hour if client_hour is not None else datetime.now(timezone.utc).hour
     # Standard morning window: 5 AM - 12 PM
     if not (5 <= current_hour <= 12):
         return {
@@ -85,18 +84,21 @@ async def get_morning_briefing_endpoint(
         except Exception:
             pass
 
-    # 5. Fetch yesterday's data
+    # 5. Fetch yesterday's data (reusing meals already returned by get_daily_summary)
     yesterday = today - timedelta(days=1)
     yesterday_summary = await get_daily_summary(db, current_user.id, yesterday)
-    yesterday_meals = await get_meals_by_date(db, current_user.id, yesterday)
+    yesterday_meals = yesterday_summary.get("meals") or []
 
     formatted_meals = []
     for m in yesterday_meals:
         formatted_meals.append({
-            "meal_type": m.meal_type,
-            "total_calories": m.total_calories,
-            "raw_input": m.raw_input,
-            "food_items": [{"name": item.name, "calories": item.calories} for item in (m.food_items or [])]
+            "meal_type": m.get("meal_type"),
+            "total_calories": m.get("total_calories", 0),
+            "raw_input": m.get("raw_input", ""),
+            "food_items": [
+                {"name": item.get("name"), "calories": item.get("calories", 0)}
+                for item in (m.get("food_items") or [])
+            ]
         })
 
     # 6. Generate briefing via Gemini

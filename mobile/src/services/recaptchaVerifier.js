@@ -237,6 +237,10 @@ const FirebasePhoneAuthBridge = forwardRef(function FirebasePhoneAuthBridge(
             pendingCallbacks.current['otp'].reject(new Error(data));
             delete pendingCallbacks.current['otp'];
           }
+          if (pendingCallbacks.current['verify']) {
+            pendingCallbacks.current['verify'].reject(new Error(data));
+            delete pendingCallbacks.current['verify'];
+          }
           break;
 
         case 'debug':

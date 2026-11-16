@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -123,7 +123,7 @@ export default function MissedMealBanner({
   }, []);
 
   // Do not show banner if not today or no active meal plan
-  const activePlan = (() => {
+  const activePlan = useMemo(() => {
     const raw = userSettings?.selected_meal_plan;
     if (!raw) return null;
     if (typeof raw === 'object') return Object.keys(raw).length > 0 ? raw : null;
@@ -133,7 +133,7 @@ export default function MissedMealBanner({
     } catch {
       return null;
     }
-  })();
+  }, [userSettings?.selected_meal_plan]);
 
   if (!isToday || !activePlan) {
     return null;

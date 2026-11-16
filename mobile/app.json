@@ -3,20 +3,14 @@
     "name": "CoreControl",
     "slug": "fitscan-mobile",
     "scheme": "fitscan",
-    "version": "1.0.10",
+    "version": "1.0.14",
     "orientation": "portrait",
     "icon": "./assets/corecontrol_logo.png",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#181410"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.fitscan.wellness",
       "infoPlist": {
-        "NSMotionUsageDescription": "CoreControl needs access to your motion data to count your daily steps.",
         "NSCameraUsageDescription": "CoreControl needs camera access to scan your meals and track calories.",
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -30,12 +24,12 @@
       "googleServicesFile": "./google-services.json",
       "versionCode": 8,
       "permissions": [
-        "ACTIVITY_RECOGNITION",
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
         "INTERNET",
-        "ACCESS_NETWORK_STATE"
+        "ACCESS_NETWORK_STATE",
+        "POST_NOTIFICATIONS"
       ]
     },
     "web": {
@@ -45,6 +39,13 @@
       "expo-asset",
       "expo-web-browser",
       "@react-native-google-signin/google-signin",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#0ea5e9"
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -63,8 +64,8 @@
         {
           "android": {
             "minSdkVersion": 26,
-            "compileSdkVersion": 35,
-            "targetSdkVersion": 35
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36
           }
         }
       ]

@@ -176,7 +176,7 @@ export default function MealCard({ meal, onDelete }) {
             <span style={{ color: "#F59E0B" }}>F: {meal.total_fat || 0}g</span>
           </div>
 
-          {meal.food_items.map((item) => (
+          {(meal.food_items || []).map((item) => (
             <div key={item.id} className={styles.foodItem}>
               <div className={styles.foodItemLeft}>
                 <span className={styles.foodName}>

@@ -21,6 +21,40 @@ import { estimateMealCost } from '../utils/mealCostEstimator';
 import { exportMealPlanPdf } from '../utils/mealPlanPdfGenerator';
 import ProUpgradeModal from '../components/ProUpgradeModal';
 import useSubscription from '../hooks/useSubscription';
+import { useToast } from '../context/ToastContext';
+import Svg, { Path } from 'react-native-svg';
+
+function CheckIcon({ size = 12, color = '#10B981' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M20 6L9 17L4 12" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function SwapIcon({ size = 13, color = '#94A3B8' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M7 16V4M7 4L3 8M7 4L11 8M17 8V20M17 20L21 16M17 20L13 16" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function ChevronRightIcon({ size = 13, color = '#64748B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M9 18L15 12L9 6" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function CloseIcon({ size = 14, color = '#94A3B8' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M18 6L6 18M6 6L18 18" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
 
 const MEAL_TYPE_ICONS = {
   breakfast: '',
@@ -34,6 +68,7 @@ const MEAL_TYPE_ICONS = {
 };
 
 export default function MealPlanScreen({ navigation }) {
+  const { showToast } = useToast();
   const {
     isPro,
     trialDaysRemaining,
@@ -163,10 +198,18 @@ export default function MealPlanScreen({ navigation }) {
         setTodayMeals(updatedSummary.meals);
       }
 
-      Alert.alert(
-        'Meal Logged',
-        `${meal.dish_name} (${meal.calories} kcal) has been logged to today's diary.`
-      );
+      showToast({
+        type: 'success',
+        title: 'Meal Logged',
+        message: `${meal.dish_name} logged to today's diary.`,
+        badge: meal.meal_type || 'Meal',
+        calories: meal.calories,
+        macros: {
+          protein: meal.protein,
+          carbs: meal.carbs,
+          fat: meal.fat,
+        },
+      });
       if (activeMeal) {
         setActiveMeal(null);
       }
@@ -360,11 +403,9 @@ export default function MealPlanScreen({ navigation }) {
         // Allow inner TouchableOpacity (recipe modal, swap button, log button) to receive initial touch
         onStartShouldSetPanResponder: () => false,
         onStartShouldSetPanResponderCapture: () => false,
-        // Claim responder as soon as intentional drag gesture is detected (> 6px)
-        onMoveShouldSetPanResponder: (_, gestureState) =>
-          !isSwapping && mealsList.length > 1 && (Math.abs(gestureState.dy) > 6 || Math.abs(gestureState.dx) > 6),
-        onMoveShouldSetPanResponderCapture: (_, gestureState) =>
-          !isSwapping && mealsList.length > 1 && (Math.abs(gestureState.dy) > 6 || Math.abs(gestureState.dx) > 6),
+        // Do not intercept or capture vertical scroll gestures to ensure standard ScrollView scrolling is never locked
+        onMoveShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponderCapture: () => false,
         onPanResponderGrant: () => {
           if (isSwapping || mealsList.length <= 1) return;
           draggingIndexRef.current = idx;
@@ -485,9 +526,10 @@ export default function MealPlanScreen({ navigation }) {
                 <View style={styles.masterPlanContainer}>
                   <View style={styles.masterHeaderBanner}>
                     <View style={styles.masterHeaderBadge}>
-                      <Text style={styles.masterHeaderBadgeText}>MASTER MEAL PLAN BLUEPRINT</Text>
+                      <Text style={styles.masterHeaderBadgeText}>DAILY PLAN</Text>
                     </View>
                     <View style={styles.masterStatusPill}>
+                      <View style={styles.activeDot} />
                       <Text style={styles.masterStatusText}>Active</Text>
                     </View>
                   </View>
@@ -495,13 +537,15 @@ export default function MealPlanScreen({ navigation }) {
                   <Text style={styles.masterPlanTitle}>
                     {selectedPlan.title || 'Personalized AI Meal Plan'}
                   </Text>
-                  <Text style={styles.masterPlanTagline}>
-                    {selectedPlan.tagline || 'Daily nutrition schedule tailored to your exact metabolic targets.'}
-                  </Text>
+                  {selectedPlan.tagline ? (
+                    <Text style={styles.masterPlanTagline} numberOfLines={2}>
+                      {selectedPlan.tagline}
+                    </Text>
+                  ) : null}
 
                   <View style={styles.masterBadgesRow}>
                     <Badge
-                      variant="primary"
+                      variant="neutral"
                       label={(userSettings?.goal_type || 'fat_loss').replace('_', ' ').toUpperCase()}
                       size="sm"
                     />
@@ -512,64 +556,47 @@ export default function MealPlanScreen({ navigation }) {
                     />
                     {selectedPlan.estimated_cost && (
                       <Badge
-                        variant="warning"
+                        variant="neutral"
                         label={selectedPlan.estimated_cost}
                         size="sm"
                       />
                     )}
                     {userSettings?.can_change_plan === false && (
                       <Badge
-                        variant="warning"
+                        variant="neutral"
                         label={`Change in ${userSettings.hours_until_next_plan_change || 1}h`}
                         size="sm"
                       />
                     )}
                   </View>
 
-                  {/* Master Daily Macro Progress Bar */}
-                  <View style={styles.masterMacroBarContainer}>
-                    <View style={styles.masterMacroBarLabels}>
-                      <Text style={styles.masterMacroBarTitle}>Daily Target Macro Distribution</Text>
-                      <Text style={styles.masterMacroBarSplit}>
-                        P: {planProteinPct}% · C: {planCarbsPct}% · F: {planFatPct}%
-                      </Text>
-                    </View>
-                    <View style={styles.masterMacroBarTrack}>
-                      <View style={[styles.masterBarSeg, { width: `${planProteinPct}%`, backgroundColor: colors.protein }]} />
-                      <View style={[styles.masterBarSeg, { width: `${planCarbsPct}%`, backgroundColor: colors.carbs }]} />
-                      <View style={[styles.masterBarSeg, { width: `${planFatPct}%`, backgroundColor: colors.fat }]} />
-                    </View>
+                  {/* Slim Macro Progress Bar */}
+                  <View style={styles.masterMacroTrack}>
+                    <View style={[styles.masterBarSeg, { width: `${planProteinPct}%`, backgroundColor: colors.protein }]} />
+                    <View style={[styles.masterBarSeg, { width: `${planCarbsPct}%`, backgroundColor: colors.carbs }]} />
+                    <View style={[styles.masterBarSeg, { width: `${planFatPct}%`, backgroundColor: colors.fat }]} />
                   </View>
 
-                  {/* Macro Distribution Grid */}
-                  <View style={styles.masterMacroGrid}>
-                    <View style={styles.masterMacroCell}>
-                      <Text style={styles.masterMacroCellLabel}>Calories</Text>
-                      <Text style={[styles.masterMacroCellVal, { color: colors.primary }]}>
-                        {planCalories}
-                      </Text>
-                      <Text style={styles.masterMacroCellUnit}>kcal/day</Text>
+                  {/* Soothing Macro Stats Row */}
+                  <View style={styles.masterMacroStatsRow}>
+                    <View style={styles.masterStatItem}>
+                      <Text style={styles.masterStatVal}>{planCalories}</Text>
+                      <Text style={styles.masterStatLabel}>kcal</Text>
                     </View>
-                    <View style={styles.masterMacroCell}>
-                      <Text style={styles.masterMacroCellLabel}>Protein</Text>
-                      <Text style={[styles.masterMacroCellVal, { color: colors.protein }]}>
-                        {planProtein}g
-                      </Text>
-                      <Text style={styles.masterMacroCellUnit}>{planProteinPct}% cal</Text>
+                    <View style={styles.statDivider} />
+                    <View style={styles.masterStatItem}>
+                      <Text style={[styles.masterStatVal, { color: colors.protein }]}>{planProtein}g</Text>
+                      <Text style={styles.masterStatLabel}>protein</Text>
                     </View>
-                    <View style={styles.masterMacroCell}>
-                      <Text style={styles.masterMacroCellLabel}>Carbs</Text>
-                      <Text style={[styles.masterMacroCellVal, { color: colors.carbs }]}>
-                        {planCarbs}g
-                      </Text>
-                      <Text style={styles.masterMacroCellUnit}>{planCarbsPct}% cal</Text>
+                    <View style={styles.statDivider} />
+                    <View style={styles.masterStatItem}>
+                      <Text style={[styles.masterStatVal, { color: colors.carbs }]}>{planCarbs}g</Text>
+                      <Text style={styles.masterStatLabel}>carbs</Text>
                     </View>
-                    <View style={styles.masterMacroCell}>
-                      <Text style={styles.masterMacroCellLabel}>Fat</Text>
-                      <Text style={[styles.masterMacroCellVal, { color: colors.fatText || '#E57453' }]}>
-                        {planFat}g
-                      </Text>
-                      <Text style={styles.masterMacroCellUnit}>{planFatPct}% cal</Text>
+                    <View style={styles.statDivider} />
+                    <View style={styles.masterStatItem}>
+                      <Text style={[styles.masterStatVal, { color: colors.fatText || '#FB7185' }]}>{planFat}g</Text>
+                      <Text style={styles.masterStatLabel}>fat</Text>
                     </View>
                   </View>
                 </View>
@@ -579,10 +606,10 @@ export default function MealPlanScreen({ navigation }) {
             {/* Daily Meal Schedule Section Header */}
             <View style={styles.sectionHeaderRow}>
               <View>
-                <Text style={styles.sectionTitle}>Daily Meal Schedule & Swaps</Text>
-                <Text style={styles.sectionSub}>Tap card for recipe details • Tap ⇅ to swap slots</Text>
+                <Text style={styles.sectionTitle}>Daily Schedule</Text>
+                <Text style={styles.sectionSub}>Tap any meal for recipe & ingredients</Text>
               </View>
-              <Badge variant="neutral" label={`${selectedPlan.meals?.length || 0} Slots`} size="sm" />
+              <Badge variant="neutral" label={`${selectedPlan.meals?.length || 0} Meals`} size="sm" />
             </View>
 
             {/* Differentiated, Concise Meal Cards */}
@@ -592,7 +619,6 @@ export default function MealPlanScreen({ navigation }) {
                 const costInfo = estimateMealCost(m, selectedPlan, userSettings);
                 const logged = isMealLoggedToday(m);
                 const isLoggingThis = loggingMealType === typeLower;
-                const priority = getMealPriority(m);
 
                 return (
                   <View
@@ -602,51 +628,24 @@ export default function MealPlanScreen({ navigation }) {
                     <TouchableOpacity
                       activeOpacity={0.88}
                       onPress={() => setActiveMeal(m)}
-                      style={[
-                        styles.conciseMealCard,
-                        priority.level === 'high' && styles.cardHighPriority,
-                        priority.level === 'medium' && styles.cardMediumPriority,
-                        priority.level === 'low' && styles.cardLowPriority,
-                      ]}
+                      style={styles.conciseMealCard}
                       accessibilityRole="button"
-                      accessibilityLabel={`${m.meal_type}: ${m.dish_name}, ${m.calories} calories, ${priority.label}. Tap for full recipe.`}
+                      accessibilityLabel={`${m.meal_type}: ${m.dish_name}, ${m.calories} calories. Tap for full recipe.`}
                     >
                       {/* Top Meta Row */}
                       <View style={styles.conciseTopRow}>
-                        <View style={styles.conciseTypeCluster}>
-                          <View style={styles.mealSlotPill}>
-                            <Text style={styles.mealSlotPillText}>{m.meal_type}</Text>
-                          </View>
-                          <View
-                            style={[
-                              styles.priorityBadge,
-                              priority.level === 'high' && styles.priorityBadgeHigh,
-                              priority.level === 'medium' && styles.priorityBadgeMedium,
-                              priority.level === 'low' && styles.priorityBadgeLow,
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.priorityBadgeText,
-                                priority.level === 'high' && styles.priorityTextHigh,
-                                priority.level === 'medium' && styles.priorityTextMedium,
-                                priority.level === 'low' && styles.priorityTextLow,
-                              ]}
-                            >
-                              {priority.label}
-                            </Text>
-                          </View>
+                        <View style={styles.mealSlotPill}>
+                          <Text style={styles.mealSlotPillText}>{m.meal_type}</Text>
                         </View>
 
                         <View style={styles.conciseRightPills}>
                           {logged && (
                             <View style={styles.loggedPill}>
-                              <Text style={styles.loggedPillText}>✓ Logged</Text>
+                              <CheckIcon size={11} color="#10B981" />
+                              <Text style={styles.loggedPillText}>Logged</Text>
                             </View>
                           )}
-                          <View style={styles.conciseCalPill}>
-                            <Text style={styles.conciseCalText}>{m.calories} kcal</Text>
-                          </View>
+                          <Text style={styles.conciseCalText}>{m.calories} kcal</Text>
                         </View>
                       </View>
 
@@ -655,41 +654,46 @@ export default function MealPlanScreen({ navigation }) {
                         <Text style={styles.conciseDishTitle} numberOfLines={1}>
                           {m.dish_name}
                         </Text>
-                        <Text style={styles.conciseCostText}>{costInfo.formatted}</Text>
+                        {costInfo?.formatted ? (
+                          <Text style={styles.conciseCostText}>{costInfo.formatted}</Text>
+                        ) : null}
                       </View>
 
                       {/* Glanceable Macro String Row */}
                       <View style={styles.glanceableMacroRow}>
                         <Text style={styles.glanceableMacroText}>
-                          <Text style={{ color: colors.protein, fontWeight: '700' }}>P: {m.protein}g</Text>
-                          <Text style={styles.macroSep}> · </Text>
-                          <Text style={{ color: colors.carbs, fontWeight: '700' }}>C: {m.carbs}g</Text>
-                          <Text style={styles.macroSep}> · </Text>
-                          <Text style={{ color: colors.fatText || '#E57453', fontWeight: '700' }}>F: {m.fat}g</Text>
+                          <Text style={{ color: colors.protein }}>{m.protein}g P</Text>
+                          <Text style={styles.macroSep}>  ·  </Text>
+                          <Text style={{ color: colors.carbs }}>{m.carbs}g C</Text>
+                          <Text style={styles.macroSep}>  ·  </Text>
+                          <Text style={{ color: colors.fatText || '#FB7185' }}>{m.fat}g F</Text>
                         </Text>
-                        <Text style={styles.tapRecipeHint}>Recipe & Checklist ›</Text>
+                        <View style={styles.tapRecipeHintGroup}>
+                          <Text style={styles.tapRecipeHint}>Recipe</Text>
+                          <ChevronRightIcon size={12} color="#64748B" />
+                        </View>
                       </View>
 
                       {/* Compact Action Footer: ⇅ Swap Slot & 1-Tap Log */}
                       <View style={styles.conciseActionRow}>
-                        <View style={styles.reorderActionsGroup}>
-                          <TouchableOpacity
-                            style={styles.swapAffordanceBtn}
-                            onPress={(e) => {
-                              e.stopPropagation?.();
-                              setSwapSourceIndex(idx);
-                            }}
-                            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Swap slot for ${m.dish_name}`}
-                          >
-                            <Text style={styles.swapAffordanceText}>⇅ Swap Slot</Text>
-                          </TouchableOpacity>
-                        </View>
+                        <TouchableOpacity
+                          style={styles.swapAffordanceBtn}
+                          onPress={(e) => {
+                            e.stopPropagation?.();
+                            setSwapSourceIndex(idx);
+                          }}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Swap slot for ${m.dish_name}`}
+                        >
+                          <SwapIcon size={12} color="#94A3B8" />
+                          <Text style={styles.swapAffordanceText}>Swap Slot</Text>
+                        </TouchableOpacity>
 
                         {logged ? (
                           <View style={styles.actionLoggedBox}>
-                            <Text style={styles.actionLoggedText}>✓ Logged</Text>
+                            <CheckIcon size={12} color="#10B981" />
+                            <Text style={styles.actionLoggedText}>Completed</Text>
                           </View>
                         ) : (
                           <TouchableOpacity
@@ -704,7 +708,7 @@ export default function MealPlanScreen({ navigation }) {
                             accessibilityLabel={`Mark ${m.dish_name} as eaten`}
                           >
                             {isLoggingThis ? (
-                              <ActivityIndicator size="small" color="#221803" />
+                              <ActivityIndicator size="small" color="#F8FAFC" />
                             ) : (
                               <Text style={styles.quickMarkEatenText}>Log Meal</Text>
                             )}
@@ -778,7 +782,7 @@ export default function MealPlanScreen({ navigation }) {
                 accessibilityRole="button"
                 accessibilityLabel="Close swap modal"
               >
-                <Text style={styles.swapModalCloseText}>✕</Text>
+                <CloseIcon size={14} color="#94A3B8" />
               </TouchableOpacity>
             </View>
 
@@ -872,7 +876,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     padding: spacing.screenPadding || 16,
-    paddingBottom: 36,
+    paddingBottom: 120,
   },
   emptyCard: {
     alignItems: 'center',
@@ -898,137 +902,115 @@ const styles = StyleSheet.create({
   },
   // Master Plan Overview Container Styles (Follow-up 5)
   masterPlanContainer: {
-    backgroundColor: '#221911',
+    backgroundColor: colors.surface || '#111318',
     borderRadius: 16,
-    borderWidth: 2,
-    borderColor: colors.primary || '#E8A020',
+    borderWidth: 1,
+    borderColor: colors.border || '#222631',
     padding: 16,
     marginBottom: 20,
-    shadowColor: '#E8A020',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    elevation: 6,
   },
   masterHeaderBanner: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   masterHeaderBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(232, 160, 32, 0.15)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
     borderWidth: 1,
-    borderColor: 'rgba(232, 160, 32, 0.4)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    gap: 4,
-  },
-  masterHeaderBadgeIcon: {
-    fontSize: 11,
   },
   masterHeaderBadgeText: {
     fontSize: 10,
-    fontWeight: '800',
-    color: colors.primary || '#E8A020',
-    letterSpacing: 0.5,
+    fontWeight: '700',
+    color: colors.textSecondary || '#94A3B8',
+    letterSpacing: 0.8,
   },
   masterStatusPill: {
-    backgroundColor: '#08090C',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
     borderRadius: 12,
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderWidth: 1,
-    borderColor: '#3A3128',
+    borderColor: 'rgba(16, 185, 129, 0.20)',
+  },
+  activeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
   },
   masterStatusText: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#7BA05B',
+    fontWeight: '600',
+    color: '#10B981',
   },
   masterPlanTitle: {
-    fontSize: typography?.sizes?.lg || 20,
-    fontWeight: '800',
-    color: colors.textPrimary || '#F4ECDD',
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.textPrimary || '#F8FAFC',
     marginBottom: 4,
   },
   masterPlanTagline: {
-    fontSize: typography?.sizes?.sm || 12,
-    color: colors.textSecondary || '#A79A85',
+    fontSize: 12,
+    color: colors.textSecondary || '#94A3B8',
     marginBottom: 12,
-    lineHeight: 16,
+    lineHeight: 17,
   },
   masterBadgesRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-    marginBottom: 14,
-  },
-  masterMacroBarContainer: {
-    backgroundColor: '#08090C',
-    borderRadius: 10,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#2D261F',
     marginBottom: 12,
   },
-  masterMacroBarLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  masterMacroBarTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textSecondary || '#A79A85',
-  },
-  masterMacroBarSplit: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textPrimary || '#F4ECDD',
-  },
-  masterMacroBarTrack: {
-    height: 8,
-    backgroundColor: '#2C251D',
-    borderRadius: 4,
+  masterMacroTrack: {
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderRadius: 2,
     overflow: 'hidden',
     flexDirection: 'row',
+    marginVertical: 12,
   },
   masterBarSeg: {
     height: '100%',
   },
-  masterMacroGrid: {
+  masterMacroStatsRow: {
     flexDirection: 'row',
-    gap: 8,
-  },
-  masterMacroCell: {
-    flex: 1,
-    backgroundColor: '#08090C',
-    borderRadius: 10,
-    padding: 8,
     alignItems: 'center',
+    justifyContent: 'space-around',
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    borderRadius: 12,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#2D261F',
+    borderColor: 'rgba(255, 255, 255, 0.05)',
   },
-  masterMacroCellLabel: {
+  masterStatItem: {
+    alignItems: 'center',
+  },
+  masterStatVal: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.textPrimary || '#F8FAFC',
+  },
+  masterStatLabel: {
     fontSize: 10,
-    fontWeight: '600',
-    color: colors.textSecondary || '#A79A85',
-    marginBottom: 2,
+    fontWeight: '500',
+    color: colors.textMuted || '#64748B',
+    marginTop: 2,
+    textTransform: 'uppercase',
   },
-  masterMacroCellVal: {
-    fontSize: 14,
-    fontWeight: '800',
-    marginBottom: 1,
-  },
-  masterMacroCellUnit: {
-    fontSize: 9,
-    color: colors.textTertiary || '#706555',
-    fontWeight: '600',
+  statDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
 
   // Section Header
@@ -1039,43 +1021,25 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: typography?.sizes?.md || 16,
+    fontSize: 16,
     fontWeight: '700',
-    color: colors.textPrimary || '#F4ECDD',
+    color: colors.textPrimary || '#F8FAFC',
   },
   sectionSub: {
-    fontSize: typography?.sizes?.xs || 11,
-    color: colors.textSecondary || '#A79A85',
+    fontSize: 11,
+    color: colors.textSecondary || '#94A3B8',
     marginTop: 2,
   },
 
-  // Differentiated Concise Meal Cards (Follow-up 2, 3, 1)
+  // Soothing Obsidian Meal Cards
   conciseMealCard: {
-    borderRadius: 12,
-    padding: 12,
+    backgroundColor: colors.surface || '#111318',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border || '#222631',
+    padding: 14,
     marginBottom: 0,
-    minHeight: 120,
     justifyContent: 'space-between',
-  },
-  cardHighPriority: {
-    backgroundColor: '#241B12',
-    borderColor: '#E8A020',
-    borderWidth: 1.5,
-    shadowColor: '#E8A020',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 5,
-    elevation: 3,
-  },
-  cardMediumPriority: {
-    backgroundColor: '#1E1914',
-    borderColor: '#3A3128',
-    borderWidth: 1,
-  },
-  cardLowPriority: {
-    backgroundColor: '#191511',
-    borderColor: '#2D251E',
-    borderWidth: 1,
   },
 
   // Card Internal Rows
@@ -1085,91 +1049,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  conciseTypeCluster: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    flexShrink: 1,
-  },
   mealSlotPill: {
-    backgroundColor: colors.surfaceElevated || '#2C251D',
+    backgroundColor: 'rgba(245, 158, 11, 0.08)',
     borderRadius: 6,
-    paddingHorizontal: 7,
+    paddingHorizontal: 8,
     paddingVertical: 3,
     borderWidth: 1,
-    borderColor: colors.borderSubtle || '#2D261F',
+    borderColor: 'rgba(245, 158, 11, 0.20)',
   },
   mealSlotPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textPrimary || '#F4ECDD',
-  },
-  priorityBadge: {
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderWidth: 1,
-  },
-  priorityBadgeHigh: {
-    backgroundColor: 'rgba(232, 160, 32, 0.18)',
-    borderColor: '#E8A020',
-  },
-  priorityBadgeMedium: {
-    backgroundColor: 'rgba(167, 154, 133, 0.12)',
-    borderColor: '#3A3128',
-  },
-  priorityBadgeLow: {
-    backgroundColor: 'rgba(112, 101, 85, 0.10)',
-    borderColor: '#2D251E',
-  },
-  priorityBadgeText: {
     fontSize: 10,
     fontWeight: '700',
+    color: colors.primary || '#F59E0B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
   },
-  priorityTextHigh: {
-    color: colors.primary || '#E8A020',
-  },
-  priorityTextMedium: {
-    color: colors.textSecondary || '#A79A85',
-  },
-  priorityTextLow: {
-    color: colors.textMuted || '#948675',
-  },
-
   conciseRightPills: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    flexShrink: 0,
+    gap: 8,
   },
   loggedPill: {
-    backgroundColor: 'rgba(123, 160, 91, 0.18)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderWidth: 1,
-    borderColor: '#7BA05B',
+    borderColor: 'rgba(16, 185, 129, 0.20)',
   },
   loggedPillText: {
     fontSize: 10,
-    fontWeight: '700',
-    color: '#7BA05B',
-  },
-  conciseCalPill: {
-    backgroundColor: '#08090C',
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderWidth: 1,
-    borderColor: '#3A3128',
-    height: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
+    fontWeight: '600',
+    color: '#10B981',
   },
   conciseCalText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textPrimary || '#F4ECDD',
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary || '#94A3B8',
   },
 
   conciseTitleRow: {
@@ -1180,15 +1099,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   conciseDishTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
-    color: colors.textPrimary || '#F4ECDD',
+    color: colors.textPrimary || '#F8FAFC',
     flex: 1,
   },
   conciseCostText: {
     fontSize: 11,
-    fontWeight: '600',
-    color: colors.warning || '#E8A020',
+    fontWeight: '500',
+    color: colors.textMuted || '#64748B',
   },
 
   glanceableMacroRow: {
@@ -1198,16 +1117,22 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   glanceableMacroText: {
-    fontSize: 11,
-    color: colors.textSecondary || '#A79A85',
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.textSecondary || '#94A3B8',
   },
   macroSep: {
-    color: colors.border || '#3A3128',
+    color: 'rgba(255, 255, 255, 0.12)',
+  },
+  tapRecipeHintGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
   },
   tapRecipeHint: {
-    fontSize: 10,
-    color: colors.textTertiary || '#706555',
-    fontWeight: '600',
+    fontSize: 11,
+    color: colors.textMuted || '#64748B',
+    fontWeight: '500',
   },
 
   conciseActionRow: {
@@ -1215,50 +1140,54 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#2B2319',
-    paddingTop: 8,
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+    paddingTop: 10,
+    marginTop: 4,
   },
   swapAffordanceBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#272018',
-    borderRadius: 6,
+    gap: 5,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: 8,
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderWidth: 1,
-    borderColor: '#3A3128',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   swapAffordanceText: {
     fontSize: 11,
-    fontWeight: '700',
-    color: colors.textPrimary || '#F4ECDD',
+    fontWeight: '600',
+    color: colors.textSecondary || '#94A3B8',
   },
   actionLoggedBox: {
-    backgroundColor: 'rgba(123, 160, 91, 0.15)',
-    borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+    borderRadius: 8,
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderWidth: 1,
-    borderColor: '#7BA05B',
+    borderColor: 'rgba(16, 185, 129, 0.20)',
   },
   actionLoggedText: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#7BA05B',
+    fontWeight: '600',
+    color: '#10B981',
   },
   quickMarkEatenBtn: {
-    backgroundColor: colors.primary || '#E8A020',
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    minHeight: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: '#1A1D24',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.25)',
   },
   quickMarkEatenText: {
     fontSize: 11,
-    fontWeight: '800',
-    color: '#221803',
+    fontWeight: '700',
+    color: colors.primary || '#F59E0B',
   },
 
   // Meal Swapping Modal Styles (Follow-up 1)
@@ -1272,10 +1201,10 @@ const styles = StyleSheet.create({
   swapModalContent: {
     width: '100%',
     maxHeight: '82%',
-    backgroundColor: '#221D17',
+    backgroundColor: colors.surface || '#111318',
     borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: colors.primary || '#E8A020',
+    borderWidth: 1,
+    borderColor: colors.border || '#222631',
     padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
@@ -1288,30 +1217,30 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#2D261F',
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
     paddingBottom: 12,
     marginBottom: 12,
   },
   swapModalTitle: {
-    fontSize: typography?.sizes?.md || 17,
-    fontWeight: '800',
-    color: colors.primary || '#E8A020',
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimary || '#F8FAFC',
   },
   swapModalSub: {
-    fontSize: typography?.sizes?.xs || 11,
-    color: colors.textSecondary || '#A79A85',
+    fontSize: 11,
+    color: colors.textSecondary || '#94A3B8',
     marginTop: 2,
   },
   swapModalCloseBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#2C251D',
+    backgroundColor: colors.surfaceElevated || '#1A1D24',
     justifyContent: 'center',
     alignItems: 'center',
   },
   swapModalCloseText: {
-    color: '#F4ECDD',
+    color: '#F8FAFC',
     fontSize: 14,
     fontWeight: '700',
   },
@@ -1322,17 +1251,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#08090C',
+    backgroundColor: colors.surfaceElevated || '#1A1D24',
     borderRadius: 10,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#3A3128',
+    borderColor: colors.border || '#222631',
   },
   swapSlotItemCurrent: {
-    backgroundColor: '#2A2016',
-    borderColor: colors.primary || '#E8A020',
-    opacity: 0.6,
+    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+    borderColor: colors.primary || '#F59E0B',
+    opacity: 0.7,
   },
   swapSlotLeft: {
     flexDirection: 'row',
@@ -1345,38 +1274,38 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 8,
-    backgroundColor: colors.surfaceActive || '#2A2219',
+    backgroundColor: colors.surfaceActive || '#222631',
     borderWidth: 1,
-    borderColor: colors.borderSubtle || '#2D261F',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   swapSlotBadgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: colors.primary || '#E8A020',
+    color: colors.primary || '#F59E0B',
   },
   swapSlotType: {
     fontSize: 11,
     fontWeight: '700',
-    color: colors.primary || '#E8A020',
+    color: colors.primary || '#F59E0B',
     textTransform: 'uppercase',
   },
   currentSlotBadge: {
-    backgroundColor: colors.primarySubtle || 'rgba(232, 160, 32, 0.15)',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
     borderRadius: 4,
     paddingHorizontal: 4,
     paddingVertical: 1,
   },
   currentSlotText: {
     fontSize: 9,
-    color: colors.primary || '#E8A020',
+    color: colors.primary || '#F59E0B',
     fontWeight: '700',
   },
   swapSlotDish: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.textPrimary || '#F4ECDD',
+    color: colors.textPrimary || '#F8FAFC',
     marginTop: 2,
   },
   swapSlotRight: {
@@ -1386,12 +1315,12 @@ const styles = StyleSheet.create({
   swapSlotCals: {
     fontSize: 12,
     fontWeight: '700',
-    color: colors.textPrimary || '#F4ECDD',
+    color: colors.textPrimary || '#F8FAFC',
   },
   swapActionArrow: {
     fontSize: 11,
-    fontWeight: '800',
-    color: colors.primary || '#E8A020',
+    fontWeight: '700',
+    color: colors.primary || '#F59E0B',
   },
 
   // Drag & Drop Reordering Styles

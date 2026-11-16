@@ -9,12 +9,21 @@ import {
   Platform,
   UIManager,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, typography, spacing, radius, shadows } from '../theme';
 import { Badge } from './ui/Badge';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+function CloseIcon({ size = 11, color = colors.dangerText || '#E57453' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M18 6L6 18M6 6l12 12" />
+    </Svg>
+  );
 }
 
 const MEAL_TYPE_COLORS = {
@@ -38,7 +47,7 @@ export function getMealPriority(meal) {
   return { label: 'Balanced', variant: 'protein' };
 }
 
-export default function MealCard({
+function MealCard({
   meal,
   isToday = true,
   onDelete,
@@ -181,7 +190,7 @@ export default function MealCard({
                   accessibilityLabel={`Delete meal ${meal.raw_input || ''}`}
                   style={styles.deleteBtn}
                 >
-                  <Text style={styles.deleteBtnText}>✕</Text>
+                  <CloseIcon size={11} color={colors.dangerText || '#E57453'} />
                 </TouchableOpacity>
               )}
               <Text style={styles.expandChevron}>{expanded ? '▲' : '▼'}</Text>
@@ -479,3 +488,5 @@ const styles = StyleSheet.create({
     color: colors.textPrimary || '#F4ECDD',
   },
 });
+
+export default React.memo(MealCard);

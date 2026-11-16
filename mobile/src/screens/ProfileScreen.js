@@ -11,11 +11,22 @@ import {
   Alert,
   Switch,
   Image,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
 import { colors, typography, spacing, radius, shadows } from '../theme';
 import { ScreenHeader, Card, Button, Badge } from '../components/ui';
-import { getSettings, updateMorningBriefingPreferences, deleteAccount, resetUserData } from '../services/api';
+import {
+  getSettings,
+  updateMorningBriefingPreferences,
+  deleteAccount,
+  resetUserData,
+  getNotificationPreferences,
+  updateNotificationPreferences,
+  testDispatchNotification,
+} from '../services/api';
+import { scheduleLocalNotification } from '../services/notifications';
 import { auth, EmailAuthProvider, reauthenticateWithCredential, deleteUser } from '../services/firebase';
 import OnboardingModal from '../components/OnboardingModal';
 import MealPlanSelectorModal from '../components/MealPlanSelectorModal';
@@ -23,6 +34,85 @@ import ConfirmPlanChangeModal from '../components/ConfirmPlanChangeModal';
 import SafeActionModal from '../components/SafeActionModal';
 import ProUpgradeModal from '../components/ProUpgradeModal';
 import useSubscription from '../hooks/useSubscription';
+
+// Zero-Emoji Vector SVG Icons for Notifications & Settings
+function BellIcon({ size = 18, color = colors.primary || '#F59E0B' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M13.73 21a2 2 0 0 1-3.46 0"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function ClockIcon({ size = 14, color = colors.textSecondary || '#94A3B8' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth="1.8" />
+      <Path d="M12 6v6l4 2" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function CheckCircleIcon({ size = 14, color = colors.protein || '#10B981' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth="1.8" />
+      <Path d="M8 12l2.5 2.5L16 9" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function FlameIcon({ size = 14, color = colors.streakPurple || '#A855F7' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M8.5 14.5A2.5 2.5 0 0 0 11 17c1.38 0 2.5-1.12 2.5-2.5 0-1.63-1.07-2.71-1.6-3.32-.42-.48-.9-.98-.9-1.68 0-.32.06-.63.17-.92-1.39.73-2.67 2.13-2.67 4.42z"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M12 2c0 4-5 6.5-5 11a5 5 0 0 0 10 0c0-3.5-3-6-3-9 0-.7-.2-1.4-.5-2h-1.5z"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function TargetIcon({ size = 14, color = colors.nutritionEmerald || '#10B981' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth="1.8" />
+      <Circle cx="12" cy="12" r="6" stroke={color} strokeWidth="1.8" />
+      <Circle cx="12" cy="12" r="2" fill={color} />
+    </Svg>
+  );
+}
+
+function CloseIcon({ size = 16, color = colors.textSecondary || '#94A3B8' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M18 6L6 18M6 6l12 12" />
+    </Svg>
+  );
+}
 
 export default function ProfileScreen({ navigation, user, onLogout }) {
   const {
@@ -46,7 +136,25 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
   const [deleteAccountModalOpen, setDeleteAccountModalOpen] = useState(false);
   const [resetDataModalOpen, setResetDataModalOpen] = useState(false);
   const [resetScope, setResetScope] = useState('all_logs');
+  const [dangerZoneModalOpen, setDangerZoneModalOpen] = useState(false);
 
+  // Push Notification Preferences State
+  const [notificationPrefs, setNotificationPrefs] = useState({
+    notifications_enabled: true,
+    meal_reminders_enabled: true,
+    breakfast_reminder_time: '09:00',
+    lunch_reminder_time: '13:30',
+    dinner_reminder_time: '20:00',
+    snack_reminder_time: '17:00',
+    streak_reminders_enabled: true,
+    streak_reminder_time: '21:30',
+    macro_adherence_reminders_enabled: true,
+    timezone: 'UTC',
+  });
+  const [testingDispatch, setTestingDispatch] = useState(false);
+  const [testNotificationFeedback, setTestNotificationFeedback] = useState(null);
+  const [editingTimeKey, setEditingTimeKey] = useState(null);
+  const [timePickerValue, setTimePickerValue] = useState('');
 
   const fetchSettings = async () => {
     try {
@@ -60,10 +168,134 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
     }
   };
 
+  const fetchNotificationPrefs = async () => {
+    try {
+      const prefs = await getNotificationPreferences();
+      if (prefs) {
+        setNotificationPrefs(prefs);
+      }
+    } catch (err) {
+      console.warn('Profile notification preferences fetch error:', err);
+    }
+  };
+
   useEffect(() => {
     fetchSettings();
+    fetchNotificationPrefs();
     refreshSubscription();
   }, [refreshSubscription]);
+
+  const handleTogglePref = async (key) => {
+    const updatedValue = !notificationPrefs[key];
+    const newPrefs = { ...notificationPrefs, [key]: updatedValue };
+    setNotificationPrefs(newPrefs);
+    try {
+      await updateNotificationPreferences({ [key]: updatedValue });
+    } catch (err) {
+      console.warn('Failed to update notification preference:', err);
+      setNotificationPrefs(notificationPrefs);
+      Alert.alert('Error', 'Unable to update notification preference. Please check connection.');
+    }
+  };
+
+  const handleOpenTimeModal = (key, currentVal) => {
+    setEditingTimeKey(key);
+    setTimePickerValue(currentVal || '09:00');
+  };
+
+  const handleSaveReminderTime = async () => {
+    if (!editingTimeKey) return;
+    const trimmed = (timePickerValue || '').trim();
+    if (!/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/.test(trimmed)) {
+      Alert.alert('Invalid Time Format', 'Please enter a valid 24-hour time in HH:MM format (e.g. 09:00 or 13:30).');
+      return;
+    }
+    const key = editingTimeKey;
+    const newPrefs = { ...notificationPrefs, [key]: trimmed };
+    setNotificationPrefs(newPrefs);
+    setEditingTimeKey(null);
+    try {
+      await updateNotificationPreferences({ [key]: trimmed });
+    } catch (err) {
+      console.warn('Failed to save reminder time:', err);
+      setNotificationPrefs(notificationPrefs);
+      Alert.alert('Error', 'Failed to save updated reminder time.');
+    }
+  };
+
+  const handleSendTestNotification = async () => {
+    setTestingDispatch(true);
+    setTestNotificationFeedback(null);
+    try {
+      // 1. Dispatch immediate local notification directly to the device tray
+      await scheduleLocalNotification({
+        title: 'CoreControl Reminder',
+        body: 'Your custom nutrition reminders and streak alerts are active!',
+        data: { screen: 'Today' },
+      });
+
+      // 2. Also trigger backend push notification dispatch
+      try {
+        await testDispatchNotification({
+          title: 'CoreControl Push Reminder',
+          body: 'Your custom nutrition reminders and streak alerts are active!',
+          data: { screen: 'Today' },
+        });
+      } catch (backendErr) {
+        console.warn('Backend push dispatch note:', backendErr);
+      }
+
+      setTestNotificationFeedback({
+        type: 'success',
+        message: 'Test notification sent! Check your device notification tray.',
+      });
+    } catch (err) {
+      console.warn('Test notification dispatch error:', err);
+      setTestNotificationFeedback({
+        type: 'error',
+        message: err.message || 'Unable to display test notification.',
+      });
+    } finally {
+      setTestingDispatch(false);
+      setTimeout(() => {
+        setTestNotificationFeedback(null);
+      }, 5000);
+    }
+  };
+
+  const getPresetsForKey = (key) => {
+    switch (key) {
+      case 'breakfast_reminder_time':
+        return ['07:30', '08:00', '08:30', '09:00', '09:30', '10:00'];
+      case 'lunch_reminder_time':
+        return ['12:00', '12:30', '13:00', '13:30', '14:00', '14:30'];
+      case 'snack_reminder_time':
+        return ['16:00', '16:30', '17:00', '17:30', '18:00'];
+      case 'dinner_reminder_time':
+        return ['19:00', '19:30', '20:00', '20:30', '21:00', '21:30'];
+      case 'streak_reminder_time':
+        return ['20:30', '21:00', '21:30', '22:00', '22:30'];
+      default:
+        return ['09:00', '13:00', '17:00', '20:00', '21:30'];
+    }
+  };
+
+  const getLabelForKey = (key) => {
+    switch (key) {
+      case 'breakfast_reminder_time':
+        return 'Breakfast Reminder Time';
+      case 'lunch_reminder_time':
+        return 'Lunch Reminder Time';
+      case 'snack_reminder_time':
+        return 'Snack Reminder Time';
+      case 'dinner_reminder_time':
+        return 'Dinner Reminder Time';
+      case 'streak_reminder_time':
+        return 'Streak Protection Alert Time';
+      default:
+        return 'Reminder Time';
+    }
+  };
 
   const handleOpenPlanSelector = () => {
     if (!hasAccess) {
@@ -449,54 +681,313 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
           </Card>
         </View>
 
-        {/* Account Logout */}
-        <Button
-          title="Logout of Account"
-          variant="secondary"
-          size="md"
-          fullWidth
-          onPress={onLogout}
-          style={styles.logoutBtn}
-        />
+        {/* Push Notifications & Reminders Section */}
+        <View style={styles.sectionHeaderRow}>
+          <BellIcon size={18} color={colors.primary || '#F59E0B'} />
+          <Text style={styles.sectionTitleWithIcon}>Push Notifications & Reminders</Text>
+        </View>
 
-        {/* Danger Zone: Safe Data Reset & Account Deletion */}
-        <View style={styles.dangerZoneCard}>
-          <Text style={styles.dangerZoneTitle}>DANGER ZONE</Text>
+        <Card variant="elevated" style={styles.notificationCard}>
+          {/* Master Notification Toggle */}
+          <View style={styles.settingRow}>
+            <View style={styles.settingTextContainer}>
+              <Text style={styles.settingTitle}>Push Notifications</Text>
+              <Text style={styles.settingSubtitle}>
+                Master switch for remote alerts, meal prompts, and streak reminders
+              </Text>
+            </View>
+            <Switch
+              value={Boolean(notificationPrefs.notifications_enabled)}
+              onValueChange={() => handleTogglePref('notifications_enabled')}
+              trackColor={{ false: '#222631', true: 'rgba(245, 158, 11, 0.45)' }}
+              thumbColor={notificationPrefs.notifications_enabled ? (colors.primary || '#F59E0B') : '#94A3B8'}
+            />
+          </View>
 
-          {/* Bulk Reset Logs */}
+          {notificationPrefs.notifications_enabled && (
+            <>
+              <View style={styles.settingDivider} />
+
+              {/* Meal Reminders Toggle */}
+              <View style={styles.settingRow}>
+                <View style={styles.settingTextContainer}>
+                  <View style={styles.settingHeaderWithIcon}>
+                    <ClockIcon size={15} color={colors.primary || '#F59E0B'} />
+                    <Text style={styles.settingTitle}>Meal Reminders</Text>
+                  </View>
+                  <Text style={styles.settingSubtitle}>
+                    Smart alerts suppressed automatically once today's meal is logged
+                  </Text>
+                </View>
+                <Switch
+                  value={Boolean(notificationPrefs.meal_reminders_enabled)}
+                  onValueChange={() => handleTogglePref('meal_reminders_enabled')}
+                  trackColor={{ false: '#222631', true: 'rgba(245, 158, 11, 0.45)' }}
+                  thumbColor={notificationPrefs.meal_reminders_enabled ? (colors.primary || '#F59E0B') : '#94A3B8'}
+                />
+              </View>
+
+              {/* Meal Reminder Times Grid */}
+              {notificationPrefs.meal_reminders_enabled && (
+                <View style={styles.mealTimesContainer}>
+                  <Text style={styles.subSectionTitle}>Custom Reminder Times (24H)</Text>
+
+                  <View style={styles.mealTimeGrid}>
+                    {/* Breakfast */}
+                    <View style={styles.mealTimeItem}>
+                      <View style={styles.mealTimeLabelRow}>
+                        <View style={[styles.mealDot, { backgroundColor: '#F59E0B' }]} />
+                        <Text style={styles.mealTimeName}>Breakfast</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.timePill}
+                        onPress={() => handleOpenTimeModal('breakfast_reminder_time', notificationPrefs.breakfast_reminder_time)}
+                        activeOpacity={0.7}
+                      >
+                        <ClockIcon size={12} color={colors.primary || '#F59E0B'} />
+                        <Text style={styles.timePillText}>{notificationPrefs.breakfast_reminder_time || '09:00'}</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Lunch */}
+                    <View style={styles.mealTimeItem}>
+                      <View style={styles.mealTimeLabelRow}>
+                        <View style={[styles.mealDot, { backgroundColor: '#10B981' }]} />
+                        <Text style={styles.mealTimeName}>Lunch</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.timePill}
+                        onPress={() => handleOpenTimeModal('lunch_reminder_time', notificationPrefs.lunch_reminder_time)}
+                        activeOpacity={0.7}
+                      >
+                        <ClockIcon size={12} color={colors.protein || '#10B981'} />
+                        <Text style={styles.timePillText}>{notificationPrefs.lunch_reminder_time || '13:30'}</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Snack */}
+                    <View style={styles.mealTimeItem}>
+                      <View style={styles.mealTimeLabelRow}>
+                        <View style={[styles.mealDot, { backgroundColor: '#38BDF8' }]} />
+                        <Text style={styles.mealTimeName}>Snack</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.timePill}
+                        onPress={() => handleOpenTimeModal('snack_reminder_time', notificationPrefs.snack_reminder_time)}
+                        activeOpacity={0.7}
+                      >
+                        <ClockIcon size={12} color={colors.hydrationSky || '#38BDF8'} />
+                        <Text style={styles.timePillText}>{notificationPrefs.snack_reminder_time || '17:00'}</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Dinner */}
+                    <View style={styles.mealTimeItem}>
+                      <View style={styles.mealTimeLabelRow}>
+                        <View style={[styles.mealDot, { backgroundColor: '#F43F5E' }]} />
+                        <Text style={styles.mealTimeName}>Dinner</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.timePill}
+                        onPress={() => handleOpenTimeModal('dinner_reminder_time', notificationPrefs.dinner_reminder_time)}
+                        activeOpacity={0.7}
+                      >
+                        <ClockIcon size={12} color={colors.fat || '#F43F5E'} />
+                        <Text style={styles.timePillText}>{notificationPrefs.dinner_reminder_time || '20:00'}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              <View style={styles.settingDivider} />
+
+              {/* Streak Protection Toggle & Time */}
+              <View style={styles.settingRow}>
+                <View style={styles.settingTextContainer}>
+                  <View style={styles.settingHeaderWithIcon}>
+                    <FlameIcon size={15} color={colors.streakPurple || '#A855F7'} />
+                    <Text style={styles.settingTitle}>Streak Protection</Text>
+                  </View>
+                  <Text style={styles.settingSubtitle}>
+                    Evening alert if no meals have been logged today to keep streak active
+                  </Text>
+                </View>
+                <Switch
+                  value={Boolean(notificationPrefs.streak_reminders_enabled)}
+                  onValueChange={() => handleTogglePref('streak_reminders_enabled')}
+                  trackColor={{ false: '#222631', true: 'rgba(245, 158, 11, 0.45)' }}
+                  thumbColor={notificationPrefs.streak_reminders_enabled ? (colors.primary || '#F59E0B') : '#94A3B8'}
+                />
+              </View>
+
+              {notificationPrefs.streak_reminders_enabled && (
+                <View style={styles.streakTimeRow}>
+                  <Text style={styles.streakTimeLabel}>Protection Alert Time</Text>
+                  <TouchableOpacity
+                    style={styles.timePill}
+                    onPress={() => handleOpenTimeModal('streak_reminder_time', notificationPrefs.streak_reminder_time)}
+                    activeOpacity={0.7}
+                  >
+                    <ClockIcon size={12} color={colors.streakPurple || '#A855F7'} />
+                    <Text style={styles.timePillText}>{notificationPrefs.streak_reminder_time || '21:30'}</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              <View style={styles.settingDivider} />
+
+              {/* Test Notification Trigger & Feedback */}
+              <View style={styles.testDispatchSection}>
+                <Button
+                  variant="secondary"
+                  size="md"
+                  fullWidth
+                  title={testingDispatch ? 'Dispatching Test Alert...' : 'Send Test Notification'}
+                  loading={testingDispatch}
+                  onPress={handleSendTestNotification}
+                  style={styles.testNotificationBtn}
+                />
+                <Text style={styles.testNotificationHint}>
+                  Dispatches an immediate remote push to test token registration & routing.
+                </Text>
+
+                {testNotificationFeedback && (
+                  <View
+                    style={[
+                      styles.feedbackBanner,
+                      testNotificationFeedback.type === 'success' && styles.feedbackBannerSuccess,
+                      testNotificationFeedback.type === 'error' && styles.feedbackBannerError,
+                      testNotificationFeedback.type === 'info' && styles.feedbackBannerInfo,
+                    ]}
+                  >
+                    <View style={styles.feedbackBannerContent}>
+                      {testNotificationFeedback.type === 'success' && <CheckCircleIcon size={16} color="#10B981" />}
+                      <Text
+                        style={[
+                          styles.feedbackBannerText,
+                          testNotificationFeedback.type === 'success' && styles.feedbackBannerTextSuccess,
+                          testNotificationFeedback.type === 'error' && styles.feedbackBannerTextError,
+                          testNotificationFeedback.type === 'info' && styles.feedbackBannerTextInfo,
+                        ]}
+                      >
+                        {testNotificationFeedback.message}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            </>
+          )}
+        </Card>
+
+        {/* Account Session & Management */}
+        <View style={styles.accountSection}>
           <Button
-            title="Reset Personal Activity Logs"
-            variant="outline"
+            title="Logout of Account"
+            variant="secondary"
             size="md"
             fullWidth
-            loading={resetting}
-            onPress={() => {
-              setResetScope('all_logs');
-              setResetDataModalOpen(true);
-            }}
-            style={styles.resetLogsBtn}
-            textStyle={{ color: colors.warning || '#E8A020' }}
+            onPress={onLogout}
+            style={styles.logoutBtn}
+            textStyle={styles.logoutBtnText}
           />
-          <Text style={styles.dangerZoneSubText}>
-            Clear all meal logs, weights, and step counts while keeping your account and profile active.
-          </Text>
 
-          {/* Account Deletion */}
-          <Button
-            title="Delete Account & All Data"
-            variant="outline"
-            size="md"
-            fullWidth
-            loading={deleting}
-            onPress={() => setDeleteAccountModalOpen(true)}
-            style={styles.deleteAccountBtn}
-            textStyle={{ color: colors.dangerText || '#E57453' }}
-          />
-          <Text style={styles.deleteWarningText}>
-            Permanently erases your user profile, meal logs, weights, and health metrics.
-          </Text>
+          <TouchableOpacity
+            style={styles.dangerZoneTrigger}
+            onPress={() => setDangerZoneModalOpen(true)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Open Data and Account Options"
+          >
+            <Text style={styles.dangerZoneTriggerText}>Data & Account Options (Danger Zone)</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Danger Zone Management Modal */}
+      <Modal
+        visible={dangerZoneModalOpen}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setDangerZoneModalOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.dangerModalContainer}>
+            <View style={styles.dangerModalHeader}>
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={styles.dangerModalTitle}>Data & Account Options</Text>
+                <Text style={styles.dangerModalSubtitle}>
+                  Manage sensitive data operations and permanent account deletion.
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setDangerZoneModalOpen(false)}
+                style={styles.dangerModalCloseBtn}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Close Danger Zone options"
+              >
+                <CloseIcon size={16} color={colors.textSecondary || '#94A3B8'} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.dangerActionBlock}>
+              <Text style={styles.dangerActionTitle}>Reset Personal Activity Logs</Text>
+              <Text style={styles.dangerActionDesc}>
+                Clear all meal logs and weight history while keeping your login and profile active.
+              </Text>
+              <Button
+                title="Reset Personal Activity Logs"
+                variant="outline"
+                size="md"
+                fullWidth
+                loading={resetting}
+                onPress={() => {
+                  setDangerZoneModalOpen(false);
+                  setResetScope('all_logs');
+                  setResetDataModalOpen(true);
+                }}
+                style={styles.resetLogsBtn}
+                textStyle={{ color: colors.warning || '#F59E0B' }}
+              />
+            </View>
+
+            <View style={styles.dangerDivider} />
+
+            <View style={styles.dangerActionBlock}>
+              <Text style={[styles.dangerActionTitle, { color: colors.error || '#F43F5E' }]}>
+                Delete Account & All Data
+              </Text>
+              <Text style={styles.dangerActionDesc}>
+                Permanently erases your user profile, meal photos, weights, and health metrics. This action is irreversible.
+              </Text>
+              <Button
+                title="Delete Account & All Data"
+                variant="outline"
+                size="md"
+                fullWidth
+                loading={deleting}
+                onPress={() => {
+                  setDangerZoneModalOpen(false);
+                  setDeleteAccountModalOpen(true);
+                }}
+                style={styles.deleteAccountBtn}
+                textStyle={{ color: colors.error || '#F43F5E' }}
+              />
+            </View>
+
+            <Button
+              title="Close"
+              variant="secondary"
+              size="md"
+              fullWidth
+              onPress={() => setDangerZoneModalOpen(false)}
+              style={styles.dangerModalDismissBtn}
+            />
+          </View>
+        </View>
+      </Modal>
 
       {/* Account Deletion Modal */}
       <SafeActionModal
@@ -508,7 +999,6 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
         itemizedWarnings={[
           'All meal photos, nutrition logs, and food item breakdowns',
           'All weight logs, trajectory records, and trend curves',
-          'All step tracking history and calorie burn records',
           'Custom calorie and macro goals, and AI-generated meal plans',
           'Your authentication account and profile data will be permanently removed',
         ]}
@@ -529,7 +1019,6 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
         itemizedWarnings={[
           'All logged meals, recipes, and food breakdown entries',
           'All weight entries and trend trajectory history',
-          'All step tracking and activity logs',
           'Note: Your account profile, login, and goals will be preserved',
         ]}
         requiredKeyword="RESET"
@@ -538,6 +1027,75 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
         userEmail={user?.email || auth?.currentUser?.email || ''}
         loading={resetting}
       />
+
+      {/* Time Picker Modal */}
+      <Modal
+        visible={editingTimeKey !== null}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setEditingTimeKey(null)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.timeModalContainer}>
+            <Text style={styles.timeModalTitle}>{getLabelForKey(editingTimeKey)}</Text>
+            <Text style={styles.timeModalSubtitle}>
+              Select a quick preset or enter a custom 24-hour time (HH:MM).
+            </Text>
+
+            {/* Quick Presets */}
+            <View style={styles.presetsContainer}>
+              {getPresetsForKey(editingTimeKey).map((preset) => {
+                const isSelected = timePickerValue === preset;
+                return (
+                  <TouchableOpacity
+                    key={preset}
+                    style={[styles.presetPill, isSelected && styles.presetPillActive]}
+                    onPress={() => setTimePickerValue(preset)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.presetPillText, isSelected && styles.presetPillTextActive]}>
+                      {preset}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Custom Input */}
+            <View style={styles.customInputContainer}>
+              <Text style={styles.customInputLabel}>Custom Time (HH:MM)</Text>
+              <TextInput
+                style={styles.timeInput}
+                value={timePickerValue}
+                onChangeText={setTimePickerValue}
+                placeholder="HH:MM"
+                placeholderTextColor="#64748B"
+                keyboardType="numbers-and-punctuation"
+                maxLength={5}
+                autoCapitalize="none"
+              />
+            </View>
+
+            {/* Modal Action Buttons */}
+            <View style={styles.modalBtnRow}>
+              <Button
+                variant="outline"
+                size="md"
+                title="Cancel"
+                onPress={() => setEditingTimeKey(null)}
+                style={styles.modalCancelBtn}
+              />
+              <Button
+                variant="primary"
+                size="md"
+                title="Save Time"
+                onPress={handleSaveReminderTime}
+                style={styles.modalSaveBtn}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -594,6 +1152,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     padding: 16,
+    paddingBottom: 120,
   },
   userCard: {
     flexDirection: 'row',
@@ -1012,67 +1571,380 @@ const styles = StyleSheet.create({
     color: '#E8A020',
     fontWeight: '700',
   },
+  accountSection: {
+    marginTop: 20,
+    gap: 12,
+  },
   logoutBtn: {
-    backgroundColor: '#221D17',
-    borderRadius: 10,
+    backgroundColor: colors.surfaceElevated || '#1A1D24',
+    borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#C7502F',
-    marginTop: 10,
-    marginBottom: 8,
+    borderColor: colors.border || '#222631',
   },
   logoutBtnText: {
-    color: '#C7502F',
+    color: colors.textPrimary || '#F8FAFC',
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
-  dangerZoneCard: {
-    marginTop: 14,
-    marginBottom: 30,
-    padding: 14,
-    borderRadius: 12,
+  dangerZoneTrigger: {
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dangerZoneTriggerText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary || '#94A3B8',
+    textDecorationLine: 'underline',
+  },
+  dangerModalContainer: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: colors.surface || '#111318',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(199, 80, 47, 0.35)',
-    backgroundColor: 'rgba(199, 80, 47, 0.05)',
+    borderColor: 'rgba(244, 63, 94, 0.35)',
+    padding: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 8,
   },
-  dangerZoneTitle: {
+  dangerModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  dangerModalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.textPrimary || '#F8FAFC',
+  },
+  dangerModalSubtitle: {
+    fontSize: 12,
+    color: colors.textSecondary || '#94A3B8',
+    marginTop: 3,
+    lineHeight: 16,
+  },
+  dangerModalCloseBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: colors.surfaceElevated || '#1A1D24',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dangerModalCloseText: {
+    color: colors.textSecondary || '#94A3B8',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  dangerActionBlock: {
+    marginVertical: 4,
+  },
+  dangerActionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textPrimary || '#F8FAFC',
+    marginBottom: 4,
+  },
+  dangerActionDesc: {
     fontSize: 11,
-    fontWeight: '800',
-    color: colors.dangerText || '#E57453',
-    letterSpacing: 0.8,
+    color: colors.textSecondary || '#94A3B8',
     marginBottom: 10,
+    lineHeight: 16,
+  },
+  dangerDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    marginVertical: 12,
+  },
+  dangerModalDismissBtn: {
+    marginTop: 14,
   },
   resetLogsBtn: {
-    borderColor: colors.warning || '#E8A020',
+    borderColor: colors.warning || '#F59E0B',
     marginBottom: 6,
   },
-  dangerZoneSubText: {
-    fontSize: 11,
-    color: colors.textSecondary || '#A79A85',
-    marginBottom: 14,
-    lineHeight: 15,
-  },
   deleteAccountBtn: {
-    backgroundColor: 'rgba(248, 81, 73, 0.08)',
+    backgroundColor: 'rgba(244, 63, 94, 0.08)',
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(248, 81, 73, 0.35)',
+    borderColor: 'rgba(244, 63, 94, 0.35)',
     marginTop: 6,
   },
-  deleteAccountBtnText: {
-    color: '#ff7b72',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  deleteWarningText: {
-    color: '#8b949e',
-    fontSize: 11,
-    textAlign: 'center',
-    marginTop: 6,
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 20,
     marginBottom: 8,
+    gap: 8,
+  },
+  sectionTitleWithIcon: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#F4ECDD',
+    letterSpacing: 0.3,
+  },
+  notificationCard: {
+    backgroundColor: '#111318',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#222631',
+    padding: 16,
+    marginBottom: 16,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  settingTextContainer: {
+    flex: 1,
+    marginRight: 12,
+  },
+  settingHeaderWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  settingTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#F8FAFC',
+  },
+  settingSubtitle: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 3,
+    lineHeight: 16,
+  },
+  settingDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    marginVertical: 14,
+  },
+  mealTimesContainer: {
+    marginTop: 10,
+    backgroundColor: '#1A1D24',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  subSectionTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 10,
+  },
+  mealTimeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'space-between',
+  },
+  mealTimeItem: {
+    width: '48%',
+    backgroundColor: '#111318',
+    borderRadius: 8,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#222631',
+  },
+  mealTimeLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 6,
+  },
+  mealDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  mealTimeName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#F8FAFC',
+  },
+  timePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    backgroundColor: '#1A1D24',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+  },
+  timePillText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#F8FAFC',
+    letterSpacing: 0.5,
+  },
+  streakTimeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: '#1A1D24',
+    borderRadius: 8,
+  },
+  streakTimeLabel: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '600',
+  },
+  testDispatchSection: {
+    marginTop: 4,
+  },
+  testNotificationBtn: {
+    marginBottom: 6,
+    backgroundColor: '#1A1D24',
+    borderColor: 'rgba(245, 158, 11, 0.4)',
+  },
+  testNotificationHint: {
+    fontSize: 11,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 15,
+  },
+  feedbackBanner: {
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  feedbackBannerSuccess: {
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderColor: '#10B981',
+  },
+  feedbackBannerError: {
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderColor: '#EF4444',
+  },
+  feedbackBannerInfo: {
+    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    borderColor: '#38BDF8',
+  },
+  feedbackBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  feedbackBannerText: {
+    fontSize: 12,
+    fontWeight: '600',
+    flex: 1,
+  },
+  feedbackBannerTextSuccess: {
+    color: '#10B981',
+  },
+  feedbackBannerTextError: {
+    color: '#F87171',
+  },
+  feedbackBannerTextInfo: {
+    color: '#38BDF8',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(8, 9, 12, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  timeModalContainer: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#111318',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#222631',
+    padding: 20,
+  },
+  timeModalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#F8FAFC',
+    marginBottom: 4,
+  },
+  timeModalSubtitle: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginBottom: 16,
+    lineHeight: 16,
+  },
+  presetsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  presetPill: {
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#1A1D24',
+    borderWidth: 1,
+    borderColor: '#222631',
+  },
+  presetPillActive: {
+    backgroundColor: 'rgba(245, 158, 11, 0.18)',
+    borderColor: '#F59E0B',
+  },
+  presetPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+  presetPillTextActive: {
+    color: '#F59E0B',
+    fontWeight: '700',
+  },
+  customInputContainer: {
+    marginBottom: 20,
+  },
+  customInputLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#94A3B8',
+    marginBottom: 6,
+  },
+  timeInput: {
+    backgroundColor: '#1A1D24',
+    borderWidth: 1,
+    borderColor: '#222631',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#F8FAFC',
+  },
+  modalBtnRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  modalCancelBtn: {
+    flex: 1,
+  },
+  modalSaveBtn: {
+    flex: 1,
   },
 });
 

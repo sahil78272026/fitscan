@@ -19,6 +19,7 @@ class User(Base):
     settings = relationship("UserSettings", back_populates="user", uselist=False, cascade="all, delete-orphan")
     weight_logs = relationship("WeightLog", back_populates="user", cascade="all, delete-orphan")
     step_logs = relationship("StepLog", back_populates="user", cascade="all, delete-orphan")
+    devices = relationship("UserDevice", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, phone={self.phone}, name={self.name})>"

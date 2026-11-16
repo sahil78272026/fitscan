@@ -50,11 +50,11 @@ export default function ProgressPage() {
   useEffect(() => {
     if (!isAuthenticated) return;
     let ignore = false;
-    async function loadProgress() {
+    async function loadInitialStats() {
       try {
         const [stats, history] = await Promise.all([
           getAdherenceStats(),
-          getWeightHistory(weightTimeframe),
+          getWeightHistory(30),
         ]);
         if (!ignore) {
           setAdherenceStats(stats);
@@ -66,11 +66,11 @@ export default function ProgressPage() {
         if (!ignore) setLoading(false);
       }
     }
-    loadProgress();
+    loadInitialStats();
     return () => {
       ignore = true;
     };
-  }, [isAuthenticated, weightTimeframe]);
+  }, [isAuthenticated]);
 
   const handleLogWeight = async (weightKg) => {
     if (!weightKg || weightKg < 25 || weightKg > 300) return;

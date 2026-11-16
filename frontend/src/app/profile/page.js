@@ -88,11 +88,11 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!isAuthenticated) return;
     let ignore = false;
-    async function loadProfile() {
+    async function loadInitialProfile() {
       try {
         const [settings, weightData] = await Promise.all([
           getSettings(),
-          getWeightHistory(timeframe),
+          getWeightHistory(30),
         ]);
         if (!ignore) {
           setUserSettings(settings);
@@ -104,11 +104,11 @@ export default function ProfilePage() {
         if (!ignore) setLoading(false);
       }
     }
-    loadProfile();
+    loadInitialProfile();
     return () => {
       ignore = true;
     };
-  }, [isAuthenticated, timeframe]);
+  }, [isAuthenticated]);
 
   // Handle Wizard Complete -> Save goals & generate meal plans
   const handleWizardComplete = async (goalData) => {
@@ -229,8 +229,10 @@ export default function ProfilePage() {
   const handleLogWeight = async (weightKg) => {
     try {
       await logWeight(weightKg);
-      await fetchSettings();
-      await fetchWeightHistory(timeframe);
+      await Promise.all([
+        fetchSettings(),
+        fetchWeightHistory(timeframe),
+      ]);
       showToast("Weight logged successfully");
     } catch (err) {
       showToast(err.message || "Failed to log weight", "error");

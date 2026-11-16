@@ -1,4 +1,5 @@
 from app.models.user import User
+from app.models.device import UserDevice
 from app.models.meal import Meal, FoodItem
 from app.models.settings import UserSettings
 from app.models.weight import WeightLog
@@ -8,6 +9,7 @@ from app.models.coupon import Coupon, CouponRedemption
 
 __all__ = [
     "User",
+    "UserDevice",
     "Meal",
     "FoodItem",
     "UserSettings",

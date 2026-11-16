@@ -37,10 +37,11 @@ def get_rate_limit_key(request: Request) -> str:
 
 limiter = Limiter(key_func=get_rate_limit_key)
 
-from app.routers import auth, meals, daily_summary, settings, calendar, stats, weight, steps, health, subscription, coupons, payments
+from app.routers import auth, meals, daily_summary, settings, calendar, stats, weight, steps, health, subscription, coupons, payments, notifications
 
 # Import models so they're registered with Base.metadata
-from app.models import User, Meal, FoodItem, UserSettings, WeightLog, StepLog, PaymentOrder, Coupon, CouponRedemption  # noqa: F401
+from app.models import User, Meal, FoodItem, UserSettings, WeightLog, StepLog, PaymentOrder, Coupon, CouponRedemption, UserDevice  # noqa: F401
+from app.services.redis_service import close_redis_client
 
 app_settings = get_settings()
 
@@ -83,6 +84,16 @@ async def init_db_schema(conn):
         ("user_settings", "morning_briefing_end_hour", "INTEGER DEFAULT 11"),
         ("user_settings", "morning_briefing_frequency", "VARCHAR(20) DEFAULT 'daily'"),
         ("user_settings", "morning_briefing_cache", "TEXT"),
+        ("user_settings", "notifications_enabled", "INTEGER DEFAULT 1"),
+        ("user_settings", "meal_reminders_enabled", "INTEGER DEFAULT 1"),
+        ("user_settings", "breakfast_reminder_time", "VARCHAR(10) DEFAULT '09:00'"),
+        ("user_settings", "lunch_reminder_time", "VARCHAR(10) DEFAULT '13:30'"),
+        ("user_settings", "dinner_reminder_time", "VARCHAR(10) DEFAULT '20:00'"),
+        ("user_settings", "snack_reminder_time", "VARCHAR(10) DEFAULT '17:00'"),
+        ("user_settings", "streak_reminders_enabled", "INTEGER DEFAULT 1"),
+        ("user_settings", "streak_reminder_time", "VARCHAR(10) DEFAULT '21:30'"),
+        ("user_settings", "macro_adherence_reminders_enabled", "INTEGER DEFAULT 1"),
+        ("user_settings", "timezone", "VARCHAR(50) DEFAULT 'UTC'"),
         ("meals", "total_protein", "FLOAT DEFAULT 0.0"),
         ("meals", "total_carbs", "FLOAT DEFAULT 0.0"),
         ("meals", "total_fat", "FLOAT DEFAULT 0.0"),
@@ -120,14 +131,25 @@ async def init_db_schema(conn):
         except Exception as e:
             logger.debug(f"users email index note: {e}")
 
+    # Ensure composite and foreign key indexes exist idempotently across SQLite and PostgreSQL
+    try:
+        await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_meals_user_date ON meals (user_id, meal_date);"))
+    except Exception as e:
+        logger.debug(f"ix_meals_user_date creation note: {e}")
+
+    try:
+        await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_food_items_meal_id ON food_items (meal_id);"))
+    except Exception as e:
+        logger.debug(f"ix_food_items_meal_id creation note: {e}")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Create tables & migrate schema on startup."""
-    logger.info("🏋️ CoreControl starting up...")
+    logger.info("CoreControl starting up...")
     async with engine.begin() as conn:
         await init_db_schema(conn)
-    logger.info("✅ Database tables & macro schema verified")
+    logger.info("Database tables & macro schema verified")
 
     try:
         from sqlalchemy import select, func
@@ -146,12 +168,16 @@ async def lifespan(app: FastAPI):
                     )
                     session.add(coupon)
             await session.commit()
-            logger.info("🎟️ Default access coupons verified (TESTFREE, ADV_LAUNCH100)")
+            logger.info("Default access coupons verified (TESTFREE, ADV_LAUNCH100)")
     except Exception as e:
         logger.warning(f"Could not auto-seed default coupons: {e}")
 
     yield
-    logger.info("👋 CoreControl shutting down...")
+    logger.info("CoreControl shutting down...")
+    try:
+        await close_redis_client()
+    except Exception as e:
+        logger.warning(f"Error closing redis client during shutdown: {e}")
     await engine.dispose()
 
 
@@ -247,4 +273,5 @@ app.include_router(health.router)
 app.include_router(subscription.router)
 app.include_router(coupons.router)
 app.include_router(payments.router)
+app.include_router(notifications.router)
 

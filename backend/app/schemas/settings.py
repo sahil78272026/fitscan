@@ -9,6 +9,7 @@ class UserGoalUpdate(BaseModel):
     age: Optional[int] = Field(None, ge=10, le=100)
     gender: Optional[str] = Field(None, pattern="^(male|female|other)$")
     height_cm: Optional[float] = Field(None, ge=50, le=250)
+    weight_kg: Optional[float] = Field(None, ge=20, le=350)
     activity_level: Optional[str] = Field("moderate", pattern="^(sedentary|light|moderate|very_active)$")
     workout_time: Optional[str] = Field("evening", pattern="^(morning|afternoon|evening|night|none)$")
     # Optional manual macro overrides:

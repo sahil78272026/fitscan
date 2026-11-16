@@ -5,9 +5,10 @@ import styles from "./ProgressRing.module.css";
 
 export default function ProgressRing({ consumed, goal }) {
   const ringRef = useRef(null);
-  const percentage = Math.min((consumed / goal) * 100, 100);
-  const remaining = Math.max(0, goal - consumed);
-  const isOver = consumed > goal;
+  const safeGoal = goal > 0 ? goal : 2000;
+  const percentage = Math.min((consumed / safeGoal) * 100, 100);
+  const remaining = Math.max(0, safeGoal - consumed);
+  const isOver = consumed > safeGoal;
 
   // SVG circle math
   const radius = 90;

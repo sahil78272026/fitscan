@@ -562,7 +562,7 @@ export default function OnboardingWizard({ initialSettings, onComplete, onCancel
                 </div>
                 <div className={styles.liveMetricsRow}>
                   <div className={styles.liveMetricCol}>
-                    <span className={styles.liveMetricLabel}>Est. Maintenance (TDEE)</span>
+                    <span className={styles.liveMetricLabel}>Est. Daily Maintenance</span>
                     <span className={styles.liveMetricValue}>~{liveStats.tdee.toLocaleString()} kcal/day</span>
                   </div>
                   <div className={styles.liveDivider} />
