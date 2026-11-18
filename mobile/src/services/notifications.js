@@ -1,4 +1,9 @@
-import * as Notifications from 'expo-notifications';
+let Notifications = null;
+try {
+  Notifications = require('expo-notifications');
+} catch (e) {
+  // Graceful fallback when expo-notifications is not installed
+}
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
@@ -13,6 +18,7 @@ export const DEFAULT_PROJECT_ID = '9d9194f3-ba90-479a-9f2e-fd1df2c55938';
  * Controls alert banners, sounds, and badges when app is in the foreground.
  */
 export function initNotifications() {
+  if (!Notifications) return;
   try {
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
@@ -34,6 +40,7 @@ export function initNotifications() {
  * @returns {Promise<string|null>} The registered Expo push token, or null if unavailable.
  */
 export async function registerForPushNotificationsAsync() {
+  if (!Notifications) return null;
   let token = null;
 
   // 1. Android Notification Channel Configuration
@@ -135,6 +142,7 @@ export async function getStoredPushToken() {
  * Bypasses remote FCM/APNs servers — works 100% reliably on emulators and physical devices.
  */
 export async function scheduleLocalNotification({ title, body, data = {} }) {
+  if (!Notifications) return null;
   try {
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {

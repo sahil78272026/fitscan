@@ -5,8 +5,23 @@ import {
   View,
   TouchableOpacity,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, typography, spacing } from '../../theme';
+
+function ChevronLeftIcon({ size = 20, color = colors.primary || '#E8A020' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M15 18L9 12L15 6"
+        stroke={color}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
 
 /**
  * Universal ScreenHeader primitive for FitScan mobile.
@@ -17,7 +32,7 @@ import { colors, typography, spacing } from '../../theme';
  * @param {string} [subtitle] - Optional subtitle
  * @param {() => void} [onBack] - Back button press handler (renders back button if provided)
  * @param {string} [backTitle] - Optional text next to back arrow (e.g. "Tracker")
- * @param {React.ReactNode|string} [backIcon='‹'] - Custom back icon or symbol
+ * @param {React.ReactNode|string} [backIcon] - Custom back icon or symbol (defaults to clean SVG ChevronLeft)
  * @param {React.ReactNode} [rightAction] - Element placed on the right side of header
  * @param {boolean} [showBorder=true] - Shows subtle bottom divider
  * @param {string} [backgroundColor] - Header background override
@@ -30,7 +45,7 @@ export function ScreenHeader({
   subtitle,
   onBack,
   backTitle,
-  backIcon = '‹',
+  backIcon,
   rightAction,
   showBorder = true,
   backgroundColor = colors.surface || '#221D17',
@@ -41,6 +56,16 @@ export function ScreenHeader({
 }) {
   const insets = useSafeAreaInsets();
   const topPadding = safeArea ? (insets.top > 0 ? insets.top : 12) : 0;
+
+  const renderBackIcon = () => {
+    if (!backIcon || backIcon === '‹' || backIcon === '←') {
+      return <ChevronLeftIcon size={20} color={colors.primary || '#E8A020'} />;
+    }
+    if (typeof backIcon === 'string') {
+      return <Text style={styles.backIconText}>{backIcon}</Text>;
+    }
+    return backIcon;
+  };
 
   return (
     <View
@@ -68,13 +93,13 @@ export function ScreenHeader({
               accessibilityLabel="Go back"
               accessibilityHint="Navigates to the previous screen"
             >
-              {typeof backIcon === 'string' ? (
-                <Text style={styles.backIconText}>{backIcon}</Text>
-              ) : (
-                backIcon
-              )}
+              {renderBackIcon()}
               {Boolean(backTitle) ? (
-                <Text style={styles.backTitleText} numberOfLines={1}>
+                <Text
+                  style={styles.backTitleText}
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={1.2}
+                >
                   {backTitle}
                 </Text>
               ) : null}
@@ -89,6 +114,7 @@ export function ScreenHeader({
               style={[styles.title, titleStyle]}
               numberOfLines={1}
               accessibilityRole="header"
+              maxFontSizeMultiplier={1.2}
             >
               {title}
             </Text>
@@ -97,7 +123,11 @@ export function ScreenHeader({
           )}
 
           {Boolean(subtitle) ? (
-            <Text style={styles.subtitle} numberOfLines={1}>
+            <Text
+              style={styles.subtitle}
+              numberOfLines={1}
+              maxFontSizeMultiplier={1.2}
+            >
               {subtitle}
             </Text>
           ) : null}

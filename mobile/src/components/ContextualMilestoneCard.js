@@ -64,7 +64,7 @@ export default function ContextualMilestoneCard({
           {navigation && (
             <TouchableOpacity
               style={styles.actionBtn}
-              onPress={() => navigation.navigate('Streak')}
+              onPress={() => navigation.navigate('Progress')}
               activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel="View achievements and streak details"

@@ -4,7 +4,12 @@ import { ActivityIndicator, View, StyleSheet, Text, Image, Platform } from 'reac
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SplashScreen from 'expo-splash-screen';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
-import * as Notifications from 'expo-notifications';
+let Notifications = null;
+try {
+  Notifications = require('expo-notifications');
+} catch (e) {
+  // Gracefully fallback when expo-notifications is not installed
+}
 import {
   initNotifications,
   registerForPushNotificationsAsync,
@@ -18,6 +23,10 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 initNotifications();
 
 export const navigationRef = createNavigationContainerRef();
+
+// Cap accessibility text scaling globally to prevent mid-word breaks and layout clipping
+if (Text.defaultProps == null) Text.defaultProps = {};
+Text.defaultProps.maxFontSizeMultiplier = 1.25;
 
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -293,6 +302,10 @@ export default function App() {
       }
     };
 
+    if (!Notifications) {
+      return;
+    }
+
     // Cold-start notification deep linking check
     Notifications.getLastNotificationResponseAsync()
       .then((response) => {
@@ -319,7 +332,7 @@ export default function App() {
     });
 
     return () => {
-      subscription.remove();
+      subscription?.remove?.();
     };
   }, []);
 

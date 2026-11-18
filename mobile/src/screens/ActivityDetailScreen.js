@@ -13,6 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 import CalendarGrid from '../components/CalendarGrid';
 import { getDailySummary, getCalendarMonth } from '../services/api';
 import {
@@ -26,6 +27,14 @@ import {
 } from '../utils/stepMetrics';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function ChevronRightIcon({ size = 16, color = '#A79A85' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M9 18l6-6-6-6" />
+    </Svg>
+  );
+}
 
 function formatYValue(num) {
   if (num >= 1000) {
@@ -863,7 +872,19 @@ export default function ActivityDetailScreen({ navigation, route }) {
           </View>
         ) : (
           activeDays.map((d, idx) => (
-            <View key={idx} style={styles.activityCard}>
+            <TouchableOpacity
+              key={idx}
+              style={[styles.activityCard, styles.activityHistoryCard]}
+              onPress={() => {
+                navigation.navigate('MainApp', {
+                  screen: 'Today',
+                  params: { selectedDate: d.date },
+                });
+              }}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`View meals logged for ${d.date}`}
+            >
               <View style={styles.activityIconBox}>
                 <Text style={styles.activityIconText}>CAL</Text>
               </View>
@@ -874,7 +895,10 @@ export default function ActivityDetailScreen({ navigation, route }) {
                   Goal: {(d.calorie_goal || goalCals).toLocaleString()} kcal • P: {d.total_protein || 0}g
                 </Text>
               </View>
-            </View>
+              <View style={styles.activityArrowBox}>
+                <ChevronRightIcon size={16} color="#A79A85" />
+              </View>
+            </TouchableOpacity>
           ))
         )}
       </>
@@ -1447,6 +1471,15 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderWidth: 1,
     borderColor: '#2D241B',
+  },
+  activityHistoryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  activityArrowBox: {
+    marginLeft: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   // R3: Yellow rounded border for meal cards in Activity Screen
   activityMealCard: {

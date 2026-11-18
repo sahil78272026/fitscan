@@ -486,20 +486,7 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
       {/* Navigation Header */}
       <ScreenHeader
         title="Profile & Goals"
-        onBack={() => navigation.navigate('Today')}
-        backTitle="Tracker"
-        backIcon="←"
-        rightAction={
-          <TouchableOpacity
-            style={styles.mealPlanBtn}
-            onPress={() => navigation.navigate('Meals')}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            accessibilityRole="button"
-            accessibilityLabel="View Meal Plan Schedule"
-          >
-            <Text style={styles.mealPlanBtnText}>Schedule</Text>
-          </TouchableOpacity>
-        }
+        subtitle="Personal metrics & account"
       />
 
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -550,6 +537,7 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
                       ? styles.subBadgeTextTrial
                       : styles.subBadgeTextExpired,
                   ]}
+                  maxFontSizeMultiplier={1.15}
                 >
                   {isPro
                     ? 'Pro Member'
@@ -565,7 +553,7 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
                   onPress={() => openPaywall('profile_badge')}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.upgradeBtnTriggerText}>Upgrade →</Text>
+                  <Text style={styles.upgradeBtnTriggerText} maxFontSizeMultiplier={1.15}>Upgrade →</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -640,42 +628,42 @@ export default function ProfileScreen({ navigation, user, onLogout }) {
         <View style={styles.metricsGrid}>
           <Card variant="elevated" style={styles.metricCard}>
             <Text style={styles.metricLabel}>Goal Type</Text>
-            <Text style={styles.metricValue}>
+            <Text style={styles.metricValue} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.2}>
               {(userSettings?.goal_type || 'fat_loss').replace('_', ' ').toUpperCase()}
             </Text>
           </Card>
 
           <Card variant="elevated" style={styles.metricCard}>
             <Text style={styles.metricLabel}>Diet Type</Text>
-            <Text style={styles.metricValue}>
+            <Text style={styles.metricValue} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.2}>
               {(userSettings?.diet_type || 'veg').replace('_', ' ').toUpperCase()}
             </Text>
           </Card>
 
           <Card variant="elevated" style={styles.metricCard}>
             <Text style={styles.metricLabel}>Budget Tier</Text>
-            <Text style={styles.metricValue}>
+            <Text style={styles.metricValue} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.2}>
               {(userSettings?.budget_tier || 'moderate').replace('_', ' ').toUpperCase()}
             </Text>
           </Card>
 
           <Card variant="elevated" style={styles.metricCard}>
             <Text style={styles.metricLabel}>Current Weight</Text>
-            <Text style={styles.metricValue}>
+            <Text style={styles.metricValue} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.2}>
               {userSettings?.weight_kg ? `${userSettings.weight_kg} kg` : 'Not Set'}
             </Text>
           </Card>
 
           <Card variant="elevated" style={styles.metricCard}>
             <Text style={styles.metricLabel}>Height</Text>
-            <Text style={styles.metricValue}>
+            <Text style={styles.metricValue} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.2}>
               {userSettings?.height_cm ? `${userSettings.height_cm} cm` : 'Not Set'}
             </Text>
           </Card>
 
           <Card variant="elevated" style={styles.metricCard}>
             <Text style={styles.metricLabel}>Activity</Text>
-            <Text style={styles.metricValue}>
+            <Text style={styles.metricValue} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.2}>
               {(userSettings?.activity_level || 'moderate').replace('_', ' ').toUpperCase()}
             </Text>
           </Card>
@@ -1152,7 +1140,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     padding: 16,
-    paddingBottom: 120,
+    paddingBottom: 140,
   },
   userCard: {
     flexDirection: 'row',
@@ -1241,7 +1229,8 @@ const styles = StyleSheet.create({
   subStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    flexWrap: 'wrap',
+    gap: 6,
     marginTop: 8,
   },
   subBadge: {
@@ -1249,6 +1238,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 6,
     borderWidth: 1,
+    flexShrink: 1,
   },
   subBadgePro: {
     backgroundColor: 'rgba(232, 160, 32, 0.12)',
@@ -1467,6 +1457,8 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     width: '48%',
+    minHeight: 70,
+    justifyContent: 'center',
     backgroundColor: '#221D17',
     borderRadius: 10,
     padding: 12,
@@ -1480,6 +1472,7 @@ const styles = StyleSheet.create({
   },
   metricValue: {
     fontSize: 14,
+    lineHeight: 18,
     fontWeight: 'bold',
     color: '#F4ECDD',
   },

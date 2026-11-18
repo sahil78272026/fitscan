@@ -70,7 +70,7 @@ export function Badge({
         </View>
       ) : null}
       {(typeof label === 'string' || typeof label === 'number') ? (
-        <Text style={labelStyles} numberOfLines={1}>
+        <Text style={labelStyles} numberOfLines={1} maxFontSizeMultiplier={1.15}>
           {label}
         </Text>
       ) : (

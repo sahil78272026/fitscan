@@ -34,12 +34,18 @@ const MEAL_TYPE_COLORS = {
 };
 
 export function getMealPriority(meal) {
+  if (meal?.criticality) {
+    const c = String(meal.criticality).toLowerCase();
+    if (c === 'high') return { label: 'Key Recovery', variant: 'primary' };
+    if (c === 'low') return { label: 'Light Fuel', variant: 'neutral' };
+    return { label: 'Core Staple', variant: 'protein' };
+  }
   const type = (meal?.meal_type || '').toLowerCase();
   const protein = Number(meal?.total_protein || meal?.protein || 0);
   const calories = Number(meal?.total_calories || meal?.calories || 0);
 
   if (type === 'dinner' || protein >= 35 || calories >= 550) {
-    return { label: 'Recovery Anchor', variant: 'primary' };
+    return { label: 'Key Recovery', variant: 'primary' };
   }
   if (type === 'snack' || calories < 300) {
     return { label: 'Light Snack', variant: 'neutral' };

@@ -10,6 +10,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, typography, radius, shadows, spacing } from '../theme';
 import { Card, Badge, Button } from './ui';
@@ -205,6 +206,7 @@ export default function MealDetailModal({
   onMealLogged,
   onLogMeal,
 }) {
+  const insets = useSafeAreaInsets();
   const [checkedIngredients, setCheckedIngredients] = useState({});
   const [isLoggingLocal, setIsLoggingLocal] = useState(false);
   const [hasLoggedLocal, setHasLoggedLocal] = useState(false);
@@ -425,7 +427,7 @@ export default function MealDetailModal({
           accessibilityLabel="Dismiss modal backdrop"
         />
 
-        <View style={styles.sheetCard}>
+        <View style={[styles.sheetCard, { paddingBottom: Math.max(insets?.bottom || 0, 16) + 12 }]}>
           {/* Top Drag Indicator */}
           <View style={styles.dragIndicatorWrapper}>
             <View style={styles.dragIndicator} />

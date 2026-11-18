@@ -79,7 +79,7 @@ export function Card({
 const styles = StyleSheet.create({
   base: {
     borderRadius: radius.lg || 16,
-    overflow: 'hidden',
+    overflow: 'visible',
   },
   interactive: {
     minHeight: 48,

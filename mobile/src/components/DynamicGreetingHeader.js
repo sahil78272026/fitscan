@@ -137,7 +137,7 @@ export default function DynamicGreetingHeader({
           {navigation && (
             <TouchableOpacity
               style={styles.streakPill}
-              onPress={() => navigation.navigate('Streak')}
+              onPress={() => navigation.navigate('Progress')}
               activeOpacity={0.8}
               accessibilityRole="button"
               accessibilityLabel={`Streak ${streakDays} days, tap for achievements`}

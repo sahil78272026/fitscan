@@ -308,7 +308,7 @@ export default function ProUpgradeModal({
         onRequestClose={onClose}
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.keyboardAvoid}
         >
           <View style={styles.overlay}>
@@ -850,10 +850,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
+    elevation: 4,
   },
   freeClaimBtn: {
     backgroundColor: '#10B981',
     shadowColor: '#10B981',
+    elevation: 4,
   },
   couponOnlyNoticeBox: {
     backgroundColor: '#1A1D24',

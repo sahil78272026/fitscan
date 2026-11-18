@@ -175,7 +175,24 @@ const getInitialMealType = () => {
   return 'dinner';
 };
 
-export default function HomeScreen({ navigation, user, onLogout }) {
+const parseDateParam = (param) => {
+  if (!param) return null;
+  if (param instanceof Date) return param;
+  if (typeof param === 'string') {
+    const parts = param.split('-');
+    if (parts.length === 3) {
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1;
+      const d = parseInt(parts[2], 10);
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+        return new Date(y, m, d, 12, 0, 0);
+      }
+    }
+  }
+  return null;
+};
+
+export default function HomeScreen({ navigation, route, user, onLogout }) {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? 12 : 0);
 
@@ -191,7 +208,16 @@ export default function HomeScreen({ navigation, user, onLogout }) {
 
   const { showToast } = useToast();
 
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(
+    () => parseDateParam(route?.params?.selectedDate) || new Date()
+  );
+
+  useEffect(() => {
+    const newDate = parseDateParam(route?.params?.selectedDate);
+    if (newDate) {
+      setSelectedDate(newDate);
+    }
+  }, [route?.params?.selectedDate]);
   const [summary, setSummary] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -667,7 +693,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
         >
           <TouchableOpacity
             style={styles.streakHeaderPill}
-            onPress={() => navigation.navigate('Streak')}
+            onPress={() => navigation.navigate('Progress')}
             activeOpacity={0.8}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
@@ -763,7 +789,7 @@ export default function HomeScreen({ navigation, user, onLogout }) {
         {/* Compact Streak Banner matching Web (stable, non-jerking) */}
         <TouchableOpacity
           style={styles.streakBanner}
-          onPress={() => navigation.navigate('Streak')}
+          onPress={() => navigation.navigate('Progress')}
           activeOpacity={0.8}
           accessibilityRole="button"
           accessibilityLabel={`Streak banner: ${adherenceStats?.current_streak ?? 0} day streak, ${Math.round(adherenceStats?.weekly_adherence_score ?? 0)}% weekly adherence. Tap to view details.`}
@@ -1638,7 +1664,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     padding: 16,
-    paddingBottom: 120,
+    paddingBottom: 140,
   },
   card: {
     backgroundColor: colors.surface || '#111318',

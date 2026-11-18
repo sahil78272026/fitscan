@@ -163,7 +163,11 @@ export default function AdherenceCard({ stats }) {
               >
                 <View style={styles.badgeIconBox}>{renderBadgeIcon(b)}</View>
                 <View style={styles.badgeInfo}>
-                  <Text style={[styles.badgeTitle, !b.unlocked && styles.textMuted]}>
+                  <Text
+                    style={[styles.badgeTitle, !b.unlocked && styles.textMuted]}
+                    numberOfLines={2}
+                    maxFontSizeMultiplier={1.2}
+                  >
                     {b.title}
                   </Text>
                   <Text style={styles.badgeDesc} numberOfLines={1}>
@@ -283,7 +287,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   badgeCard: {
-    width: '48%',
+    flex: 1,
+    minWidth: 140,
     flexDirection: 'row',
     alignItems: 'center',
     padding: 10,
@@ -316,6 +321,7 @@ const styles = StyleSheet.create({
   },
   badgeTitle: {
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: 'bold',
     color: '#F4ECDD',
   },

@@ -44,8 +44,6 @@ export default function StreakScreen({ navigation }) {
         <ScreenHeader
           title="Streak & Achievements"
           onBack={() => (navigation?.canGoBack?.() ? navigation.goBack() : navigation.navigate('MainApp'))}
-          backTitle="Back"
-          backIcon="←"
         />
         <View style={styles.loader}>
           <ActivityIndicator size="large" color={colors.primary || '#E8A020'} />
@@ -60,8 +58,6 @@ export default function StreakScreen({ navigation }) {
       <ScreenHeader
         title="Streak & Achievements"
         onBack={() => (navigation?.canGoBack?.() ? navigation.goBack() : navigation.navigate('MainApp'))}
-        backTitle="Back"
-        backIcon="←"
       />
 
       <ScrollView
@@ -101,5 +97,6 @@ const styles = StyleSheet.create({
   },
   scroll: {
     padding: 16,
+    paddingBottom: 48,
   },
 });

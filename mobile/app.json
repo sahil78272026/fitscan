@@ -40,13 +40,6 @@
       "expo-web-browser",
       "@react-native-google-signin/google-signin",
       [
-        "expo-notifications",
-        {
-          "icon": "./assets/icon.png",
-          "color": "#0ea5e9"
-        }
-      ],
-      [
         "expo-splash-screen",
         {
           "image": "./assets/splash.png",

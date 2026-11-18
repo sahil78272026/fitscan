@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     padding: 16,
-    paddingBottom: 120,
+    paddingBottom: 140,
   },
   heroCard: {
     backgroundColor: '#221D17',

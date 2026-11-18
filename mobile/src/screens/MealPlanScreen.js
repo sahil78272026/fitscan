@@ -243,7 +243,7 @@ export default function MealPlanScreen({ navigation }) {
   const getMealPriority = (meal) => {
     if (meal?.criticality) {
       const c = String(meal.criticality).toLowerCase();
-      if (c === 'high') return { level: 'high', label: 'Key Recovery Meal' };
+      if (c === 'high') return { level: 'high', label: 'Key Recovery' };
       if (c === 'low') return { level: 'low', label: 'Light Fuel' };
       return { level: 'medium', label: 'Core Staple' };
     }
@@ -254,7 +254,7 @@ export default function MealPlanScreen({ navigation }) {
       return { level: 'low', label: 'Light Fuel' };
     }
     if (type === 'dinner' || protein >= 35 || calories >= 580) {
-      return { level: 'high', label: 'Key Recovery Meal' };
+      return { level: 'high', label: 'Key Recovery' };
     }
     return { level: 'medium', label: 'Core Staple' };
   };
@@ -470,9 +470,6 @@ export default function MealPlanScreen({ navigation }) {
       <ScreenHeader
         title="Meal Plan Details"
         subtitle="Daily schedule & recipes"
-        onBack={() => navigation.navigate('Today')}
-        backTitle="Tracker"
-        backIcon="←"
         rightAction={downloadAction}
       />
 
@@ -651,7 +648,7 @@ export default function MealPlanScreen({ navigation }) {
 
                       {/* Concise Dish Title */}
                       <View style={styles.conciseTitleRow}>
-                        <Text style={styles.conciseDishTitle} numberOfLines={1}>
+                        <Text style={styles.conciseDishTitle} numberOfLines={2}>
                           {m.dish_name}
                         </Text>
                         {costInfo?.formatted ? (
@@ -876,7 +873,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     padding: spacing.screenPadding || 16,
-    paddingBottom: 120,
+    paddingBottom: 140,
   },
   emptyCard: {
     alignItems: 'center',
@@ -1139,6 +1136,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.06)',
     paddingTop: 10,
